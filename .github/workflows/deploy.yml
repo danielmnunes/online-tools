@@ -12,6 +12,11 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    outputs:
+      # Whether Cloudflare credentials are configured. Without this the deploy
+      # job fails on every push until someone sets the secrets, which trains
+      # everyone to ignore a red build.
+      can-deploy: ${{ steps.credentials.outputs.present }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -32,9 +37,23 @@ jobs:
           path: dist/
           retention-days: 7
 
+      - id: credentials
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -n "$TOKEN" ]; then
+            echo 'present=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'present=false' >> "$GITHUB_OUTPUT"
+            echo '::notice::Skipping deploy — set CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID to enable it.'
+          fi
+
   deploy:
     needs: verify
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: >-
+      needs.verify.outputs.can-deploy == 'true'
+      && github.ref == 'refs/heads/main'
+      && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5

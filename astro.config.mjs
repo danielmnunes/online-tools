@@ -7,7 +7,10 @@ import tailwindcss from '@tailwindcss/vite';
 
 // Set SITE_URL in CI / .env once the real domain is known. It only affects
 // absolute URLs: sitemap.xml, canonical links and Open Graph tags.
-const site = process.env.SITE_URL ?? 'https://online-tools.example.com';
+//
+// `||` rather than `??` on purpose: an unset GitHub Actions variable arrives
+// as an empty string, not as undefined, and an empty string is not a URL.
+const site = process.env.SITE_URL?.trim() || 'https://online-tools.example.com';
 
 export default defineConfig({
   site,
