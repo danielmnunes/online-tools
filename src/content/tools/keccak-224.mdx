@@ -1,0 +1,50 @@
+---
+description: >-
+    Compute the original Keccak-224 hash, the competition version that predates the SHA3-224 padding change.
+faq:
+  - q: >-
+        Why does this differ from SHA3-224?
+    a: >-
+        NIST added two domain-separator bits to the padding when standardising SHA-3, so the final block differs. The permutation, rate and capacity are identical, but the digests never match. Keccak-224 pads with 0x01 where SHA3-224 pads with 0x06.
+  - q: >-
+        Should I use Keccak-224 for anything new?
+    a: >-
+        Only to interoperate with something that already uses it. For new work, SHA3-224 is the standardised name with the same security properties, and SHA3-256 is a better default than either.
+  - q: >-
+        Is there an Ethereum connection like there is for Keccak-256?
+    a: >-
+        No. Ethereum settled on the 256-bit variant everywhere. Keccak-224 appears mainly in software written against the competition submission before FIPS 202 existed.
+references:
+  - label: >-
+        FIPS 202 — SHA-3 Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
+  - label: >-
+        The Keccak team's reference site
+    url: https://keccak.team/
+---
+
+## What Keccak-224 does
+
+Keccak-224 produces a 224-bit digest, written as 56 hexadecimal characters. It is the
+original competition parameterisation: the Keccak-f[1600] sponge with 448 bits of capacity
+and 1152 bits of rate, using the plain multi-rate padding rather than the domain-separated
+padding FIPS 202 introduced.
+
+## The competition version
+
+Between Keccak winning the SHA-3 competition in 2012 and FIPS 202 being published in 2015,
+implementations shipped against the submitted specification. NIST then prefixed the padding
+with two bits so that the hash functions, the extendable-output functions and any future
+Keccak-based mode would live in separate domains and could never produce colliding outputs
+for the same input.
+
+Software written in that window computes what this tool computes. Software written against
+the standard computes SHA3-224. Neither is wrong; they are different functions with
+confusingly similar names.
+
+## Choosing between them
+
+If you are verifying a digest produced by an older tool, or reproducing values from a
+pre-2015 implementation, you want this page. Anywhere else, use SHA3-224 — or better,
+SHA3-256, since the extra 32 bits cost nothing meaningful and remove the question of whether
+112 bits of collision resistance is enough.

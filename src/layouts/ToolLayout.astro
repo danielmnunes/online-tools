@@ -1,0 +1,120 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import ToolWidget from '~/components/ToolWidget.astro';
+import { relatedTools } from '~/tools/registry';
+import { CATEGORY_BY_ID, type Tool } from '~/tools/types';
+
+interface Props {
+  tool: Tool;
+  description: string;
+  faq: ReadonlyArray<{ q: string; a: string }>;
+  references: ReadonlyArray<{ label: string; url: string }>;
+}
+
+const { tool, description, faq, references } = Astro.props;
+const category = CATEGORY_BY_ID[tool.category];
+const related = relatedTools(tool);
+const pageUrl = new URL(Astro.url.pathname, Astro.site).toString();
+
+const jsonLd: unknown[] = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: tool.title,
+    description,
+    url: pageUrl,
+    applicationCategory: 'DeveloperApplication',
+    operatingSystem: 'Any',
+    // True and worth stating: there is no paid tier and no account.
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  },
+];
+
+if (faq.length > 0) {
+  jsonLd.push({
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faq.map(({ q, a }) => ({
+      '@type': 'Question',
+      name: q,
+      acceptedAnswer: { '@type': 'Answer', text: a },
+    })),
+  });
+}
+---
+
+<BaseLayout title={`${tool.title} — online/tools`} {description} {jsonLd}>
+  <nav aria-label="Breadcrumb" class="mb-3 text-xs text-muted">
+    <ol class="flex flex-wrap items-center gap-1.5">
+      <li><a href="/" class="hover:text-fg">Home</a></li>
+      <li aria-hidden="true">/</li>
+      <li><a href={`/${category.id}/`} class="hover:text-fg">{category.label}</a></li>
+      <li aria-hidden="true">/</li>
+      <li aria-current="page" class="text-fg">{tool.name}</li>
+    </ol>
+  </nav>
+
+  <h1 class="text-2xl font-semibold tracking-tight sm:text-3xl">{tool.title}</h1>
+  <p class="mt-2 max-w-2xl text-sm text-muted">{description}</p>
+
+  <div class="mt-6">
+    <ToolWidget {tool} />
+  </div>
+
+  <div class="prose-tool mt-10 max-w-2xl text-[0.9375rem]">
+    <slot />
+
+    {
+      faq.length > 0 && (
+        <>
+          <h2>Frequently asked questions</h2>
+          <dl>
+            {faq.map(({ q, a }) => (
+              <div class="mt-4">
+                <dt class="font-semibold">{q}</dt>
+                <dd class="mt-1 text-muted">{a}</dd>
+              </div>
+            ))}
+          </dl>
+        </>
+      )
+    }
+
+    {
+      references.length > 0 && (
+        <>
+          <h2>References</h2>
+          <ul>
+            {references.map((reference) => (
+              <li>
+                <a href={reference.url} rel="noopener noreferrer nofollow" target="_blank">
+                  {reference.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </>
+      )
+    }
+  </div>
+
+  {
+    related.length > 0 && (
+      <section class="mt-10 border-t border-border pt-6">
+        <h2 class="text-sm font-semibold">Related tools</h2>
+        <ul class="mt-3 flex flex-wrap gap-2">
+          {related.map((other) => (
+            <li>
+              <a
+                href={`/${other.slug}/`}
+                class="inline-block rounded-md border border-border px-2.5 py-1 text-sm text-muted hover:bg-surface hover:text-fg"
+              >
+                {other.name}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+</BaseLayout>

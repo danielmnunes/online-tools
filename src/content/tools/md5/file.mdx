@@ -1,0 +1,50 @@
+---
+description: >-
+    Compute the MD5 checksum of a file in your browser. The file is read locally and never uploaded.
+faq:
+  - q: >-
+        If the MD5 matches, is the file safe?
+    a: >-
+        It means the file matches the one whose checksum you were given — nothing more. MD5 collisions are cheap to construct, so someone who controls both the file and the published checksum can hand you a different file with the same MD5. A matching MD5 proves the download was not corrupted in transit; it does not prove the file is the one the author intended.
+  - q: >-
+        Is there a size limit?
+    a: >-
+        Not one we impose. The file is streamed through the hash in small pieces rather than loaded into memory, so multi-gigabyte files work. The practical limit is patience — hashing happens in JavaScript on one core.
+  - q: >-
+        How do I check this against md5sum output?
+    a: >-
+        The lowercase hex digest here is exactly what md5sum prints before the filename. Paste the whole md5sum line into the comparison box — the trailing filename is ignored.
+references:
+  - label: >-
+        RFC 6151 — Updated Security Considerations for MD5
+    url: https://www.rfc-editor.org/rfc/rfc6151
+  - label: >-
+        RFC 1321 — The MD5 Message-Digest Algorithm
+    url: https://www.rfc-editor.org/rfc/rfc1321
+---
+
+## Verifying a download with MD5
+
+Drop a file above and its MD5 digest appears. Paste the checksum the publisher listed into
+the comparison box and the page tells you whether they match.
+
+Everything happens in your browser. The file is read with the File API and streamed through
+the hash function in chunks; no part of it is sent anywhere. You can confirm this in the
+network tab.
+
+## What a match actually proves
+
+MD5 is broken for collisions, and this changes the meaning of a match. An attacker who
+prepared both the file and the checksum can produce two files with the same MD5 — one
+harmless, one not. So a matching MD5 tells you the bytes arrived intact from wherever the
+checksum came from. It does not authenticate the file.
+
+For that you need a signature: a `SHA256SUMS` file signed with the publisher's GPG key,
+or a signed release artefact. The checksum protects against a truncated download or a bad
+mirror; the signature protects against the mirror itself.
+
+## Where MD5 checksums still appear
+
+Vendor download pages that have not been updated in fifteen years, internal artefact
+registries, and deduplication systems that only care about accidental collisions. If you are
+choosing a checksum to publish today, publish SHA-256.

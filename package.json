@@ -1,0 +1,37 @@
+{
+  "name": "online-tools",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Client-side developer tools: hashing, encoding, ciphers, compression. Nothing leaves your browser.",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "deploy": "astro build && wrangler deploy"
+  },
+  "dependencies": {
+    "@noble/hashes": "^2.4.0",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.4",
+    "@astrojs/mdx": "^8.0.0",
+    "@astrojs/sitemap": "^3.7.4",
+    "@astrojs/svelte": "^9.0.1",
+    "@tailwindcss/vite": "^4.3.3",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/svelte": "^5.4.2",
+    "@testing-library/user-event": "^14.6.7",
+    "astro": "^7.2.10",
+    "jsdom": "^30.0.1",
+    "svelte": "^5.57.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0",
+    "wrangler": "^4.128.0"
+  }
+}

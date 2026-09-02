@@ -1,0 +1,23 @@
+---
+import type { Tool } from '~/tools/types';
+import TextHash from '~/components/widgets/TextHash.svelte';
+import FileHash from '~/components/widgets/FileHash.svelte';
+
+interface Props {
+  tool: Tool;
+}
+const { tool } = Astro.props;
+---
+
+{
+  /*
+   * One arm per widget kind. Astro only ships the JS for the island it
+   * actually renders, so importing every widget here costs nothing on pages
+   * that do not use them.
+   *
+   * client:load rather than client:visible: the widget is the reason the
+   * visitor opened the page, and it sits above the fold.
+   */
+}
+{tool.widget === 'text-hash' && <TextHash algorithm={tool.config.algorithm} client:load />}
+{tool.widget === 'file-hash' && <FileHash algorithm={tool.config.algorithm} client:load />}

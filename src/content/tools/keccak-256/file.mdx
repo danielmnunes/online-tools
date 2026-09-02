@@ -1,0 +1,45 @@
+---
+description: >-
+    Compute the original Keccak-256 hash of a file, the variant Ethereum uses rather than SHA3-256.
+faq:
+  - q: >-
+        How do I know I am using the right one?
+    a: >-
+        Hash an empty file. Keccak-256 gives c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470, the constant that appears throughout Ethereum. SHA3-256 gives something else entirely.
+  - q: >-
+        Will this match a Solidity keccak256 call?
+    a: >-
+        Yes, if the input bytes are the same. Solidity hashes the ABI-encoded arguments, so reproducing a contract's hash means hashing exactly the bytes the contract hashed — not the source text or a JSON representation of them.
+  - q: >-
+        Can I get a contract's bytecode hash this way?
+    a: >-
+        Yes. Save the deployed bytecode as a binary file and hash it here; that is the value EXTCODEHASH returns and what CREATE2 address derivation uses.
+references:
+  - label: >-
+        The Keccak team's reference site
+    url: https://keccak.team/
+  - label: >-
+        FIPS 202 — SHA-3 Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
+---
+
+## Hashing a file with Keccak-256
+
+Drop a file above for its Keccak-256 digest — the original competition version, not the
+standardised SHA3-256. The file is read and hashed in your browser.
+
+## Why this page is separate from SHA3-256
+
+NIST appended two domain-separator bits to the padding when finalising FIPS 202 in 2015.
+Ethereum had shipped a few weeks earlier using the competition version and could not change
+without a consensus break. The two functions are otherwise identical and produce completely
+different digests.
+
+The failure mode is silent: a library's `sha3_256` returns a perfectly valid 64-character
+digest that simply is not what Solidity computed. If a hash does not match what a contract
+expects, checking which function you used is the first thing to try.
+
+## Ethereum artefacts worth hashing
+
+Deployed bytecode, for `EXTCODEHASH` and `CREATE2` addresses. Serialised RLP structures, for
+trie nodes. Any file whose digest a contract will compare against a stored value.

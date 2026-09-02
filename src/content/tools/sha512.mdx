@@ -1,0 +1,50 @@
+---
+description: >-
+    Compute a SHA-512 hash of any text, with optional HMAC and a choice of input and output encodings.
+faq:
+  - q: >-
+        Is SHA-512 more secure than SHA-256?
+    a: >-
+        In the sense that 256 bits of collision resistance beats 128, yes. In every practical sense, no — 128 bits of collision resistance is already beyond any conceivable attack, so the extra margin buys nothing you can observe. Choose SHA-512 for speed on 64-bit hardware or for a standard that requires it, not out of an expectation of greater safety.
+  - q: >-
+        Does SHA-512 suffer from length-extension attacks?
+    a: >-
+        Yes. Like SHA-256, SHA-512 is a Merkle–Damgård construction and publishes its entire final state as the digest, so an attacker who has a digest can append data and compute the digest of the longer message without knowing the original. Never authenticate a message by hashing a secret concatenated with it — use HMAC-SHA-512, or SHA-512/256, which truncates and so does not leak the full state.
+  - q: >-
+        Why is SHA-512 sometimes slower on a phone than on a laptop?
+    a: >-
+        SHA-512 needs 64-bit arithmetic to be efficient, and it lacks the dedicated CPU instructions that SHA-256 enjoys on ARMv8. On mobile chips with SHA-256 acceleration, hardware-assisted SHA-256 can comfortably beat software SHA-512.
+references:
+  - label: >-
+        FIPS 180-4 — Secure Hash Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
+  - label: >-
+        RFC 6234 — US Secure Hash Algorithms
+    url: https://www.rfc-editor.org/rfc/rfc6234
+---
+
+## What SHA-512 does
+
+SHA-512 produces a 512-bit digest, written as 128 hexadecimal characters. It processes input
+in 1024-bit blocks through 80 rounds of a compression function built from 64-bit additions,
+rotations and exclusive-ors. Structurally it is the same Merkle–Damgård design as SHA-256,
+scaled up to 64-bit words.
+
+## Where the size actually helps
+
+A 512-bit digest gives 256 bits of collision resistance. No system needs that against a
+classical attacker. It becomes interesting under a quantum threat model: Grover's algorithm
+reduces preimage search from 2^n to 2^(n/2), so a 512-bit digest retains a 256-bit preimage
+margin where SHA-256 would drop to 128. Whether that matters depends on how seriously you
+take long-horizon quantum risk, but it is the honest argument for the larger size.
+
+The other genuine use is as a source of key material. SHA-512 output is a convenient 64
+bytes, which is exactly what several key-derivation and signature schemes want — Ed25519,
+for instance, expands its private key by hashing it with SHA-512.
+
+## Length extension
+
+The one sharp edge. Because the digest is the complete internal state, anyone holding
+`SHA-512(secret || message)` can compute `SHA-512(secret || message || padding || extra)`
+without knowing the secret. This has broken real APIs. Use HMAC-SHA-512 whenever a key is
+involved.

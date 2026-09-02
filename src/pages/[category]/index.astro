@@ -1,0 +1,41 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '~/layouts/BaseLayout.astro';
+import ToolCard from '~/components/ToolCard.astro';
+import { populatedCategories, toolsInCategory } from '~/tools/registry';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('tools');
+  const descriptionById = new Map(entries.map((entry) => [entry.id, entry.data.description]));
+
+  return populatedCategories().map((category) => ({
+    params: { category: category.id },
+    props: {
+      category,
+      tools: toolsInCategory(category.id).map((tool) => ({
+        tool,
+        description: descriptionById.get(tool.slug) ?? '',
+      })),
+    },
+  }));
+}
+
+const { category, tools } = Astro.props;
+---
+
+<BaseLayout title={`${category.label} tools — online/tools`} description={category.blurb}>
+  <nav aria-label="Breadcrumb" class="mb-3 text-xs text-muted">
+    <ol class="flex items-center gap-1.5">
+      <li><a href="/" class="hover:text-fg">Home</a></li>
+      <li aria-hidden="true">/</li>
+      <li aria-current="page" class="text-fg">{category.label}</li>
+    </ol>
+  </nav>
+
+  <h1 class="text-2xl font-semibold tracking-tight sm:text-3xl">{category.label}</h1>
+  <p class="mt-2 max-w-2xl text-sm text-muted">{category.blurb}</p>
+
+  <ul class="mt-6 grid gap-3 sm:grid-cols-2">
+    {tools.map(({ tool, description }) => <ToolCard {tool} {description} />)}
+  </ul>
+</BaseLayout>

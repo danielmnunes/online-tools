@@ -1,0 +1,59 @@
+---
+description: >-
+    Compute a BLAKE3 hash of any text — a fast, parallel, tree-based hash with extendable output.
+faq:
+  - q: >-
+        How much faster is BLAKE3 really?
+    a: >-
+        On a single core it is several times faster than SHA-256 without hardware acceleration and comfortably faster than BLAKE2. On large inputs the gap widens without limit, because the tree structure lets BLAKE3 use every core in the machine and SIMD instructions on each of them. For a multi-gigabyte file on a many-core server, an order of magnitude is realistic.
+  - q: >-
+        How can it be so much faster and still secure?
+    a: >-
+        Two changes. BLAKE3 cut BLAKE2's rounds from ten or twelve to seven, which the designers argue keeps a comfortable margin against known attacks. And it replaced the sequential chain with a Merkle tree over 1 KiB chunks, which costs nothing in security but unlocks parallelism that a chained design structurally cannot have.
+  - q: >-
+        Is the 256-bit output fixed?
+    a: >-
+        No. BLAKE3 is an extendable-output function — it can produce any number of bytes, and the first 32 are what this tool shows by default. That makes it usable as a hash, a KDF and a stream cipher from one primitive.
+  - q: >-
+        Should I use it in production?
+    a: >-
+        It is widely deployed and has held up since 2020, but it is younger than SHA-2 and not standardised by NIST. That is the real trade-off, and it is about process rather than any known weakness. Where a certification or a specification names the hash, use what it names; where you are free and throughput matters, BLAKE3 is hard to beat.
+references:
+  - label: >-
+        The BLAKE3 specification and reference implementation
+    url: https://github.com/BLAKE3-team/BLAKE3
+  - label: >-
+        BLAKE3 paper
+    url: https://github.com/BLAKE3-team/BLAKE3-specs/blob/master/blake3.pdf
+---
+
+## What BLAKE3 does
+
+BLAKE3 produces a digest of any length — 256 bits by default, shown here as 64 hexadecimal
+characters. Internally it splits input into 1 KiB chunks, hashes each chunk independently,
+and combines the results in a binary Merkle tree.
+
+## Why the tree changes everything
+
+Every hash function discussed on this site before BLAKE3 is sequential: block *n* cannot be
+processed until block *n−1* is done, because each block's output feeds the next. That is a
+hard limit — no amount of hardware makes SHA-256 faster on one stream.
+
+BLAKE3's chunks are independent, so a 1 GB file can be hashed on sixteen cores at once and
+the partial results merged. Combined with SIMD instructions that process several chunks per
+core, this is where the dramatic numbers come from. It also means verification can be
+incremental: because the tree commits to each chunk, a receiver can verify any slice of a
+large file without having the whole thing — the property that makes BLAKE3 attractive for
+content-addressed storage and streaming verification.
+
+## One primitive, several jobs
+
+The same construction runs in three modes: plain hashing, keyed hashing for MACs, and key
+derivation with a context string. There is no need for HMAC, and no need for a separate KDF
+— which is why this tool offers no HMAC checkbox.
+
+## The honest caveat
+
+BLAKE3 is from 2020, has no NIST standardisation, and reduced BLAKE2's round count to get
+its speed. Nothing suggests that margin is inadequate, and the design is by a well-regarded
+team, but "faster and newer" is a trade a compliance-bound system may not be able to make.

@@ -1,0 +1,53 @@
+---
+description: >-
+    Compute a SHA3-256 hash of any text, with optional HMAC and a choice of input and output encodings.
+faq:
+  - q: >-
+        Is SHA3-256 better than SHA-256?
+    a: >-
+        Not stronger in any measurable way — both target 128-bit collision resistance and neither has a known weakness. SHA-3 is structurally different, which is the point: it exists so that a future break of the Merkle–Damgård design behind SHA-2 would not take out both standards at once. In pure software SHA-3 is usually slower than SHA-2, and much slower than SHA-2 with hardware acceleration.
+  - q: >-
+        Does SHA3-256 need HMAC?
+    a: >-
+        Not for the reason SHA-256 does. The sponge construction does not leak its internal state in the digest, so length extension does not apply and prefixing a key is not immediately broken. KMAC is the standardised way to key a SHA-3 hash. HMAC-SHA3 is still well defined and widely implemented, which is why it is offered here.
+  - q: >-
+        Why is SHA3-512 slower than SHA3-256?
+    a: >-
+        The sponge trades rate for capacity. A larger digest requires a larger capacity to keep the security margin, which leaves a smaller rate — fewer bytes absorbed per permutation call. SHA3-512 absorbs 72 bytes per call against SHA3-256's 136, so it does roughly twice the work per byte.
+references:
+  - label: >-
+        FIPS 202 — SHA-3 Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
+  - label: >-
+        The Keccak team's reference site
+    url: https://keccak.team/
+---
+
+## What SHA3-256 does
+
+SHA3-256 produces a 256-bit digest, written as 64 hexadecimal characters. It is built on the
+Keccak-f[1600] permutation using a sponge construction: input is absorbed into a 1600-bit
+state 136 bytes at a time, the permutation is applied after each block, and the digest is
+squeezed back out of the same state at the end.
+
+## Why a second standard existed to be won
+
+By 2005 the collision attacks on MD5 and SHA-1 had made a worrying point: every widely used
+hash function shared the same Merkle–Damgård skeleton, so one good structural idea could
+break all of them. NIST ran an open competition from 2007 to 2012 and selected Keccak, whose
+sponge design has nothing in common with SHA-2. SHA-3 was never a replacement for SHA-2 —
+SHA-2 remains unbroken — it is an insurance policy with a different failure mode.
+
+## The sponge's practical dividend
+
+Because only part of the state is ever output, an attacker holding a digest cannot resume
+the computation. That kills length extension outright, which is the one sharp edge of
+SHA-256. It also makes the same permutation reusable for extendable-output functions
+(SHAKE), keyed hashing (KMAC) and authenticated encryption, all from the same primitive.
+
+## SHA3-256 and Keccak-256 are not the same
+
+Between the competition and standardisation, NIST changed the padding rule, appending the
+domain separator bits `01` before the usual padding. Ethereum had already shipped the
+original. The two functions therefore produce entirely different digests for the same input.
+If you need the Ethereum one, use the Keccak-256 tool.

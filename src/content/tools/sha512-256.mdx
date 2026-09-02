@@ -1,0 +1,49 @@
+---
+description: >-
+    Compute a SHA-512/256 hash of any text, with optional HMAC and a choice of input and output encodings.
+faq:
+  - q: >-
+        Why use SHA-512/256 instead of SHA-256?
+    a: >-
+        Two reasons. It is typically faster on 64-bit processors without SHA-256 hardware instructions, because the SHA-512 core does less work per byte. And it is not vulnerable to length extension, since more than half the internal state is discarded — so a naive hash of a secret followed by a message is not immediately broken, unlike with SHA-256.
+  - q: >-
+        Can I get it by truncating a SHA-512 digest myself?
+    a: >-
+        No. SHA-512/256 uses different initial hash values, so its digest is not the first 32 bytes of the SHA-512 digest of the same input. Truncating SHA-512 yourself gives a different — though also length-extension-resistant — value that no standard names.
+  - q: >-
+        Is anyone actually using it?
+    a: >-
+        Yes, though quietly. Go's standard library exposes it, several disk and database formats picked it for the speed, and it turns up in protocols designed after the length-extension problem became well known. It has never had the mindshare of SHA-256.
+references:
+  - label: >-
+        FIPS 180-4 — Secure Hash Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
+---
+
+## What SHA-512/256 does
+
+SHA-512/256 produces a 256-bit digest, written as 64 hexadecimal characters. It is the
+SHA-512 compression function with a purpose-built initial state, truncated to its leftmost
+256 bits.
+
+## The best-kept secret in SHA-2
+
+It is reasonable to argue that SHA-512/256 is what SHA-256 should have been for 64-bit
+machines. It gives the same 128-bit collision resistance, runs faster in software on any
+processor with 64-bit registers, and removes the length-extension footgun that has produced
+a long tail of authentication bugs in real systems — the Flickr API signature forgery being
+the textbook case.
+
+What it lacks is ubiquity. SHA-256 has hardware instructions on modern x86 and ARM, which on
+those paths beats any software SHA-512 variant, and it is the name that appears in every
+specification, checksum file and interview question. Ecosystem gravity is a real engineering
+consideration, and it is why SHA-256 remains the sensible default despite the technical case
+here.
+
+## Length extension, concretely
+
+With SHA-256, someone who knows `H(secret || message)` and the length of `secret` can
+compute `H(secret || message || padding || anything)` without knowing the secret at all,
+because the digest *is* the internal state. With SHA-512/256 they cannot, because half the
+state never leaves the function. This does not make a bare hash a MAC — use HMAC for that —
+but it removes a whole category of accident.

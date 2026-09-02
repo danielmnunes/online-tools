@@ -1,0 +1,42 @@
+---
+description: >-
+    Compute the original Keccak-512 hash of a file, the competition variant that predates SHA3-512.
+faq:
+  - q: >-
+        How does this differ from SHA3-512?
+    a: >-
+        The padding byte, and nothing else. Keccak-512 closes with 0x01, SHA3-512 with 0x06. Both use the same permutation and the same 1024-bit capacity; the digests never coincide.
+  - q: >-
+        Is this the slowest option on the site?
+    a: >-
+        Among the hash tools, close to it. Only 72 bytes are absorbed per permutation call, so a large file takes roughly twice as long as with Keccak-256.
+  - q: >-
+        Does the original padding weaken it?
+    a: >-
+        No. The change was about separating Keccak's modes from one another, not about repairing a flaw. Both carry the same security claims.
+references:
+  - label: >-
+        The Keccak team's reference site
+    url: https://keccak.team/
+  - label: >-
+        FIPS 202 — SHA-3 Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
+---
+
+## Hashing a file with Keccak-512
+
+Drop a file above for its 128-character Keccak-512 digest, using the original competition
+padding. The file is read locally and streamed through the sponge in chunks.
+
+## The widest margin, at the lowest rate
+
+Keccak-512 reserves 1024 bits of its state as capacity, which buys 256 bits of collision
+resistance and leaves only 72 bytes of rate. That is the slowest configuration in the family,
+and on a multi-gigabyte file the difference against Keccak-256 is plainly visible in the
+progress bar.
+
+## When it is the right page
+
+Matching a digest from software built before FIPS 202, or a test vector labelled "Keccak"
+rather than "SHA-3". For anything new, SHA3-512 is the standardised equivalent, and SHA-256
+is what people can actually verify.

@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "online-tools",
+  "compatibility_date": "2026-09-01",
+
+  // A purely static deployment: no Worker script, just assets served from the
+  // edge. Adding server-rendered routes later means adding a "main" entry and
+  // the @astrojs/cloudflare adapter; nothing here has to change.
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "404-page"
+  }
+}

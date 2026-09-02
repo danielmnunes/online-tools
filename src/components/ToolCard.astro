@@ -1,0 +1,16 @@
+---
+import type { Tool } from '~/tools/types';
+
+interface Props {
+  tool: Tool;
+  description: string;
+}
+const { tool, description } = Astro.props;
+---
+
+<li class="rounded-lg border border-border transition-colors hover:border-accent/50">
+  <a href={`/${tool.slug}/`} class="block h-full px-4 py-3">
+    <span class="text-sm font-semibold text-fg">{tool.name}</span>
+    <span class="mt-1 block text-xs leading-relaxed text-muted">{description}</span>
+  </a>
+</li>

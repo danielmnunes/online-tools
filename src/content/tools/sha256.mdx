@@ -1,0 +1,52 @@
+---
+description: >-
+    Compute a SHA-256 hash of any text, with optional HMAC and a choice of input and output encodings.
+faq:
+  - q: >-
+        Is SHA-256 secure?
+    a: >-
+        Yes. There is no known practical attack against SHA-256 — no collisions, no preimages, and no meaningful shortcut over brute force. It is the default recommendation for general-purpose cryptographic hashing and is what TLS certificates, Bitcoin and most signature schemes rely on today.
+  - q: >-
+        Can I use SHA-256 to hash passwords?
+    a: >-
+        Not on its own. SHA-256 is fast by design, so an attacker with a stolen database can test billions of candidate passwords per second on a GPU. Password storage needs a deliberately slow, memory-hard function — Argon2id first, then scrypt or bcrypt. If you must build on SHA-256, use it inside PBKDF2 with a high iteration count, not directly.
+  - q: >-
+        What is the difference between SHA-256 and SHA-2?
+    a: >-
+        SHA-2 is the family; SHA-256 is one member of it. The family also includes SHA-224, SHA-384, SHA-512 and the truncated variants SHA-512/224 and SHA-512/256. They share a design and differ in internal word size, digest length and initial constants.
+  - q: >-
+        Is SHA-256 the same as SHA-3?
+    a: >-
+        No. Despite the name, SHA-3 is a completely different construction — a sponge based on the Keccak permutation, selected in 2012 through an open competition. It was standardised as a hedge in case a structural weakness were ever found in SHA-2, not because SHA-2 is weak. Both are considered secure.
+references:
+  - label: >-
+        FIPS 180-4 — Secure Hash Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
+  - label: >-
+        RFC 6234 — US Secure Hash Algorithms
+    url: https://www.rfc-editor.org/rfc/rfc6234
+---
+
+## What SHA-256 does
+
+SHA-256 maps an input of any length to a 256-bit digest, written as 64 hexadecimal characters.
+It belongs to the SHA-2 family, published by NIST in 2001 and specified in FIPS 180-4. Unlike
+MD5 and SHA-1, it has held up: after two decades of analysis there is still no attack better
+than brute force, which for a 256-bit digest means roughly 2^128 work to find a collision — a
+number with no physical meaning.
+
+## Where it is used
+
+SHA-256 is the hash underneath most of the infrastructure people rely on daily: TLS
+certificate signatures, software package checksums, Bitcoin's proof of work and transaction
+identifiers, container image digests, and the HMAC constructions used to authenticate API
+requests. When a specification says "a secure hash" without qualification, SHA-256 is
+usually what it means.
+
+## HMAC-SHA-256
+
+Hashing a secret together with a message by concatenation is a classic mistake — the
+Merkle–Damgård structure of SHA-2 makes it vulnerable to length-extension, where an attacker
+who knows a digest can compute the digest of a longer message without knowing the secret.
+HMAC exists to solve exactly this, and HMAC-SHA-256 is the standard way to authenticate a
+message with a shared key. Tick the HMAC box above to compute one.

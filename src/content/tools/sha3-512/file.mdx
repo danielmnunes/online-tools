@@ -1,0 +1,42 @@
+---
+description: >-
+    Compute the SHA3-512 checksum of a file in your browser. The file is read locally and never uploaded.
+faq:
+  - q: >-
+        Is SHA3-512 worth the time on a large file?
+    a: >-
+        For archival integrity where the data outlives the hardware, arguably. For everyday verification, no — it absorbs only 72 bytes per permutation call, about half the rate of SHA3-256, and 128-bit collision resistance is already unreachable.
+  - q: >-
+        Does the longer digest help against quantum attacks?
+    a: >-
+        That is the honest argument for it. Grover's algorithm halves effective preimage strength, so a 512-bit digest keeps a 256-bit margin. Whether that matters depends on how long the data must remain verifiable.
+  - q: >-
+        Is it the same as Keccak-512?
+    a: >-
+        No. The padding differs by two domain-separator bits added during standardisation, and the digests never match.
+references:
+  - label: >-
+        FIPS 202 — SHA-3 Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
+---
+
+## Verifying a file with SHA3-512
+
+Drop a file above for its 128-character SHA3-512 digest. The file is read locally and
+streamed through the sponge; nothing is uploaded.
+
+## The most conservative approved option
+
+Among NIST-standardised hashes this is the largest margin available: 256 bits of collision
+resistance on a construction structurally unrelated to SHA-2. It is also among the slowest
+things you can do to a large file in software.
+
+That trade suits long-horizon integrity — signed archives, records that must remain
+verifiable for decades, evidence preservation — where the per-byte cost is irrelevant next to
+the consequences of a break twenty years out.
+
+## And where it does not suit
+
+Anything in a hot path, anything at scale, and any download page where the point is that
+people actually check. A checksum nobody verifies because it takes four minutes is worse
+than a SHA-256 they verify in ten seconds.

@@ -1,0 +1,44 @@
+---
+description: >-
+    Compute the original Keccak-384 hash, the competition version that predates the SHA3-384 padding change.
+faq:
+  - q: >-
+        How does this differ from SHA3-384?
+    a: >-
+        Only in the final block's padding. NIST appended two domain-separator bits when standardising, so Keccak-384 pads with 0x01 and SHA3-384 pads with 0x06. Same permutation, same 768-bit capacity, entirely different digests.
+  - q: >-
+        Is it slower than Keccak-256?
+    a: >-
+        Yes, by roughly 30%. The larger capacity leaves a rate of 832 bits — 104 bytes absorbed per permutation call, against 136 for the 256-bit variant — so more calls are needed per megabyte.
+  - q: >-
+        Where is it used?
+    a: >-
+        Rarely. Implementations predating FIPS 202, and test suites that carry the original Keccak vectors. New designs at this security tier use SHA3-384.
+references:
+  - label: >-
+        FIPS 202 — SHA-3 Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
+  - label: >-
+        The Keccak team's reference site
+    url: https://keccak.team/
+---
+
+## What Keccak-384 does
+
+Keccak-384 produces a 384-bit digest, written as 96 hexadecimal characters, from the
+Keccak-f[1600] sponge with 768 bits of capacity and 832 bits of rate — the original
+competition parameters with the original padding rule.
+
+## Original versus standardised
+
+The SHA-3 standard differs from the Keccak submission in exactly one respect: two bits
+appended to the message before padding, so that SHA-3 hashes, SHAKE outputs and other
+Keccak modes occupy separate domains. That change was made after a great deal of software
+had already shipped, which is why both functions remain in circulation under names that do
+little to distinguish them.
+
+## Practical guidance
+
+Use this tool to reproduce a digest from an implementation written against the competition
+specification. For anything new at the 192-bit security tier, use SHA3-384, which is the
+name every current standard means.

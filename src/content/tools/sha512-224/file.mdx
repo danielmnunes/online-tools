@@ -1,0 +1,44 @@
+---
+description: >-
+    Compute the SHA-512/224 checksum of a file in your browser. The file is read locally and never uploaded.
+faq:
+  - q: >-
+        Is this the same as SHA-224?
+    a: >-
+        No. SHA-224 is truncated SHA-256; SHA-512/224 is truncated SHA-512. They share a digest length and nothing else, and produce different values for the same file.
+  - q: >-
+        Why does this page exist?
+    a: >-
+        For interoperability. Some specifications and libraries expose SHA-512/224, and reproducing a digest from one of them requires the exact function rather than something the same length.
+  - q: >-
+        Is it resistant to length extension?
+    a: >-
+        Yes, because most of the internal state is discarded before output. For file checksums this makes no practical difference, but it is the structural reason the truncated SHA-512 variants exist.
+references:
+  - label: >-
+        FIPS 180-4 — Secure Hash Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
+---
+
+## Verifying a file with SHA-512/224
+
+Drop a file above to compute its SHA-512/224 digest — 56 hexadecimal characters, produced by
+running the full SHA-512 compression function and keeping the leftmost 224 bits.
+
+The file is read and hashed in your browser, streamed in chunks so that size is limited by
+time rather than memory.
+
+## Two ways to get 224 bits
+
+SHA-224 and SHA-512/224 both produce 28 bytes, and it is easy to reach for whichever name
+looks familiar. They are different functions: one truncates SHA-256, the other truncates
+SHA-512, and their digests never coincide.
+
+If a checksum does not match, confirming which of the two the publisher meant is the first
+thing to check. The digest length gives no clue, which is exactly what makes this confusion
+persistent.
+
+## On 64-bit hardware
+
+The SHA-512 core does less work per byte than the SHA-256 core, so SHA-512/224 generally
+outruns SHA-224 on desktop and server processors — a real if rarely relevant advantage.

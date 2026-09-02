@@ -1,0 +1,42 @@
+---
+description: >-
+    Compute the SHA3-384 checksum of a file in your browser. The file is read locally and never uploaded.
+faq:
+  - q: >-
+        Why is SHA3-384 slower than SHA3-256 on a large file?
+    a: >-
+        Its larger capacity leaves a rate of 832 bits, so only 104 bytes are absorbed per permutation call against 136 for SHA3-256. That is roughly 30% more permutation calls for the same file, and the permutation is where the time goes.
+  - q: >-
+        Is it the SHA-3 counterpart of SHA-384?
+    a: >-
+        Only in digest length. SHA-384 is truncated SHA-512 and is often faster than SHA-256; SHA3-384 is a distinct sponge parameterisation and is slower than SHA3-256. The digests are unrelated.
+  - q: >-
+        Does it match openssl dgst -sha3-384?
+    a: >-
+        Yes, byte for byte in hex.
+references:
+  - label: >-
+        FIPS 202 — SHA-3 Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
+---
+
+## Verifying a file with SHA3-384
+
+Drop a file above for its 96-character SHA3-384 digest. Hashing runs in your browser and the
+file is streamed rather than buffered, so a large file costs time but not memory.
+
+## The 192-bit tier
+
+SHA3-384 exists to sit alongside AES-256 and P-384 in the security tier that CNSA and several
+government profiles specify. If you are computing this digest, it is almost certainly because
+a policy names it rather than because you weighed the options.
+
+## What it costs
+
+Expect roughly 30% less throughput than SHA3-256, and considerably less than SHA-256 on
+hardware with SHA extensions — none of which this page can reach from JavaScript. On a
+multi-gigabyte file that difference is measured in seconds to minutes, so the progress bar
+above is doing real work.
+
+For ordinary download verification, SHA-256 is faster, universally supported, and beyond any
+practical attack.

@@ -1,0 +1,44 @@
+---
+description: >-
+    Compute a SHA3-384 hash of any text, with optional HMAC and a choice of input and output encodings.
+faq:
+  - q: >-
+        Why is SHA3-384 noticeably slower than SHA3-256?
+    a: >-
+        Its capacity is 768 bits, leaving a rate of 832 bits — only 104 bytes absorbed per permutation call, against 136 for SHA3-256. That is about 30% more permutation calls for the same input, and the permutation is where all the time goes.
+  - q: >-
+        Is SHA3-384 the SHA-3 equivalent of SHA-384?
+    a: >-
+        Only in output length. SHA-384 is SHA-512 truncated and inherits SHA-512's speed on 64-bit hardware; SHA3-384 is a distinct sponge parameterisation that is slower than its 256-bit sibling. The two produce unrelated digests.
+  - q: >-
+        When is a 384-bit digest actually required?
+    a: >-
+        In the 192-bit security tier that pairs with AES-256 and P-384 — the CNSA suite and several government and financial profiles specify it. Outside those, it is over-provisioned for anything a classical attacker can do.
+references:
+  - label: >-
+        FIPS 202 — SHA-3 Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
+---
+
+## What SHA3-384 does
+
+SHA3-384 produces a 384-bit digest, written as 96 hexadecimal characters. It runs the
+Keccak-f[1600] permutation over a sponge with 768 bits of capacity and 832 bits of rate,
+absorbing 104 bytes of input per permutation call.
+
+## The cost of a bigger digest
+
+In SHA-2, moving from SHA-256 to SHA-384 can make things *faster*, because SHA-384 is built
+on the 64-bit SHA-512 core. In SHA-3 the relationship is monotonic and intuitive: bigger
+digest, bigger capacity, smaller rate, more permutation calls, slower. SHA3-384 costs roughly
+30% more per byte than SHA3-256.
+
+That makes the choice straightforward. Pick SHA3-384 when a specification demands a 192-bit
+security tier, not as a general upgrade.
+
+## Post-quantum framing
+
+The usual argument for 384 and 512-bit digests is Grover's algorithm, which halves the
+effective preimage strength of a hash. A 384-bit digest keeps a 192-bit preimage margin under
+that model. Whether this justifies the throughput cost depends entirely on how long the data
+must stay secret — for anything with a horizon under a decade, SHA3-256 is not the weak link.

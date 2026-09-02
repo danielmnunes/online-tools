@@ -1,0 +1,121 @@
+@import "tailwindcss";
+
+/* Dark mode is driven by a class on <html> so the toggle can override the
+   OS preference. The inline script in BaseLayout sets it before first paint. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", "Fira Code",
+    Menlo, Consolas, monospace;
+}
+
+/* Semantic tokens. Components reference these, never raw palette values, so
+   the whole site re-themes from this one block. */
+:root {
+  --color-bg: var(--color-white);
+  --color-surface: var(--color-slate-50);
+  --color-border: var(--color-slate-200);
+  --color-fg: var(--color-slate-900);
+  --color-muted: var(--color-slate-500);
+  --color-accent: var(--color-indigo-600);
+  --color-accent-fg: var(--color-white);
+  --color-danger: var(--color-red-600);
+  --color-ok: var(--color-emerald-600);
+}
+
+.dark {
+  --color-bg: var(--color-slate-950);
+  --color-surface: var(--color-slate-900);
+  --color-border: var(--color-slate-800);
+  --color-fg: var(--color-slate-100);
+  --color-muted: var(--color-slate-400);
+  --color-accent: var(--color-indigo-400);
+  --color-accent-fg: var(--color-slate-950);
+  --color-danger: var(--color-red-400);
+  --color-ok: var(--color-emerald-400);
+}
+
+@theme inline {
+  --color-bg: var(--color-bg);
+  --color-surface: var(--color-surface);
+  --color-border: var(--color-border);
+  --color-fg: var(--color-fg);
+  --color-muted: var(--color-muted);
+  --color-accent: var(--color-accent);
+  --color-accent-fg: var(--color-accent-fg);
+  --color-danger: var(--color-danger);
+  --color-ok: var(--color-ok);
+}
+
+html {
+  scrollbar-gutter: stable;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-fg);
+}
+
+/* Prose defaults for the MDX content block. Kept hand-rolled instead of
+   pulling in @tailwindcss/typography: we need ~8 elements, not 200. */
+.prose-tool {
+  line-height: 1.7;
+}
+.prose-tool h2 {
+  font-size: 1.375rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  margin-block: 2rem 0.75rem;
+}
+.prose-tool h3 {
+  font-size: 1.0625rem;
+  font-weight: 650;
+  margin-block: 1.5rem 0.5rem;
+}
+.prose-tool p { margin-block: 0.75rem; }
+.prose-tool ul { list-style: disc; padding-inline-start: 1.25rem; margin-block: 0.75rem; }
+.prose-tool ol { list-style: decimal; padding-inline-start: 1.25rem; margin-block: 0.75rem; }
+.prose-tool li { margin-block: 0.25rem; }
+.prose-tool a {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.prose-tool code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.25rem;
+  padding: 0.1em 0.35em;
+}
+.prose-tool pre {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  padding: 0.875rem;
+  overflow-x: auto;
+  margin-block: 1rem;
+}
+.prose-tool pre code {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: 0.8125rem;
+}
+.prose-tool table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-block: 1rem;
+  font-size: 0.875rem;
+  display: block;
+  overflow-x: auto;
+}
+.prose-tool th, .prose-tool td {
+  border: 1px solid var(--color-border);
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+}
+.prose-tool th { background-color: var(--color-surface); font-weight: 600; }

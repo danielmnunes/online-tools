@@ -1,0 +1,53 @@
+---
+description: >-
+    Compute a BLAKE2s hash of any text, the 32-bit optimised variant of BLAKE2 from RFC 7693.
+faq:
+  - q: >-
+        When should I choose BLAKE2s over BLAKE2b?
+    a: >-
+        When the processor has no 64-bit registers — microcontrollers, small embedded targets, and some WebAssembly or JavaScript paths where 64-bit arithmetic is emulated. On any 64-bit CPU, BLAKE2b is faster and allows longer digests.
+  - q: >-
+        What is the maximum digest length?
+    a: >-
+        32 bytes for BLAKE2s, against 64 for BLAKE2b. BLAKE2s also caps its key at 32 bytes and its input counter at 2^64 bytes, all consequences of the narrower word size.
+  - q: >-
+        Why no HMAC option?
+    a: >-
+        BLAKE2 takes a key natively, mixed into its initial state, which is both faster and simpler than HMAC's nested construction. That is the intended way to use it as a MAC.
+references:
+  - label: >-
+        RFC 7693 — The BLAKE2 Cryptographic Hash and MAC
+    url: https://www.rfc-editor.org/rfc/rfc7693
+  - label: >-
+        BLAKE2 reference site
+    url: https://www.blake2.net/
+---
+
+## What BLAKE2s does
+
+BLAKE2s produces a digest of up to 256 bits — 64 hexadecimal characters at the default length
+used here. It processes 64-byte blocks through ten rounds of a ChaCha-derived compression
+function operating on 32-bit words.
+
+## The 32-bit half of the family
+
+BLAKE2 ships as two functions because word size dominates hash performance. BLAKE2b assumes
+64-bit registers and 128-byte blocks; BLAKE2s assumes 32-bit registers and 64-byte blocks.
+Running BLAKE2b on an 8-bit or 32-bit microcontroller means emulating 64-bit arithmetic,
+which is slow enough to matter. BLAKE2s exists so that constrained devices get the same
+design without that penalty.
+
+The trade is ceiling rather than strength: 256 bits of output instead of 512, and a shorter
+maximum key. At 256 bits both are equally out of reach of any attack.
+
+## Where it shows up
+
+WireGuard uses BLAKE2s throughout its handshake, chosen partly so the protocol runs
+identically on routers and embedded hardware. It also appears in the Noise protocol
+framework and in firmware update verification, where the target is exactly the kind of
+device BLAKE2s was drawn for.
+
+## And if you are on a modern CPU
+
+Use BLAKE2b, or BLAKE3. On 64-bit hardware BLAKE2s leaves performance on the table for no
+compensating benefit.

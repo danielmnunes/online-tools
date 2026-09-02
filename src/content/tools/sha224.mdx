@@ -1,0 +1,46 @@
+---
+description: >-
+    Compute a SHA-224 hash of any text, with optional HMAC and a choice of input and output encodings.
+faq:
+  - q: >-
+        Why would I choose SHA-224 over SHA-256?
+    a: >-
+        Almost never for security — both offer more strength than any current system needs, and SHA-224 costs exactly the same to compute since it is SHA-256 with a different starting state and a truncated output. The real reasons are interoperability with a protocol that specifies it, and fitting a digest into a 28-byte field.
+  - q: >-
+        Is SHA-224 just SHA-256 cut short?
+    a: >-
+        Not quite, and the difference matters. SHA-224 uses different initial hash values, so truncating a SHA-256 digest to 28 bytes does not give you the SHA-224 digest of the same input. The distinct initial state is deliberate — it stops the two functions being trivially related.
+  - q: >-
+        Does SHA-224 resist length-extension attacks?
+    a: >-
+        Partially, and by accident rather than design. Because 32 bits of internal state are discarded, an attacker who knows a SHA-224 digest cannot reconstruct the full chaining value needed to continue hashing. That makes the classic length-extension trick impractical, but it is not a security claim to build on — use HMAC when you need message authentication.
+references:
+  - label: >-
+        FIPS 180-4 — Secure Hash Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
+  - label: >-
+        RFC 3874 — A 224-bit One-way Hash Function
+    url: https://www.rfc-editor.org/rfc/rfc3874
+---
+
+## What SHA-224 does
+
+SHA-224 produces a 224-bit digest, written as 56 hexadecimal characters. Internally it is
+SHA-256: the same compression function, the same 64 rounds, the same 512-bit blocks. Two
+things differ — the eight initial hash values, and the fact that the last of the eight
+output words is discarded.
+
+## Why 224 bits exists at all
+
+The size was chosen to match the security level of Triple DES and of 2048-bit RSA, both of
+which sit at roughly 112 bits of strength. A 224-bit digest gives 112 bits of collision
+resistance, so pairing SHA-224 with those algorithms produces a system with no obviously
+weak link. That reasoning is largely historical now — modern protocols pair SHA-256 with
+AES-128 or better — which is why SHA-224 appears mostly in older standards and in
+certificate profiles that predate the current defaults.
+
+## Performance
+
+There is no speed advantage. SHA-224 and SHA-256 process data at identical rates because
+they run the same code; the only saving is 4 bytes of storage per digest. If you are
+choosing freely, choose SHA-256 and spend the four bytes.

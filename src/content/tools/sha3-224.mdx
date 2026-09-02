@@ -1,0 +1,44 @@
+---
+description: >-
+    Compute a SHA3-224 hash of any text, with optional HMAC and a choice of input and output encodings.
+faq:
+  - q: >-
+        How does SHA3-224 relate to SHA3-256?
+    a: >-
+        Same permutation, different capacity. SHA3-224 reserves 448 bits of the state as capacity and absorbs 144 bytes per permutation call, against SHA3-256's 136. So SHA3-224 is slightly faster per byte as well as shorter, which is the reverse of the SHA-2 situation where SHA-224 and SHA-256 cost exactly the same.
+  - q: >-
+        Can I get SHA3-224 by truncating SHA3-256?
+    a: >-
+        No. The two use different capacities and different domain padding, so their internal computations diverge from the first block. The digests are unrelated.
+  - q: >-
+        Is 224 bits enough?
+    a: >-
+        It gives 112 bits of collision resistance, which is the same tier as 2048-bit RSA and Triple DES. Adequate, and matched to those algorithms by design, but there is no reason to prefer it over SHA3-256 unless a specification asks for it.
+references:
+  - label: >-
+        FIPS 202 — SHA-3 Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
+---
+
+## What SHA3-224 does
+
+SHA3-224 produces a 224-bit digest, written as 56 hexadecimal characters. It uses the
+Keccak sponge with a rate of 1152 bits — 144 bytes absorbed per application of the
+Keccak-f[1600] permutation — and a capacity of 448 bits.
+
+## Rate and capacity
+
+The sponge splits its 1600-bit state into a rate, which is where input is mixed in, and a
+capacity, which is never touched directly by input or output. Security comes from the
+capacity: it must be twice the target collision resistance. Speed comes from the rate: the
+more bytes absorbed per permutation call, the fewer calls per megabyte.
+
+SHA3-224 sits at the fast end of the family for exactly this reason. Every step up in digest
+size costs capacity, which costs rate, which costs throughput. This is a cleaner trade-off
+than SHA-2 offers, where SHA-224 and SHA-256 run at identical speed.
+
+## When you would use it
+
+Interoperability, almost always. A protocol or hardware module that specifies a 224-bit SHA-3
+digest is the realistic reason to reach for this. Choosing freely, SHA3-256 costs little more
+and stops anyone having to think about whether 112 bits is enough.

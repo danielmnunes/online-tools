@@ -1,0 +1,49 @@
+---
+description: >-
+    Compute the BLAKE2b checksum of a file in your browser — the hash behind b2sum, faster than SHA-256 in software.
+faq:
+  - q: >-
+        Does this match b2sum?
+    a: >-
+        Yes. GNU coreutils b2sum defaults to BLAKE2b with a 512-bit digest, which is what this page produces. Paste its whole output line into the comparison box; the filename is ignored.
+  - q: >-
+        Is it really faster than sha256sum?
+    a: >-
+        In pure software, comfortably — BLAKE2b outruns MD5 while offering SHA-3-level security. On a CPU with SHA-256 instructions, hardware-accelerated sha256sum can still win. This page runs in JavaScript with no access to those instructions, so here BLAKE2b is the faster choice.
+  - q: >-
+        Why is there no HMAC option?
+    a: >-
+        BLAKE2 takes a key natively, which is both faster and cleaner than wrapping it in HMAC. Keyed hashing is a widget feature rather than an HMAC checkbox.
+references:
+  - label: >-
+        RFC 7693 — The BLAKE2 Cryptographic Hash and MAC
+    url: https://www.rfc-editor.org/rfc/rfc7693
+  - label: >-
+        BLAKE2 reference site
+    url: https://www.blake2.net/
+---
+
+## Verifying a file with BLAKE2b
+
+Drop a file above for its 128-character BLAKE2b digest. The file is streamed through the hash
+in your browser and never uploaded.
+
+## The fast option that is also well established
+
+BLAKE2b's pitch is that it is faster than MD5 while carrying the security margin of a SHA-3
+finalist. That is not marketing: the design took BLAKE, which had a large margin, and spent
+part of it on fewer rounds and a simpler schedule.
+
+Unlike newer fast hashes, it has been standardised since 2015, ships in GNU coreutils as
+`b2sum`, and is embedded in Argon2, libsodium and WireGuard. If you want speed without
+explaining a young algorithm to a reviewer, this is the one.
+
+## Matching the command line
+
+```
+b2sum bigfile.tar
+openssl dgst -blake2b512 bigfile.tar
+```
+
+Both produce the digest shown above. Note that `b2sum` can be asked for shorter digests with
+`-l`; this page computes the full 512-bit output.

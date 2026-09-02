@@ -1,0 +1,57 @@
+---
+import { getCollection, render } from 'astro:content';
+import ToolLayout from '~/layouts/ToolLayout.astro';
+import { TOOLS } from '~/tools/registry';
+import { CATEGORIES } from '~/tools/types';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('tools');
+  const contentById = new Map(entries.map((entry) => [entry.id, entry]));
+
+  // The registry and the content collection are two hand-maintained lists that
+  // must agree. Catching a mismatch here turns a silently broken page into a
+  // failed build, which is the whole point of having a build step.
+  const missingContent = TOOLS.filter((tool) => !contentById.has(tool.slug));
+  if (missingContent.length > 0) {
+    throw new Error(
+      `Tools in the registry with no src/content/tools/<slug>.mdx: ` +
+        missingContent.map((t) => t.slug).join(', '),
+    );
+  }
+
+  const registrySlugs = new Set(TOOLS.map((tool) => tool.slug));
+  const orphaned = entries.filter((entry) => !registrySlugs.has(entry.id));
+  if (orphaned.length > 0) {
+    throw new Error(
+      `Content files with no entry in src/tools/registry.ts: ` +
+        orphaned.map((e) => e.id).join(', '),
+    );
+  }
+
+  // Category pages live at /<category>/, so a tool may not claim that path.
+  const categoryIds = new Set<string>(CATEGORIES.map((category) => category.id));
+  const shadowed = TOOLS.filter((tool) => categoryIds.has(tool.slug));
+  if (shadowed.length > 0) {
+    throw new Error(
+      `Tool slugs collide with category pages: ` + shadowed.map((t) => t.slug).join(', '),
+    );
+  }
+
+  return TOOLS.map((tool) => ({
+    params: { slug: tool.slug },
+    props: { tool, entry: contentById.get(tool.slug)! },
+  }));
+}
+
+const { tool, entry } = Astro.props;
+const { Content } = await render(entry);
+---
+
+<ToolLayout
+  {tool}
+  description={entry.data.description}
+  faq={entry.data.faq}
+  references={entry.data.references}
+>
+  <Content />
+</ToolLayout>

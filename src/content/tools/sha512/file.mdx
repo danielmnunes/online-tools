@@ -1,0 +1,43 @@
+---
+description: >-
+    Compute the SHA-512 checksum of a file in your browser. The file is read locally and never uploaded.
+faq:
+  - q: >-
+        Why do some projects publish SHA-512 instead of SHA-256?
+    a: >-
+        Partly margin, partly speed. On 64-bit processors without SHA-256 hardware instructions, SHA-512 hashes faster because it does less work per byte. Debian's repository metadata, RPM package headers and a number of release pipelines use it for that reason.
+  - q: >-
+        Does it match sha512sum?
+    a: >-
+        Yes, byte for byte. Paste the whole sha512sum line into the comparison box; the filename after the digest is ignored.
+  - q: >-
+        Is a 128-character checksum unwieldy?
+    a: >-
+        A little, which is why some projects prefer Base64. Switch the output encoding above to compare against a Base64-formatted digest without converting anything by hand.
+references:
+  - label: >-
+        FIPS 180-4 — Secure Hash Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
+---
+
+## Verifying a file with SHA-512
+
+Drop a file above to compute its SHA-512 digest. The file is streamed through the hash in
+your browser and never leaves the machine.
+
+## The speed argument
+
+It is counter-intuitive that the longer digest is often the faster one, but SHA-512 works on
+64-bit words with 1024-bit blocks where SHA-256 works on 32-bit words with 512-bit blocks.
+Per byte of input, SHA-512 does meaningfully less work on any 64-bit CPU. That is why it
+appears in package management systems that hash a great deal of data.
+
+The exception is hardware acceleration: x86 SHA-NI and the ARMv8 crypto extensions implement
+SHA-256 but usually not SHA-512, and on those paths SHA-256 wins comfortably. This page runs
+in JavaScript with no access to either, so here SHA-512 is the quicker of the two.
+
+## What the checksum is for
+
+As always, a checksum published beside the download proves the bytes are intact, not that
+they are authentic. Where it matters, verify a signature over the checksum file with a key
+you obtained from somewhere other than the download page.

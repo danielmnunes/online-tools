@@ -1,0 +1,43 @@
+---
+description: >-
+    Apply SHA-256 twice to a file, the HASH256 construction used throughout Bitcoin.
+faq:
+  - q: >-
+        Will this match a Bitcoin block hash?
+    a: >-
+        Only if you feed it the 80-byte serialised block header, and only after reversing the byte order. Bitcoin displays hashes little-endian while this tool shows big-endian, so the digest here reads backwards compared with a block explorer.
+  - q: >-
+        Is the second hash applied to the hex or the bytes?
+    a: >-
+        The raw 32 bytes, which is correct and is the most common implementation mistake. Hashing the hexadecimal text of the first digest gives a different, wrong answer.
+  - q: >-
+        Why would I checksum a file this way?
+    a: >-
+        Almost never for ordinary downloads — nobody publishes double SHA-256 checksums. This page is for working with Bitcoin data: serialised blocks, raw transactions, and formats that inherited the convention.
+references:
+  - label: >-
+        Bitcoin developer reference — block chain
+    url: https://developer.bitcoin.org/reference/block_chain.html
+---
+
+## Hashing a file with HASH256
+
+Drop a file above and it is hashed with `SHA-256(SHA-256(bytes))` — Bitcoin's `HASH256`. The
+file is streamed through both passes locally and never uploaded.
+
+## What this is useful for
+
+Raw Bitcoin data, essentially. A serialised block header hashed this way gives the block
+hash; a serialised transaction gives the txid; the Merkle root that binds a block's
+transactions is built from the same construction. If you have dumped one of those to a file,
+this page reproduces the identifier.
+
+For verifying an ordinary download it is the wrong tool, because no one publishes double
+SHA-256 checksums. Use the SHA-256 page for that.
+
+## The byte-order trap
+
+Bitcoin prints hashes in reverse. A block hash that a explorer shows as
+`0000...abcd` appears here with its byte pairs in the opposite order. Nothing is wrong — read
+the digest from the end in pairs of hex characters to compare with the explorer, or reverse
+the bytes before display in your own code.

@@ -1,0 +1,42 @@
+---
+description: >-
+    Compute the SHA3-224 checksum of a file in your browser. The file is read locally and never uploaded.
+faq:
+  - q: >-
+        Is SHA3-224 faster than SHA3-256?
+    a: >-
+        Slightly, yes. A smaller digest allows a smaller capacity and therefore a larger rate — 144 bytes absorbed per permutation call against 136 — so it does marginally less work per byte. This is the opposite of SHA-224 and SHA-256, which cost exactly the same.
+  - q: >-
+        Can I truncate a SHA3-256 digest to get this?
+    a: >-
+        No. The two use different capacities and different domain padding, so their computations diverge immediately.
+  - q: >-
+        Is it the same as Keccak-224?
+    a: >-
+        No. Keccak-224 uses the original competition padding; SHA3-224 uses the padding NIST added in FIPS 202. The digests never match.
+references:
+  - label: >-
+        FIPS 202 — SHA-3 Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
+---
+
+## Verifying a file with SHA3-224
+
+Drop a file above for its 56-character SHA3-224 digest, computed locally and streamed through
+the file so that size is limited by patience rather than memory.
+
+## The one place SHA-3 sizes behave intuitively
+
+In the SHA-2 family, a shorter digest does not mean a faster hash — SHA-224 and SHA-256 run
+the identical computation. In SHA-3 the relationship is direct: the sponge splits its state
+into rate and capacity, capacity scales with the digest size, and whatever is left is rate.
+More rate means more bytes absorbed per permutation call.
+
+So SHA3-224 really is the fastest member of the family, and SHA3-512 the slowest, by a factor
+of nearly two.
+
+## In practice
+
+You will rarely see a SHA3-224 checksum published. This page exists for reproducing a value
+from a specification or a library that exposes it. For verifying downloads, SHA-256 remains
+what publishers actually use.

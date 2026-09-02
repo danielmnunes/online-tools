@@ -1,0 +1,45 @@
+---
+description: >-
+    Compute the SHA-224 checksum of a file in your browser. The file is read locally and never uploaded.
+faq:
+  - q: >-
+        Will I ever see a SHA-224 checksum published?
+    a: >-
+        Rarely. It appears in older standards and in certificate profiles built around a 112-bit security tier, but essentially no software project publishes SHA-224 download checksums. If you are here, it is probably to match a specific tool or specification.
+  - q: >-
+        Is it faster than SHA-256 for large files?
+    a: >-
+        No. SHA-224 is SHA-256 with different initial values and a truncated output, so it costs exactly the same per byte. The only saving is four bytes of digest.
+  - q: >-
+        Does it match sha224sum?
+    a: >-
+        Yes. The lowercase hex output is identical to what sha224sum prints.
+references:
+  - label: >-
+        FIPS 180-4 — Secure Hash Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
+  - label: >-
+        RFC 3874 — A 224-bit One-way Hash Function
+    url: https://www.rfc-editor.org/rfc/rfc3874
+---
+
+## Verifying a file with SHA-224
+
+Drop a file above and its 56-character SHA-224 digest appears. The file is read through the
+browser's File API and streamed through the hash; nothing is uploaded, and there is no size
+limit beyond how long you are willing to wait.
+
+## A digest size chosen to match something else
+
+SHA-224 exists because 224 bits gives 112 bits of collision resistance, which is the security
+level of Triple DES and 2048-bit RSA. Pairing them produced a system with no weak link. That
+reasoning belonged to a period when Triple DES was still a live option, so SHA-224 is now
+mostly a compatibility function.
+
+For file verification specifically there is no argument for it: SHA-256 costs the same,
+produces four more bytes, and is what everyone publishes.
+
+## Matching the command line
+
+`sha224sum file` and `shasum -a 224 file` both produce the value shown above. Paste either
+tool's whole output line into the comparison box — the filename is ignored.

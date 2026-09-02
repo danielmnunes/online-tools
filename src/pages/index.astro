@@ -1,0 +1,65 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '~/layouts/BaseLayout.astro';
+import ToolCard from '~/components/ToolCard.astro';
+import { TOOLS, populatedCategories, toolsInCategory } from '~/tools/registry';
+
+const entries = await getCollection('tools');
+const descriptionById = new Map(entries.map((entry) => [entry.id, entry.data.description]));
+
+// The home page is a directory, not a dump: once a category outgrows this
+// many entries the rest live on the category page.
+const PREVIEW_PER_CATEGORY = 8;
+
+const sections = populatedCategories().map((category) => {
+  const all = toolsInCategory(category.id);
+  return {
+    category,
+    total: all.length,
+    tools: all.slice(0, PREVIEW_PER_CATEGORY).map((tool) => ({
+      tool,
+      description: descriptionById.get(tool.slug) ?? '',
+    })),
+  };
+});
+
+const description =
+  'Free developer tools for hashing, encoding, encryption and compression. ' +
+  'Everything runs in your browser — nothing is uploaded.';
+---
+
+<BaseLayout title="online/tools — developer tools that run in your browser" {description}>
+  <section class="max-w-2xl">
+    <h1 class="text-3xl font-semibold tracking-tight sm:text-4xl">
+      Developer tools that never see your data
+    </h1>
+    <p class="mt-3 text-[0.9375rem] leading-relaxed text-muted">
+      {TOOLS.length} tools for hashing, encoding, encryption and compression. Each one runs
+      as WebAssembly and JavaScript inside your own browser, so your input never leaves the
+      machine you typed it on. Open the network tab and check.
+    </p>
+  </section>
+
+  {
+    sections.map(({ category, tools, total }) => (
+      <section class="mt-10">
+        <div class="flex items-baseline gap-3">
+          <h2 class="text-lg font-semibold tracking-tight">
+            <a href={`/${category.id}/`} class="hover:text-accent">{category.label}</a>
+          </h2>
+          <p class="text-xs text-muted">{category.blurb}</p>
+        </div>
+        <ul class="mt-3 grid gap-3 sm:grid-cols-2">
+          {tools.map(({ tool, description: toolDescription }) => (
+            <ToolCard {tool} description={toolDescription} />
+          ))}
+        </ul>
+        {total > tools.length && (
+          <a href={`/${category.id}/`} class="mt-3 inline-block text-sm text-accent hover:underline">
+            View all {total} {category.label.toLowerCase()} tools →
+          </a>
+        )}
+      </section>
+    ))
+  }
+</BaseLayout>

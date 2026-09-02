@@ -1,0 +1,49 @@
+---
+description: >-
+    Compute the SHA-384 checksum of a file, including the Base64 form used by Subresource Integrity.
+faq:
+  - q: >-
+        How do I produce a Subresource Integrity hash?
+    a: >-
+        Set the output encoding above to Base64 and prefix the result with "sha384-". That gives the value for an integrity attribute — for example integrity="sha384-BASE64VALUE". SRI accepts sha256, sha384 and sha512, and sha384 is the conventional choice.
+  - q: >-
+        Does this match shasum -a 384?
+    a: >-
+        Yes in hex. Command-line tools print hex; SRI wants Base64 of the same digest bytes, which is why the encoding selector is useful on this page in particular.
+  - q: >-
+        Why is SHA-384 sometimes faster than SHA-256?
+    a: >-
+        It is SHA-512 with the output truncated, and SHA-512 works on 64-bit words. Fewer operations per byte on 64-bit hardware, despite the longer digest.
+references:
+  - label: >-
+        Subresource Integrity — W3C
+    url: https://www.w3.org/TR/SRI/
+  - label: >-
+        FIPS 180-4 — Secure Hash Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
+---
+
+## The Subresource Integrity use case
+
+SHA-384 is the hash most often seen in an `integrity` attribute — the mechanism that lets a
+page load a script from a CDN and have the browser refuse it if a single byte differs from
+what the author pinned.
+
+```html
+<script src="https://cdn.example.com/lib.js"
+        integrity="sha384-oqVuAfXRKap7fdgcCY5uykM6+R9GqQ8K/uxy9rx7HNQlGYl1kPzQho1wx4JwY8wC"
+        crossorigin="anonymous"></script>
+```
+
+To generate that value: drop the file above, switch the output encoding to Base64, and
+prefix the result with `sha384-`. The equivalent on a command line is
+`openssl dgst -sha384 -binary lib.js | openssl base64 -A`.
+
+## Verifying downloads
+
+The same digest in hex form is what `shasum -a 384` prints, so this page works for ordinary
+checksum verification too. Paste a published digest into the comparison box and it is
+checked against every output encoding, so a Base64 checksum matches even while the display
+shows hex.
+
+The file never leaves your browser — it is read locally and streamed through the hash.

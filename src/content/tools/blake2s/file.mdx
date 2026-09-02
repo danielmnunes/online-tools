@@ -1,0 +1,44 @@
+---
+description: >-
+    Compute the BLAKE2s checksum of a file in your browser. The file is read locally and never uploaded.
+faq:
+  - q: >-
+        Should I use BLAKE2s or BLAKE2b for a file?
+    a: >-
+        BLAKE2b on any 64-bit machine, which includes anything you are likely to be reading this on. BLAKE2s uses 32-bit words and exists for microcontrollers and other constrained targets. It also caps its digest at 256 bits against BLAKE2b's 512.
+  - q: >-
+        Does it match b2sum?
+    a: >-
+        Not by default — b2sum computes BLAKE2b. Use openssl dgst -blake2s256 to get the value this page produces.
+  - q: >-
+        Where does BLAKE2s get used?
+    a: >-
+        WireGuard's handshake, the Noise protocol framework, and firmware verification on embedded devices — places chosen so the same code runs on a router and a server.
+references:
+  - label: >-
+        RFC 7693 — The BLAKE2 Cryptographic Hash and MAC
+    url: https://www.rfc-editor.org/rfc/rfc7693
+  - label: >-
+        BLAKE2 reference site
+    url: https://www.blake2.net/
+---
+
+## Verifying a file with BLAKE2s
+
+Drop a file above for its 64-character BLAKE2s digest. Hashing runs locally, streamed through
+the file, with nothing uploaded.
+
+## The variant for small processors
+
+BLAKE2 ships as two functions because word size dominates hash performance. BLAKE2s works on
+32-bit words and 64-byte blocks so that a microcontroller without 64-bit arithmetic runs it
+at full speed rather than emulating wide integers.
+
+That means the usual reason to be on this page is compatibility with a device or protocol
+that chose BLAKE2s deliberately — checking a firmware image against a digest the bootloader
+will compute, for instance.
+
+## On a desktop
+
+BLAKE2b is faster and allows longer digests. If you are choosing freely and hashing a large
+file on a modern machine, use that page instead, or BLAKE3.

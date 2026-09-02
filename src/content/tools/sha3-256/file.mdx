@@ -1,0 +1,43 @@
+---
+description: >-
+    Compute the SHA3-256 checksum of a file in your browser. The file is read locally and never uploaded.
+faq:
+  - q: >-
+        Does this match sha3sum or openssl dgst -sha3-256?
+    a: >-
+        Yes, both. The lowercase hex output is identical. Note that it will not match a tool computing Keccak-256 — those differ by a padding byte and produce entirely different digests.
+  - q: >-
+        Should I publish SHA3-256 checksums instead of SHA-256?
+    a: >-
+        There is no security reason to switch — SHA-256 is unbroken — and SHA-256 is what every verifier already has. Publish SHA3-256 when a policy requires algorithm diversity, or alongside SHA-256 rather than instead of it.
+  - q: >-
+        Why is it slower here than SHA-256?
+    a: >-
+        SHA-3 is slower than SHA-2 in software generally, and this page has no access to the CPU's SHA-256 instructions either way. On large files the difference is noticeable.
+references:
+  - label: >-
+        FIPS 202 — SHA-3 Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
+---
+
+## Verifying a file with SHA3-256
+
+Drop a file above for its SHA3-256 digest. The file is streamed through the sponge
+construction in your browser and never uploaded.
+
+## Why a project would publish SHA-3
+
+Not because SHA-2 is failing — it is not. The argument is structural diversity: SHA-2 and
+SHA-3 share no design ancestry, so a break in one would leave the other standing. Some
+government and financial profiles require an approved alternative to be available for exactly
+that reason, and a few projects publish both digests so verifiers can choose.
+
+In everyday use SHA-256 remains the pragmatic choice for a published checksum, because every
+machine already has a tool that computes it.
+
+## Not Keccak-256
+
+If a digest does not match, check which function was meant. NIST added two domain-separator
+bits to the padding when standardising, so SHA3-256 and the original Keccak-256 give
+completely different results for the same file. Ethereum tooling means Keccak; `sha3sum` and
+`openssl` mean SHA-3.

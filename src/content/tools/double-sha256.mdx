@@ -1,0 +1,54 @@
+---
+description: >-
+    Apply SHA-256 twice, the construction Bitcoin uses for block hashes and transaction identifiers.
+faq:
+  - q: >-
+        Why hash twice instead of once?
+    a: >-
+        The usual explanation is protection against length-extension attacks — an attacker who knows the outer digest learns nothing about the inner state, so the trick that works on plain SHA-256 does not apply. Whether Bitcoin actually needed that property is debated, but the construction is now fixed by consensus and cannot change.
+  - q: >-
+        Is this the same as hashing the hex string of the first digest?
+    a: >-
+        No, and this is the most common mistake. The second SHA-256 runs over the 32 raw bytes of the first digest, not over its 64-character hexadecimal representation. Hashing the hex text gives a completely different, wrong answer.
+  - q: >-
+        Why do Bitcoin block hashes appear reversed?
+    a: >-
+        Bitcoin displays hashes in little-endian byte order while this tool, like most, shows big-endian. To match a block explorer, reverse the byte order of the digest — read it as pairs of hex characters from the end to the beginning.
+  - q: >-
+        Is double SHA-256 twice as strong?
+    a: >-
+        No. Chaining a hash with itself does not double the security level; collision resistance is still governed by the 256-bit output, so 128 bits. It also cannot be stronger than a single SHA-256 against collisions, since any collision in the inner hash is a collision in the whole construction.
+references:
+  - label: >-
+        Bitcoin developer reference — block hashing
+    url: https://developer.bitcoin.org/reference/block_chain.html
+  - label: >-
+        FIPS 180-4 — Secure Hash Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
+---
+
+## What this computes
+
+`SHA-256(SHA-256(message))` — the raw 32-byte output of the first pass fed straight into a
+second pass. Bitcoin calls it `HASH256`, and it is what produces block hashes, transaction
+identifiers and the Merkle tree that binds transactions into a block. The proof-of-work
+puzzle miners solve is finding a block header whose double SHA-256 falls below a target.
+
+## The two traps
+
+**Bytes, not text.** The intermediate digest must be passed on as 32 bytes. Feeding the
+hexadecimal string into the second round is a mistake that produces a plausible-looking
+result and wastes a great deal of debugging time. This tool does it correctly; if you are
+reimplementing it, that is the line to check first.
+
+**Byte order.** Bitcoin's RPC interface and block explorers print hashes in reverse byte
+order, a historical accident of how the original client serialised integers. A digest that
+looks nothing like the block hash you expected is usually just the same value read the other
+way round.
+
+## Where else it appears
+
+Beyond Bitcoin, double SHA-256 shows up in the Base58Check encoding used for addresses,
+where the first four bytes of the double hash serve as a checksum, and in a scattering of
+formats that copied Bitcoin's conventions. Outside that lineage there is little reason to
+choose it — SHA-512/256 or SHA-3 give length-extension resistance without the folklore.

@@ -1,0 +1,45 @@
+---
+description: >-
+    Compute the SHA-512/256 checksum of a file in your browser. The file is read locally and never uploaded.
+faq:
+  - q: >-
+        Is this the same as SHA-256?
+    a: >-
+        No, and the digests differ completely. SHA-512/256 runs the SHA-512 compression function with a purpose-built initial state and keeps the first 256 bits. It is a different function that happens to produce the same length.
+  - q: >-
+        Can I compute it by truncating a SHA-512 digest?
+    a: >-
+        No. The initial hash values differ, so the computation diverges from the very first block. Truncating SHA-512 yourself gives an unrelated value.
+  - q: >-
+        Where would I meet a SHA-512/256 checksum?
+    a: >-
+        Go programs using crypto/sha512, some database and filesystem formats that wanted length-extension resistance and 64-bit speed, and protocols designed after that weakness became well known.
+references:
+  - label: >-
+        FIPS 180-4 — Secure Hash Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
+---
+
+## Verifying a file with SHA-512/256
+
+Drop a file above to compute its SHA-512/256 digest: 64 hexadecimal characters, the same
+length as SHA-256 but a different function.
+
+Hashing happens locally, streamed through the file so that multi-gigabyte inputs work
+without loading anything fully into memory.
+
+## The variant that deserved more adoption
+
+SHA-512/256 gives the same 128-bit collision resistance as SHA-256, runs faster in software
+on 64-bit processors, and cannot be length-extended. On the technical merits it is the better
+32-byte hash from the SHA-2 family.
+
+What it never got was ubiquity. `sha256sum` is on every machine; there is no `sha512-256sum`.
+SHA-256 has dedicated CPU instructions that no software SHA-512 variant can match. For a
+published checksum, being the thing everyone can verify is itself a feature — which is why
+SHA-256 remains the right default despite this.
+
+## Telling them apart
+
+Both produce 64 hex characters, so a mismatch gives no hint about which function was meant.
+If a checksum fails, check the algorithm before checking the file.

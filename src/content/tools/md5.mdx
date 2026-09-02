@@ -1,0 +1,60 @@
+---
+description: >-
+    Compute an MD5 hash of any text, with optional HMAC and a choice of input and output encodings.
+faq:
+  - q: >-
+        Can an MD5 hash be decrypted back to the original text?
+    a: >-
+        No. MD5 is a one-way function, not encryption — the 128-bit digest simply does not contain enough information to reconstruct an arbitrary input. What tools advertising "MD5 decryption" actually do is look the digest up in a table of pre-computed hashes of common strings, which only works for short or predictable inputs.
+  - q: >-
+        Is MD5 safe for storing passwords?
+    a: >-
+        No, and it never really was. MD5 is designed to be fast, which is exactly the wrong property for a password hash — commodity hardware computes billions of MD5 digests per second, so a stolen database of MD5 password hashes is effectively a database of plaintext passwords. Use Argon2id, scrypt or bcrypt, all of which are deliberately slow and memory-hard.
+  - q: >-
+        Why does my digest differ from another tool's?
+    a: >-
+        Almost always because of the bytes being hashed, not the algorithm. The usual causes are a trailing newline your editor added, CRLF versus LF line endings, or a different character encoding for non-ASCII text. Set the input encoding explicitly above and check for a trailing newline before assuming a bug.
+  - q: >-
+        Is MD5 still acceptable for anything?
+    a: >-
+        Yes, for non-adversarial integrity checking — detecting accidental corruption in a file transfer, deduplicating content, or as a cache key. It is unsuitable wherever an attacker controls the input, which rules out signatures, certificates and password storage.
+references:
+  - label: >-
+        RFC 1321 — The MD5 Message-Digest Algorithm
+    url: https://www.rfc-editor.org/rfc/rfc1321
+  - label: >-
+        RFC 6151 — Updated Security Considerations for MD5 and HMAC-MD5
+    url: https://www.rfc-editor.org/rfc/rfc6151
+---
+
+## What MD5 does
+
+MD5 reduces an input of any length to a fixed 128-bit value, conventionally written as 32
+hexadecimal characters. It was published by Ronald Rivest in 1992 as RFC 1321 and, for
+about a decade, was the default choice whenever a program needed a checksum.
+
+The function is deterministic: the same bytes always produce the same digest, on any machine.
+That is what makes it useful for integrity checking — hash a file before and after a transfer,
+compare the two digests, and any accidental corruption shows up as a completely different value.
+
+## Why MD5 is considered broken
+
+MD5 is broken in the specific sense that **collisions are easy to construct**. A collision is
+two different inputs with the same digest. Wang and Yu demonstrated practical collisions in
+2004, and by 2009 Stevens and colleagues had a chosen-prefix attack: given any two starting
+messages, an attacker can compute suffixes that make the full messages hash identically.
+This is not theoretical — the Flame malware discovered in 2012 used an MD5 collision to forge
+a code-signing certificate that Windows accepted.
+
+Collision resistance is what signatures, certificates and content-addressed storage depend on,
+so MD5 is disqualified from all of them. Note that MD5 is *not* broken for preimages — nobody
+can take a digest and produce an input that hashes to it. That distinction is why HMAC-MD5,
+which relies on a keyed construction rather than collision resistance, held up considerably
+longer than plain MD5, though there is still no reason to choose it for new work.
+
+## Choosing something else
+
+For integrity checking where an attacker might be involved, use SHA-256 or BLAKE3. For
+password storage, use Argon2id. For a fast non-cryptographic checksum where you only care
+about accidental corruption and want speed, xxHash is far faster than MD5 and equally
+unsuitable for adversarial use — which at least makes the limitation obvious.

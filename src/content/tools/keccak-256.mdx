@@ -1,0 +1,54 @@
+---
+description: >-
+    Compute the original Keccak-256 hash used by Ethereum, which differs from the standardised SHA3-256.
+faq:
+  - q: >-
+        What is the difference between Keccak-256 and SHA3-256?
+    a: >-
+        One byte of padding. Before standardising, NIST appended the domain-separator bits 01 to every message, so SHA3-256 pads with 0x06 where original Keccak pads with 0x01. Everything else — the permutation, the rate, the capacity — is identical. That single change makes every digest different, which is why the two cannot be used interchangeably.
+  - q: >-
+        Which one does Ethereum use?
+    a: >-
+        The original Keccak-256, this one. Ethereum shipped before FIPS 202 was finalised and kept the submission version for consensus compatibility. Solidity's keccak256, the Ethereum address derivation, the function selectors in ABI encoding and the state trie all use it. Solidity's sha3 was an alias for keccak256 and was removed precisely because the name misled people.
+  - q: >-
+        How do I check I am using the right one?
+    a: >-
+        Hash the empty string. Keccak-256 gives c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470 — the constant that appears throughout Ethereum as the empty trie root. SHA3-256 gives a completely different value.
+  - q: >-
+        Is Keccak-256 less secure for not being standardised?
+    a: >-
+        No. The padding change was about domain separation between SHA-3 and other Keccak-based functions, not about repairing a weakness. Both are the same cryptographic construction with the same security claims.
+references:
+  - label: >-
+        FIPS 202 — SHA-3 Standard (see the padding discussion)
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
+  - label: >-
+        The Keccak team's reference site
+    url: https://keccak.team/
+---
+
+## What Keccak-256 does
+
+Keccak-256 produces a 256-bit digest, written as 64 hexadecimal characters, using the
+Keccak-f[1600] permutation in a sponge with 136 bytes of rate and 512 bits of capacity —
+exactly the parameters SHA3-256 uses. The only divergence is the padding applied to the final
+block.
+
+## The padding split, and why it matters so much
+
+Keccak won the SHA-3 competition in 2012. During standardisation NIST added two domain
+separator bits before the multi-rate padding, so that SHA-3 hashing, SHAKE output and other
+Keccak-derived functions could not collide with one another. FIPS 202 landed in August 2015.
+
+Ethereum launched in July 2015, using the competition version. Changing it afterwards would
+have been a consensus break, so it stayed. The result is a permanent fork in naming that
+still catches people out: a library's `sha3_256` will not reproduce a Solidity `keccak256`
+hash, and the failure is silent — you get a valid-looking 64-character digest that is simply
+wrong.
+
+## Where you will meet it
+
+Ethereum addresses (the last 20 bytes of the Keccak-256 of an uncompressed public key), ABI
+function selectors (the first 4 bytes of the Keccak-256 of the signature string), event
+topics, the Merkle Patricia trie, EIP-55 checksummed address capitalisation, and every
+`keccak256()` call in Solidity.

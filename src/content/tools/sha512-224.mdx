@@ -1,0 +1,46 @@
+---
+description: >-
+    Compute a SHA-512/224 hash of any text, with optional HMAC and a choice of input and output encodings.
+faq:
+  - q: >-
+        How is SHA-512/224 different from SHA-224?
+    a: >-
+        They produce the same digest length from completely different computations. SHA-224 is SHA-256 truncated; SHA-512/224 is SHA-512 truncated. The digests of the same input do not match. SHA-512/224 is usually faster on 64-bit hardware, for the same reason SHA-512 is.
+  - q: >-
+        Where do the initial hash values come from?
+    a: >-
+        FIPS 180-4 specifies a generation procedure rather than a table: take the SHA-512 initial values, exclusive-or each with 0xa5a5a5a5a5a5a5a5, run SHA-512 over the ASCII string naming the variant, and use the result as the new starting state. It is a deterministic, auditable way to produce constants that are clearly not chosen to hide a weakness.
+  - q: >-
+        Is it safe against length extension?
+    a: >-
+        Yes. Only 224 of the 512 state bits appear in the output, so the chaining value cannot be recovered from a digest, and the extension trick does not apply.
+references:
+  - label: >-
+        FIPS 180-4 — Secure Hash Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
+---
+
+## What SHA-512/224 does
+
+SHA-512/224 produces a 224-bit digest, written as 56 hexadecimal characters. It runs the
+full SHA-512 compression function with a distinct initial state, then keeps the leftmost 224
+bits of the 512-bit result.
+
+## The point of the design
+
+Two properties come out of truncating a wide hash rather than using a narrow one. The first
+is speed: on 64-bit processors the SHA-512 core is considerably faster per byte than the
+SHA-256 core, so you get a short digest at the cost of the fast function. The second is
+immunity to length extension, which follows automatically once most of the state is thrown
+away.
+
+The initial values are not arbitrary. FIPS 180-4 derives them by hashing the string
+"SHA-512/224" under a modified SHA-512, which makes them nothing-up-my-sleeve numbers —
+anyone can regenerate them and verify no structure was smuggled in.
+
+## When to use it
+
+Rarely by choice, usually because a specification calls for it. If you want a 224-bit digest
+and are free to pick, this is the better of the two options on modern server hardware; if
+you want a short digest and have no constraints at all, SHA-256 truncated to your needs, or
+BLAKE3 with a custom output length, are simpler things to explain to the next reader.

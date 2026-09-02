@@ -1,0 +1,49 @@
+---
+description: >-
+    Compute a SHA-1 hash of any text, with optional HMAC and a choice of input and output encodings.
+faq:
+  - q: >-
+        Is SHA-1 still safe to use?
+    a: >-
+        Not for anything security-relevant. A practical collision was demonstrated in 2017 (SHAttered) and a chosen-prefix collision followed in 2020, bringing the cost of forging a colliding pair within reach of a well-funded attacker. NIST has formally deprecated SHA-1 and plans to disallow it entirely by 2030. Use SHA-256 instead.
+  - q: >-
+        If SHA-1 is broken, why does Git still use it?
+    a: >-
+        Git uses SHA-1 as a content address rather than a signature, and modern Git ships with collision detection that rejects the known attack patterns. The project has also implemented SHA-256 object formats. In practice the threat model for a local repository is different from that for a certificate authority, but new systems should not choose SHA-1.
+  - q: >-
+        How is SHA-1 different from MD5?
+    a: >-
+        SHA-1 produces a 160-bit digest instead of 128, and uses a different compression function with more rounds. That made it meaningfully stronger than MD5 for about fifteen years, but the two are now in the same category — both have practical collision attacks and neither should be used where an attacker controls the input.
+references:
+  - label: >-
+        RFC 3174 — US Secure Hash Algorithm 1 (SHA1)
+    url: https://www.rfc-editor.org/rfc/rfc3174
+  - label: >-
+        FIPS 180-4 — Secure Hash Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
+---
+
+## What SHA-1 does
+
+SHA-1 maps an input of any length to a 160-bit digest, normally written as 40 hexadecimal
+characters. It was designed by the NSA and published by NIST in 1995 as part of the Secure
+Hash Standard, and it became the workhorse hash of the early web — TLS certificates, Git
+object identifiers, software release checksums.
+
+## The collision attacks
+
+The theoretical margin on SHA-1 eroded steadily from 2005 onwards. The decisive moment was
+February 2017, when researchers at CWI Amsterdam and Google published **SHAttered**: two
+distinct PDF files with the same SHA-1 digest, produced with roughly nine quintillion
+computations. In 2020 the *SHA-1 is a Shambles* work extended this to a chosen-prefix
+collision, which is the shape of attack that lets someone forge a certificate or substitute
+a document, at a cost of tens of thousands of dollars in rented compute.
+
+Once chosen-prefix collisions are affordable, a hash function is finished for any use that
+depends on two parties agreeing that a digest identifies one specific document.
+
+## What to use instead
+
+SHA-256 is the direct replacement and is what most systems migrated to. If you need speed,
+BLAKE3 is considerably faster than SHA-1 while offering a proper 256-bit security level.
+For password storage, no plain hash is appropriate — use Argon2id.

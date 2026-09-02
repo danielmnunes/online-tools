@@ -1,0 +1,45 @@
+---
+description: >-
+    Compute the original Keccak-384 hash of a file, the competition variant that predates SHA3-384.
+faq:
+  - q: >-
+        How does this differ from SHA3-384?
+    a: >-
+        Only in the final padding byte — 0x01 here against 0x06 for SHA3-384. The permutation, the 768-bit capacity and the 104-byte rate are identical, but the digests never match.
+  - q: >-
+        Is it slower than Keccak-256?
+    a: >-
+        By roughly 30%. The larger capacity leaves less rate, so more permutation calls are needed per megabyte.
+  - q: >-
+        Where would I need it?
+    a: >-
+        Reproducing output from an implementation written against the Keccak submission rather than FIPS 202. There is no widely deployed system that depends on this variant.
+references:
+  - label: >-
+        The Keccak team's reference site
+    url: https://keccak.team/
+  - label: >-
+        FIPS 202 — SHA-3 Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
+---
+
+## Hashing a file with Keccak-384
+
+Drop a file above for its 96-character Keccak-384 digest, computed with the original
+competition padding. Everything runs in your browser; the file is streamed and never
+uploaded.
+
+## Original versus standardised, once more
+
+The SHA-3 standard differs from the Keccak submission in exactly two bits appended before
+padding. That was enough to split the ecosystem into two families of function with nearly
+identical names, and it is why a page like this exists at all.
+
+For a 384-bit digest in anything new, SHA3-384 is the name current specifications mean. This
+page is for matching something older.
+
+## Speed expectations
+
+Keccak-384 absorbs 104 bytes per permutation call. On a large file that is noticeably slower
+than Keccak-256's 136 and dramatically slower than a hardware-accelerated SHA-256 — which
+this page cannot reach from JavaScript in any case.

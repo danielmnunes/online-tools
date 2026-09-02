@@ -1,0 +1,48 @@
+---
+description: >-
+    Compute a SHA3-512 hash of any text, with optional HMAC and a choice of input and output encodings.
+faq:
+  - q: >-
+        How much slower is SHA3-512 than SHA3-256?
+    a: >-
+        Roughly half the throughput. SHA3-512 absorbs 72 bytes per permutation call against SHA3-256's 136, so it needs nearly twice as many calls for the same input, and the permutation dominates the cost.
+  - q: >-
+        Does the extra length buy real security?
+    a: >-
+        Not against any classical attack — 128-bit collision resistance is already unreachable. The argument is post-quantum: Grover's algorithm halves preimage strength, so a 512-bit digest retains a 256-bit margin. If your threat model does not include a large quantum computer within the data's lifetime, SHA3-256 is sufficient.
+  - q: >-
+        Is SHA3-512 immune to length extension?
+    a: >-
+        Yes. The sponge only ever outputs part of its state, so a digest does not let an attacker resume the computation. This holds for every SHA-3 variant, unlike SHA-512 where the digest is the whole state.
+references:
+  - label: >-
+        FIPS 202 — SHA-3 Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
+---
+
+## What SHA3-512 does
+
+SHA3-512 produces a 512-bit digest, written as 128 hexadecimal characters. It uses the
+largest capacity in the family — 1024 bits — leaving a rate of 576 bits, so only 72 bytes of
+input are absorbed per application of the Keccak-f[1600] permutation.
+
+## The most conservative option in the standard
+
+If the goal is maximum margin from a NIST-approved hash, this is it: 256 bits of collision
+resistance, 512 bits of preimage resistance, on a construction with no structural
+relationship to SHA-2. The cost is throughput. SHA3-512 is among the slowest widely deployed
+hash functions in software, several times slower than SHA-256 with hardware acceleration and
+an order of magnitude slower than BLAKE3.
+
+## Where that trade makes sense
+
+Long-lived signatures and archival integrity, where the data outlives the hardware and the
+per-byte cost is irrelevant next to the consequences of a break decades from now. It is a
+poor fit for hashing in a hot path, for content addressing at scale, or for anything where
+throughput shows up in a latency budget.
+
+## A note on Keccak-512
+
+The original Keccak submission with 512-bit output used a different padding rule and is a
+different function. Ethereum tooling that says "Keccak" means that one. See the Keccak-512
+tool if you need to match it.

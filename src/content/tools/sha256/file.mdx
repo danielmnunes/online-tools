@@ -1,0 +1,54 @@
+---
+description: >-
+    Compute the SHA-256 checksum of a file in your browser. The file is read locally and never uploaded.
+faq:
+  - q: >-
+        How do I compare this with sha256sum or shasum -a 256?
+    a: >-
+        The lowercase hex digest matches those tools byte for byte. Paste the entire line from a SHA256SUMS file into the comparison box; the filename after the digest is ignored, and the leading asterisk that some tools emit for binary mode is handled too.
+  - q: >-
+        Does a matching SHA-256 prove the file is authentic?
+    a: >-
+        It proves the file matches the checksum you were given. Whether that checksum is trustworthy is a separate question — if it came from the same page as the download, an attacker who replaced one could replace the other. Real authentication needs the checksum file to be signed, and the signature verified against a key you obtained independently.
+  - q: >-
+        Can I hash a very large file?
+    a: >-
+        Yes. The file is streamed in chunks rather than loaded into memory, so size is limited by time, not by RAM. A multi-gigabyte file will take a while, and the progress bar reflects real progress.
+references:
+  - label: >-
+        FIPS 180-4 — Secure Hash Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
+---
+
+## The default checksum
+
+SHA-256 is what almost every project publishes today: Linux distributions, container images,
+language toolchains, release tarballs. If a download page offers one checksum, this is
+usually it.
+
+Drop a file above and compare the result with the published value. Everything runs locally —
+the file is read through the browser's File API and streamed through the hash in chunks, so
+nothing is uploaded and there is no size limit beyond your patience.
+
+## The part people skip
+
+A checksum on the same web page as the download protects against corruption, not against
+compromise. Anyone who can modify the file can modify the checksum next to it.
+
+The pattern that actually works is the one Debian, Ubuntu, Arch and Tails use: a `SHA256SUMS`
+file listing digests, plus a `SHA256SUMS.gpg` signature over that file, verified against a
+key you obtained from somewhere other than the download mirror. Then the chain runs from a
+key you trust, through the signature, through the checksum, to the bytes on your disk.
+
+Checking the checksum alone still catches the most common real problem — a truncated
+download or a bad mirror — which is why it is worth doing even without the signature.
+
+## Matching the command line
+
+```
+sha256sum ubuntu-24.04.iso
+shasum -a 256 ubuntu-24.04.iso
+certutil -hashfile ubuntu-24.04.iso SHA256
+```
+
+All three produce the digest shown above; only the formatting differs.

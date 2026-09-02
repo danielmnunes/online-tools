@@ -1,0 +1,48 @@
+---
+description: >-
+    Compute a SHA-384 hash of any text, with optional HMAC and a choice of input and output encodings.
+faq:
+  - q: >-
+        Why is SHA-384 often faster than SHA-256 on my machine?
+    a: >-
+        Because it is SHA-512 underneath, and SHA-512 works on 64-bit words. On any 64-bit processor that means roughly half as many operations per byte as SHA-256, which works on 32-bit words. So despite producing a longer digest, SHA-384 typically hashes large inputs faster than SHA-256 on desktop and server hardware. On 32-bit embedded targets the ranking flips.
+  - q: >-
+        Is SHA-384 vulnerable to length extension?
+    a: >-
+        No. SHA-384 is SHA-512 with 128 bits of the final state discarded, and an attacker cannot continue hashing without those bits. This is one of the few places where truncation buys a genuine structural property rather than just a shorter output.
+  - q: >-
+        Where will I encounter SHA-384 in practice?
+    a: >-
+        Mostly in TLS cipher suites at the 192-bit security tier, paired with AES-256 and P-384 — the suites required by CNSA and by several government profiles. It also appears in JOSE as the PS384, RS384 and ES384 signature algorithms.
+references:
+  - label: >-
+        FIPS 180-4 — Secure Hash Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
+  - label: >-
+        RFC 6234 — US Secure Hash Algorithms
+    url: https://www.rfc-editor.org/rfc/rfc6234
+---
+
+## What SHA-384 does
+
+SHA-384 produces a 384-bit digest, written as 96 hexadecimal characters. It is SHA-512 run
+with a different set of initial hash values, with the final two 64-bit words of the eight-word
+state dropped from the output.
+
+## The 64-bit advantage
+
+SHA-512 — and therefore SHA-384 — operates on 64-bit words with 80 rounds per 1024-bit block.
+SHA-256 operates on 32-bit words with 64 rounds per 512-bit block. Per byte of input, the
+64-bit design does substantially less work, so on any processor with native 64-bit arithmetic
+SHA-384 usually outruns SHA-256 by a wide margin. That is a counter-intuitive result worth
+remembering: the longer digest is often the cheaper one.
+
+The exception is hardware acceleration. Modern x86 and ARM chips ship SHA-256 instructions
+(SHA-NI, ARMv8 crypto extensions) but frequently no SHA-512 equivalent, which can reverse
+the ranking entirely on those paths.
+
+## Truncation as a feature
+
+Discarding 128 bits of state is what makes SHA-384 immune to length-extension attacks, the
+weakness that forces HMAC on plain SHA-256. If you need a hash that can be used more
+naively without that footgun, SHA-384, SHA-512/256 and the SHA-3 family are the options.

@@ -1,0 +1,44 @@
+---
+description: >-
+    Compute the original Keccak-224 hash of a file, the competition variant that predates SHA3-224.
+faq:
+  - q: >-
+        How does this differ from SHA3-224?
+    a: >-
+        By a padding byte. Keccak-224 closes the message with 0x01; SHA3-224 uses 0x06, encoding the two domain-separator bits NIST added in FIPS 202. Same permutation, different digests.
+  - q: >-
+        Is there an Ethereum use for this variant?
+    a: >-
+        No. Ethereum uses Keccak-256 everywhere. Keccak-224 appears in software written against the competition submission before the standard existed.
+  - q: >-
+        Which should I use for a new checksum?
+    a: >-
+        Neither. SHA-256 is what people can verify with tools they already have.
+references:
+  - label: >-
+        The Keccak team's reference site
+    url: https://keccak.team/
+  - label: >-
+        FIPS 202 — SHA-3 Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
+---
+
+## Hashing a file with Keccak-224
+
+Drop a file above for its 56-character Keccak-224 digest, computed with the original padding
+rule. The file is streamed through the hash locally and never uploaded.
+
+## Why the original padding still matters
+
+Between Keccak winning the SHA-3 competition in 2012 and FIPS 202 arriving in 2015, real
+software shipped against the submitted specification. Those implementations compute what this
+page computes. Anything written against the standard computes SHA3-224.
+
+Neither is wrong, and neither is more secure. The change existed to keep SHA-3's several
+modes in separate domains, not to fix a weakness.
+
+## Reproducing an old digest
+
+This page's reason to exist is matching a value from a pre-2015 tool or a test vector labelled
+"Keccak". If you are producing a new checksum, use SHA-256 — or SHA3-224 if the length is
+what you need.

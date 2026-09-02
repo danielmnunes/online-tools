@@ -1,0 +1,56 @@
+---
+description: >-
+    Compute a BLAKE2b hash of any text, the 64-bit optimised variant standardised in RFC 7693.
+faq:
+  - q: >-
+        Why is there no HMAC option here?
+    a: >-
+        Because BLAKE2 does not need one. It takes a key natively — the key is mixed into the initial state — which is faster than HMAC and has a cleaner security proof. Wrapping BLAKE2 in HMAC is defined and works, but it is doing by hand what the function already does internally, so this tool does not offer it.
+  - q: >-
+        BLAKE2b or BLAKE2s?
+    a: >-
+        BLAKE2b on anything with 64-bit registers, which is every desktop, server and modern phone. BLAKE2s uses 32-bit words and wins only on small embedded processors. BLAKE2b also allows digests up to 64 bytes against BLAKE2s's 32.
+  - q: >-
+        How does BLAKE2 relate to SHA-3?
+    a: >-
+        BLAKE was a finalist in the same competition Keccak won. The designers then optimised the losing entry for speed rather than for the conservatism a standard demands, and released it as BLAKE2 in 2012. It is faster than MD5 while offering the security level of SHA-3.
+  - q: >-
+        Is BLAKE2 still the right choice?
+    a: >-
+        It is excellent and widely deployed — Argon2, libsodium, WireGuard and much of the Linux ecosystem use it. For new work BLAKE3 is faster still, particularly on large inputs and multiple cores. BLAKE2 remains the better answer where a stable, long-standardised function matters.
+references:
+  - label: >-
+        RFC 7693 — The BLAKE2 Cryptographic Hash and MAC
+    url: https://www.rfc-editor.org/rfc/rfc7693
+  - label: >-
+        BLAKE2 reference site
+    url: https://www.blake2.net/
+---
+
+## What BLAKE2b does
+
+BLAKE2b produces a digest of up to 512 bits — 128 hexadecimal characters at the default
+length used here. It processes 128-byte blocks through twelve rounds of a compression
+function derived from the ChaCha stream cipher, operating on 64-bit words.
+
+## Faster than MD5, as strong as SHA-3
+
+That is the claim BLAKE2 was built to make, and it holds. The design took BLAKE, a SHA-3
+finalist with a large security margin, and spent some of that margin on speed: fewer rounds,
+a simplified padding scheme, no requirement for the constants and counters that a
+standards-track function carries. The result outruns MD5 and SHA-1 in software while carrying
+none of their weaknesses.
+
+## Native keying, and the rest of the toolkit
+
+BLAKE2 accepts a key, a salt and a personalisation string directly in its parameter block.
+The key gives a MAC without the double-hashing HMAC requires. The personalisation string
+lets an application domain-separate its hashes so that a digest computed for one purpose can
+never be replayed as one computed for another — a property people usually have to build by
+hand with prefixes.
+
+## Where it is deployed
+
+Argon2, the winner of the Password Hashing Competition, uses BLAKE2b internally.
+So do libsodium's generic hashing, WireGuard's handshake, the Zcash protocol, and
+`b2sum` on most Linux distributions.

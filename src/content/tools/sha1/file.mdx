@@ -1,0 +1,47 @@
+---
+description: >-
+    Compute the SHA-1 checksum of a file in your browser. The file is read locally and never uploaded.
+faq:
+  - q: >-
+        Is SHA-1 still meaningful for verifying files?
+    a: >-
+        For detecting accidental corruption, yes. Against an attacker, no — chosen-prefix collisions have been practical since 2020, so someone who controls the file and its published digest can produce a different file with the same SHA-1. Prefer SHA-256 for anything where the source is not fully trusted.
+  - q: >-
+        Why does Git use SHA-1 for file contents then?
+    a: >-
+        Git hashes a header plus the file contents, and modern Git runs a collision-detection variant that rejects the known attack patterns outright. It is also moving to SHA-256 object formats. Note that a Git blob hash is not the same as the plain SHA-1 of the file — the header changes the input.
+  - q: >-
+        How do I match sha1sum output?
+    a: >-
+        The lowercase hex digest here is what sha1sum prints. Paste its whole line into the comparison box; the trailing filename is ignored.
+references:
+  - label: >-
+        RFC 3174 — US Secure Hash Algorithm 1
+    url: https://www.rfc-editor.org/rfc/rfc3174
+  - label: >-
+        SHA-1 is a Shambles — chosen-prefix collision
+    url: https://sha-mbles.github.io/
+---
+
+## Verifying a file with SHA-1
+
+Drop a file above to compute its SHA-1 digest and compare it with a published value. The
+file is read and hashed entirely in your browser, streamed in chunks, and never uploaded.
+
+## What SHA-1 can and cannot tell you
+
+SHA-1 still detects the boring failures perfectly well: a download that stopped halfway, a
+mirror serving a stale file, a disk that flipped a bit. If your only concern is whether the
+bytes survived the trip, it works.
+
+What it cannot do is resist someone who wants two files to have the same digest. The 2017
+SHAttered result produced a colliding pair of PDFs; the 2020 chosen-prefix attack brought the
+cost of forging a collision between two attacker-chosen documents down to the price of some
+rented compute. Any verification where an adversary might have supplied the file needs
+SHA-256.
+
+## The Git blob caveat
+
+A common surprise: `git hash-object file` and `sha1sum file` disagree. Git prepends a header
+of the form `blob <length>\0` before hashing, so the input is not the file alone. This page
+computes the plain SHA-1 of the file contents, which is what `sha1sum` gives.

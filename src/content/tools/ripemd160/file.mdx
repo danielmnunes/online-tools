@@ -1,0 +1,43 @@
+---
+description: >-
+    Compute the RIPEMD-160 checksum of a file in your browser. The file is read locally and never uploaded.
+faq:
+  - q: >-
+        Is this the same as a Bitcoin HASH160?
+    a: >-
+        No. HASH160 is RIPEMD-160 applied to a SHA-256 digest, not to the data directly. This page hashes the file contents with RIPEMD-160 alone. To reproduce HASH160 you would hash with SHA-256 first, then hash those 32 bytes here.
+  - q: >-
+        Do any projects publish RIPEMD-160 checksums?
+    a: >-
+        Very few. It saw some use in the 1990s and 2000s alongside MD5 and SHA-1, and it survives mostly inside Bitcoin's address construction. SHA-256 is what to expect on a modern download page.
+  - q: >-
+        Is 160 bits enough for file integrity?
+    a: >-
+        Against accidental corruption, easily. Against a determined adversary, 80 bits of collision resistance is a thinner margin than anything designed today would accept — though unlike MD5 and SHA-1, RIPEMD-160 has no practical collision attack.
+references:
+  - label: >-
+        The RIPEMD-160 page (KU Leuven)
+    url: https://homes.esat.kuleuven.be/~bosselae/ripemd160.html
+---
+
+## Verifying a file with RIPEMD-160
+
+Drop a file above for its 40-character RIPEMD-160 digest. Hashing runs in your browser,
+streamed through the file, with nothing uploaded.
+
+## An unusual choice, and when it is the right one
+
+RIPEMD-160 is not a general-purpose file checksum in 2026 — nothing publishes it. Where it
+turns up is cryptocurrency tooling, because Bitcoin compresses public keys to 20 bytes with
+it, and because the ecosystem inherited that choice wholesale.
+
+The other reason to reach for it is provenance. RIPEMD-160 came out of an open European
+academic project rather than a national standards body, and after 2013 some people preferred
+that. It has also aged well: three decades of analysis with no practical collision, which is
+more than MD5 or SHA-1 can claim.
+
+## The 80-bit ceiling
+
+A 160-bit digest gives 80 bits of collision resistance. That is the binding constraint, not
+any weakness in the design, and it is why nothing new should be built on it. For verifying a
+download, use SHA-256.

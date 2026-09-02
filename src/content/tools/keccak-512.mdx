@@ -1,0 +1,44 @@
+---
+description: >-
+    Compute the original Keccak-512 hash, the competition version that predates the SHA3-512 padding change.
+faq:
+  - q: >-
+        How does this differ from SHA3-512?
+    a: >-
+        The padding, and nothing else. Keccak-512 appends 0x01 to close the message; SHA3-512 appends 0x06, encoding the two domain-separator bits NIST added during standardisation. Both use the same permutation and the same 1024-bit capacity, and their digests never coincide.
+  - q: >-
+        Is Keccak-512 the strongest option here?
+    a: >-
+        It offers the largest margin of the Keccak family — 256 bits of collision resistance, 512 of preimage — but at the lowest throughput, since only 72 bytes are absorbed per permutation call. SHA3-512 offers the same margin under a standardised name.
+  - q: >-
+        Was the original padding a weakness?
+    a: >-
+        No. The change was about cleanly separating Keccak's several modes from one another, not about repairing a flaw. Both functions carry the same security claims.
+references:
+  - label: >-
+        FIPS 202 — SHA-3 Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
+  - label: >-
+        The Keccak team's reference site
+    url: https://keccak.team/
+---
+
+## What Keccak-512 does
+
+Keccak-512 produces a 512-bit digest, written as 128 hexadecimal characters. It is the
+Keccak-f[1600] sponge with 1024 bits of capacity and 576 bits of rate — 72 bytes of input
+absorbed per permutation call — using the original competition padding.
+
+## Why two nearly identical functions exist
+
+Keccak was selected as SHA-3 in October 2012, and FIPS 202 was published in August 2015. In
+that three-year window, libraries, blockchains and test suites implemented what the
+submission described. The standard then added two bits of domain separation to the padding.
+The cryptography did not change; the name did, and the digests did.
+
+## When to reach for it
+
+To verify output from an implementation built before FIPS 202, or to match a test vector
+labelled "Keccak" rather than "SHA-3". For new work, SHA3-512 is the same construction under
+the name every current specification uses — and if throughput matters at all, SHA3-256 or
+BLAKE3 will serve better than either.

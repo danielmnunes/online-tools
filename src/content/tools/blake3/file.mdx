@@ -1,0 +1,48 @@
+---
+description: >-
+    Compute the BLAKE3 checksum of a file in your browser — the hash behind b3sum, designed for large inputs.
+faq:
+  - q: >-
+        Does this match b3sum?
+    a: >-
+        Yes. b3sum's default 256-bit output is what this page produces, in the same lowercase hex.
+  - q: >-
+        Will it be as fast here as b3sum is on my machine?
+    a: >-
+        No, and it is worth being clear about why. BLAKE3's headline speed comes from hashing chunks in parallel across CPU cores with SIMD instructions. This page runs a single-threaded JavaScript implementation, so you get BLAKE3's digest without BLAKE3's parallelism. It is still quick, but a native b3sum on a many-core machine will be far faster.
+  - q: >-
+        Why is there no HMAC option?
+    a: >-
+        BLAKE3 has a keyed mode built in, and a separate key-derivation mode with a context string. Both are better than wrapping it in HMAC, so the HMAC checkbox would only invite the wrong choice.
+  - q: >-
+        Is the digest always 32 bytes?
+    a: >-
+        No — BLAKE3 can emit any length. 32 bytes is the conventional default and what b3sum prints, which is what this page computes.
+references:
+  - label: >-
+        BLAKE3 specification and reference implementation
+    url: https://github.com/BLAKE3-team/BLAKE3
+---
+
+## Verifying a file with BLAKE3
+
+Drop a file above for its 64-character BLAKE3 digest. The file is streamed through the hash
+in your browser and never uploaded.
+
+## What BLAKE3 is for
+
+Large files. Every other hash on this site is strictly sequential — block *n* depends on
+block *n−1*, so no amount of hardware speeds up a single stream. BLAKE3 splits input into
+1 KiB chunks, hashes them independently, and combines them in a Merkle tree. A native
+implementation can therefore use every core in the machine.
+
+The same tree structure allows incremental verification: because the tree commits to each
+chunk, a receiver can verify one slice of a huge file without downloading the rest. That
+property is why BLAKE3 keeps appearing in content-addressed storage and file-sync tools.
+
+## The honest limitation of this page
+
+The parallelism does not survive the trip into a browser tab. This is a single-threaded
+JavaScript implementation, so it produces the correct digest at a fraction of the speed
+`b3sum` reaches natively. For verifying a download that is fine; for hashing a hundred
+gigabytes, use the native tool.
