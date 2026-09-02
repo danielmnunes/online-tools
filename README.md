@@ -57,9 +57,13 @@ entry, or if a tool slug collides with a category page.
 ## Deployment
 
 Static assets on Cloudflare Workers. `wrangler.jsonc` points at `dist/`; there is no Worker
-script. CI needs two repository secrets — `CLOUDFLARE_API_TOKEN` and
-`CLOUDFLARE_ACCOUNT_ID` — and one repository variable, `SITE_URL`, which sets the absolute
-URLs in the sitemap and canonical tags.
+script. Deployed at `https://online-tools.dnhub.workers.dev`.
+
+CI deploys on every push to `main`, but only once two repository secrets exist —
+`CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. Until then the deploy job skips with a
+notice rather than failing the build. The `SITE_URL` repository variable overrides the
+default site address used for canonical tags, Open Graph and the sitemap; set it when a
+custom domain replaces the workers.dev one.
 
 ## Licence and provenance
 
