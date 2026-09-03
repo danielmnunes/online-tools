@@ -27,6 +27,8 @@ const navCategories = populatedCategories();
     <meta property="og:url" content={canonical} />
     <meta name="twitter:card" content="summary" />
     <link rel="sitemap" href="/sitemap-index.xml" />
+    <!-- Declared explicitly so browsers stop probing /favicon.ico and 404ing. -->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 
     {
       jsonLd.map((payload) => (
