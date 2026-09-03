@@ -21,7 +21,8 @@ utilizador** — e onde essa afirmação é verificável abrindo o separador de 
 
 ### Objetivos
 
-1. Cobertura funcional equivalente ao site de referência (~200 ferramentas).
+1. Cobertura funcional próxima da do site de referência (~188 ferramentas). A categoria Hash
+   fecha em 21 algoritmos, com exclusões deliberadas listadas em §5.
 2. Processamento 100% client-side, sem exceções.
 3. Cada ferramenta num URL próprio, com HTML estático real — o tráfego desta categoria vem
    de pesquisa orgânica ("md5 online", "base64 decode").
@@ -88,12 +89,12 @@ seu widget é erro de tipos, não uma página em branco em runtime.
 
 ### 4.2 Poucos widgets, muitas ferramentas
 
-~13 componentes Svelte servem as ~200 ferramentas:
+~13 componentes Svelte servem as ~188 ferramentas:
 
 | Widget | Cobre | ≈ páginas |
 |---|---|---|
-| `TextHash` | hashes de texto | 38 |
-| `FileHash` | checksums de ficheiro, por chunks, com progresso | 30 |
+| `TextHash` | hashes de texto | 21 |
+| `FileHash` | checksums de ficheiro, por chunks, com progresso | 21 |
 | `XofHash` | shake, cshake, kmac, tuplehash, parallelhash | 22 |
 | `Codec` | base16/32/58/64, html, url, cbor | 16 |
 | `FileCodec` | as variantes de ficheiro dos codecs | 10 |
@@ -148,9 +149,27 @@ que WebAssembly. É um custo real e está documentado no topo de `src/lib/algo/h
 hashing de ficheiros se provar demasiado lento, o caminho de ficheiro — e só esse — pode
 carregar o build WASM, decidido com números e não por antecipação.
 
-Onde nem o noble nem a Web Crypto cobrem um algoritmo (MD2, RIPEMD-128/256/320, CRC-16,
-DES, RC4, SPECK, XXTEA), a implementação é própria, em `src/lib/algo/legacy/`, com vetores
-de teste da especificação.
+Onde nem o noble nem a Web Crypto cobrem um algoritmo (DES, RC4, SPECK, XXTEA — todos da
+secção de cifras), a implementação é própria, em `src/lib/algo/legacy/`, com vetores de
+teste da especificação.
+
+### 5.1 Âmbito da categoria Hash
+
+A categoria fecha nos **21 algoritmos** que o `@noble/hashes` e a Web Crypto cobrem. Ficam
+deliberadamente de fora MD2, MD4, RIPEMD-128/256/320, CRC-16/32, Adler-32, SM3, Whirlpool e
+XXHash 32/64/3/128.
+
+O que essa decisão troca, dito de forma direta: perde-se procura orgânica real
+("crc32 online", "sm3 online"). O que se evita são catorze implementações escritas à mão, a
+maioria sem a rede de segurança que §6 exige de tudo o resto — o OpenSSL 3 não expõe MD2,
+MD4 nem Whirlpool fora do *legacy provider*, e nunca teve RIPEMD-128/256/320, pelo que a
+verificação assentaria só em vetores da especificação (a exceção é o SM3, que o `node:crypto`
+cobre). O XXH3/XXH128, por sua vez, obrigaria a trazer de volta o `hash-wasm` rejeitado
+acima.
+
+Se a decisão for revertida, o caminho está descrito: entrada na tabela de `hashes.ts`,
+módulo em `impl/`, MDX, e registo explícito em `VERIFIED_ELSEWHERE` — a guarda de cobertura
+dos testes obriga a essa declaração.
 
 ---
 
@@ -183,11 +202,11 @@ Correção criptográfica não se verifica a olho. Três camadas independentes:
 
 ---
 
-## 8. Catálogo-alvo (~200 ferramentas)
+## 8. Catálogo-alvo (~188 ferramentas)
 
 | Categoria | Ferramentas |
 |---|---|
-| **Hash** | CRC/CRC-16/CRC-32, Adler-32, XXHash (32/64/3/128), SM3, Whirlpool, MD2/MD4/MD5, SHA-1, SHA-2 (224/256/384/512/512-224/512-256), Double SHA-256, SHA-3 (×4), Keccak (×4), RIPEMD (128/160/256/320), BLAKE2b/2s, BLAKE3 — cada um com variante de ficheiro |
+| **Hash** | MD5, SHA-1, SHA-2 (224/256/384/512/512-224/512-256), Double SHA-256, SHA-3 (×4), Keccak (×4), RIPEMD-160, BLAKE2b/2s, BLAKE3 — cada um com variante de ficheiro. **Entregue.** Exclusões em §5 |
 | **XOF e MAC** | SHAKE128/256, cSHAKE128/256, KMAC(XOF)128/256, TupleHash(XOF)128/256, ParallelHash(XOF)128/256, HMAC calculator |
 | **KDF** | PBKDF2, EvpKDF, HKDF, scrypt, Argon2; bcrypt/scrypt/Argon2 com variante *verify* |
 | **Encoding** | Hex/Base16, Base32, Base58, Base64 (texto e ficheiro), Hex dump, HTML entities, URL encode/decode, URL parser, CBOR, JWT decoder |

@@ -3,10 +3,10 @@
 Estado de execução do [PRD.md](PRD.md). `[x]` feito e verificado · `[ ]` por fazer.
 
 **Agora:** 42 ferramentas em produção, 461 testes, CI a fazer deploy automático.
-**Alvo:** ~200 ferramentas.
+**Alvo:** ~188 ferramentas. A categoria Hash está **fechada** em 21 algoritmos.
 
 ```
-Hash          ████████████░░░░░░░░  42 / 68
+Hash          ████████████████████  42 / 42  (âmbito fechado)
 XOF e KDF     ░░░░░░░░░░░░░░░░░░░░   0 / 35
 Encoding      ░░░░░░░░░░░░░░░░░░░░   0 / 26
 Format+Conv   ░░░░░░░░░░░░░░░░░░░░   0 / 20
@@ -14,7 +14,7 @@ Cryptography  ░░░░░░░░░░░░░░░░░░░░   0 /
 Compression   ░░░░░░░░░░░░░░░░░░░░   0 / 30
 Generator     ░░░░░░░░░░░░░░░░░░░░   0 / 9
                                     ─────────
-                                    42 / 214
+                                    42 / 188
 ```
 
 ---
@@ -36,7 +36,7 @@ Generator     ░░░░░░░░░░░░░░░░░░░░   0 /
 - [x] GitHub Actions: verify em PR, deploy em `main`
 - [x] Repositório público: https://github.com/danielmnunes/online-tools
 
-### Fase 1 — Hash: texto e ficheiro (42 de ~68 páginas)
+### Fase 1 — Hash: texto e ficheiro (42 páginas) — âmbito fechado
 
 - [x] Tabela de algoritmos (`src/lib/algo/hashes.ts`) — **21 algoritmos**
 - [x] Ferramentas de hash **geradas** da tabela, não escritas à mão (21 → 42 páginas)
@@ -50,6 +50,11 @@ Generator     ░░░░░░░░░░░░░░░░░░░░   0 /
 Algoritmos entregues: `md5` `sha1` `ripemd160` `sha224` `sha256` `double-sha256` `sha384`
 `sha512` `sha512-224` `sha512-256` `sha3-224` `sha3-256` `sha3-384` `sha3-512`
 `keccak-224` `keccak-256` `keccak-384` `keccak-512` `blake2b` `blake2s` `blake3`
+
+**Fora de âmbito, por decisão:** MD2, MD4, RIPEMD-128/256/320, CRC-16/32, Adler-32, SM3,
+Whirlpool e XXHash 32/64/3/128. Nenhum existe no `@noble/hashes` nem na Web Crypto, portanto
+cada um exigiria implementação à mão — e quase nenhum teria paridade OpenSSL para a validar.
+Ver [PRD §5.1](PRD.md).
 
 ### Verificação
 
@@ -73,16 +78,12 @@ Algoritmos entregues: `md5` `sha1` `ripemd160` `sha224` `sha256` `double-sha256`
 
 ## Por fazer
 
-### Fase 1b — Completar Hash (~24 páginas)
+### Fase 1 — opções por expor no widget
 
-Algoritmos que nem o `@noble/hashes` nem a Web Crypto cobrem. Decidir por medição, caso a
-caso, entre implementação própria e carregar o `hash-wasm` só para estes.
+Não são algoritmos novos: são opções que os algoritmos já entregues suportam e a UI não expõe.
 
-- [ ] Implementação própria em `src/lib/algo/legacy/`: **MD2** (RFC 1319), **RIPEMD-128/256/320**, **CRC-16**
-- [ ] Triviais (~20 linhas cada): **CRC-32**, **Adler-32**
-- [ ] Avaliar `hash-wasm` só para: **MD4**, **SM3**, **Whirlpool**, **XXHash 32/64/3/128**
-- [ ] Variantes de ficheiro dos acima
-- [ ] Vetores de teste da especificação para cada um
+- [ ] **Keying nativo** para BLAKE2b/2s e BLAKE3 — não oferecem HMAC porque aceitam chave diretamente
+- [ ] **Comprimento de digest variável** para os mesmos três
 
 ### Fase 2 — XOF, MAC e derivação de chaves (~35 páginas)
 
@@ -147,7 +148,5 @@ caso, entre implementação própria e carregar o `hash-wasm` só para estes.
 
 - [ ] **Licença.** Sem ficheiro `LICENSE`, um repositório público é "todos os direitos reservados" por omissão. Decidir se é open source e qual.
 - [ ] **Domínio próprio.** O endereço `workers.dev` funciona; um domínio próprio precisa de definir a variável `SITE_URL`.
-- [ ] **Keying nativo para BLAKE2/BLAKE3.** Estes não oferecem HMAC porque aceitam chave nativamente — falta expor essa opção no widget.
-- [ ] **Comprimento de digest variável** para BLAKE2b/2s e BLAKE3, que o suportam.
 - [ ] **`hash-wasm` para o caminho de ficheiro.** Medir se o JavaScript puro é lento demais em ficheiros de vários GB antes de decidir.
 - [ ] **Topics do repositório** no GitHub, para descoberta.
