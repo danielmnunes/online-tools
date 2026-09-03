@@ -5,7 +5,11 @@ faq:
   - q: >-
         Why is there no HMAC option here?
     a: >-
-        Because BLAKE2 does not need one. It takes a key natively — the key is mixed into the initial state — which is faster than HMAC and has a cleaner security proof. Wrapping BLAKE2 in HMAC is defined and works, but it is doing by hand what the function already does internally, so this tool does not offer it.
+        Because BLAKE2 does not need one. It takes a key natively — the key is mixed into the initial state — which is faster than HMAC and has a cleaner security proof. Wrapping BLAKE2 in HMAC is defined and works, but it is doing by hand what the function already does internally. Tick "Keyed" and supply a key of 1 to 64 bytes to get the MAC the designers intended.
+  - q: >-
+        Is a 32-byte BLAKE2b digest the same as the first half of a 64-byte one?
+    a: >-
+        No, and this catches people out. The requested length goes into the parameter block that seeds the initial state, so asking for 32 bytes produces an entirely different value rather than a truncation of the longer digest. Two systems that hash the same input at different lengths will never agree on any prefix.
   - q: >-
         BLAKE2b or BLAKE2s?
     a: >-
@@ -44,7 +48,9 @@ none of their weaknesses.
 ## Native keying, and the rest of the toolkit
 
 BLAKE2 accepts a key, a salt and a personalisation string directly in its parameter block.
-The key gives a MAC without the double-hashing HMAC requires. The personalisation string
+The key gives a MAC without the double-hashing HMAC requires, and the "Keyed" box above is
+that key rather than an HMAC one — the values differ, so the distinction matters when you
+are checking against something another system produced. The personalisation string
 lets an application domain-separate its hashes so that a digest computed for one purpose can
 never be replayed as one computed for another — a property people usually have to build by
 hand with prefixes.

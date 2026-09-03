@@ -101,4 +101,71 @@ describe('TextHash', () => {
     render(TextHash, { algorithm: 'blake3' });
     expect(screen.queryByLabelText('HMAC')).toBeNull();
   });
+
+  it('offers no key or length control at all for a fixed algorithm', () => {
+    render(TextHash, { algorithm: 'md5' });
+    expect(screen.queryByLabelText('Keyed')).toBeNull();
+    expect(screen.queryByLabelText('Output length')).toBeNull();
+  });
+});
+
+/**
+ * The BLAKE family is keyed directly rather than through HMAC, and chooses its
+ * own digest length. Both are offered by the same widget, so both need to be
+ * shown to actually reach the algorithm and not merely render.
+ */
+describe('TextHash with a natively keyed algorithm', () => {
+  // OpenSSL: openssl mac -macopt hexkey:<KEY> -macopt size:64 BLAKE2BMAC
+  const KEY = '000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f';
+  const KEYED_ABC =
+    '9af0244b7da7fe29d90a89727e06a0c93977ce1ad7edcb76ac0b24142194ea00' +
+    'c77be4a1d3fededd31d5a593625a508e742fc90d708f8b48a5c246e4e8e42d94';
+  // b2sum -l 256
+  const ABC_32_BYTES = 'bddd813c634239723171ef3fee98579b94964e3bb1cb3e427262c8c068d52319';
+
+  it('offers a key rather than HMAC', () => {
+    render(TextHash, { algorithm: 'blake2b' });
+    expect(screen.queryByLabelText('HMAC')).toBeNull();
+    expect(screen.getByLabelText('Keyed')).toBeInTheDocument();
+  });
+
+  it('hashes with the key the user supplies', async () => {
+    const user = userEvent.setup();
+    render(TextHash, { algorithm: 'blake2b' });
+    await user.type(screen.getByLabelText('Input'), 'abc');
+
+    await user.click(screen.getByLabelText('Keyed'));
+    await user.selectOptions(screen.getByLabelText('Key encoding'), 'hex');
+    await user.type(screen.getByLabelText('Key'), KEY);
+
+    await waitFor(() => expect(output()).toHaveTextContent(KEYED_ABC));
+  });
+
+  it('recomputes at the length the user asks for', async () => {
+    const user = userEvent.setup();
+    render(TextHash, { algorithm: 'blake2b' });
+    await user.type(screen.getByLabelText('Input'), 'abc');
+
+    const length = screen.getByLabelText('Output length');
+    await user.clear(length);
+    await user.type(length, '32');
+
+    await waitFor(() => expect(output()).toHaveTextContent(ABC_32_BYTES));
+    expect(screen.getByText('256 bits')).toBeInTheDocument();
+  });
+
+  it('reports an unusable key instead of falling back to an unkeyed digest', async () => {
+    const user = userEvent.setup();
+    render(TextHash, { algorithm: 'blake3' });
+    await user.type(screen.getByLabelText('Input'), 'abc');
+
+    await user.click(screen.getByLabelText('Keyed'));
+    // BLAKE3 fixes its key at 32 bytes; four is not a length it accepts.
+    await user.type(screen.getByLabelText('Key'), '四');
+
+    await waitFor(() => expect(output()).toHaveTextContent(/needs a key of exactly 32 bytes/));
+    expect(output()).not.toHaveTextContent(
+      '6437b3ac38465133ffb63b75273a8db548c558465d79db03fd359c6cd5bd9d85',
+    );
+  });
 });

@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { hashBytes } from '~/lib/algo/hash';
+import { hashBytes, hashBlob, type HashParams } from '~/lib/algo/hash';
 import { HASHES, HASH_IDS, type HashId } from '~/lib/algo/hashes';
 import { bytesToHex, hexToBytes, textToBytes } from '~/lib/encoding';
 
-async function hex(id: HashId, text: string, key?: Uint8Array): Promise<string> {
-  return bytesToHex(await hashBytes(id, textToBytes(text, 'utf-8'), key));
+async function hex(id: HashId, text: string, params?: HashParams): Promise<string> {
+  return bytesToHex(await hashBytes(id, textToBytes(text, 'utf-8'), params));
 }
 
 /** RFC 1321, appendix A.5. */
@@ -71,32 +71,35 @@ describe('SHA-256', () => {
 /** HMAC-MD5 and HMAC-SHA-1 from RFC 2202; HMAC-SHA-256 from RFC 4231. */
 describe('HMAC', () => {
   it('HMAC-MD5, RFC 2202 case 1', async () => {
-    expect(await hex('md5', 'Hi There', hexToBytes('0b'.repeat(16)))).toBe(
+    expect(await hex('md5', 'Hi There', { hmacKey: hexToBytes('0b'.repeat(16)) })).toBe(
       '9294727a3638bb1c13f48ef8158bfc9d',
     );
   });
 
   it('HMAC-MD5, RFC 2202 case 2 (ASCII key)', async () => {
-    expect(await hex('md5', 'what do ya want for nothing?', textToBytes('Jefe', 'utf-8'))).toBe(
+    const key = { hmacKey: textToBytes('Jefe', 'utf-8') };
+    expect(await hex('md5', 'what do ya want for nothing?', key)).toBe(
       '750c783e6ab0b503eaa86e310a5db738',
     );
   });
 
   it('HMAC-SHA-1, RFC 2202 case 1', async () => {
-    expect(await hex('sha1', 'Hi There', hexToBytes('0b'.repeat(20)))).toBe(
+    expect(await hex('sha1', 'Hi There', { hmacKey: hexToBytes('0b'.repeat(20)) })).toBe(
       'b617318655057264e28bc0b6fb378c8ef146be00',
     );
   });
 
   it('HMAC-SHA-256, RFC 4231 case 1', async () => {
-    expect(await hex('sha256', 'Hi There', hexToBytes('0b'.repeat(20)))).toBe(
+    expect(await hex('sha256', 'Hi There', { hmacKey: hexToBytes('0b'.repeat(20)) })).toBe(
       'b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7',
     );
   });
 
   it('HMAC-SHA-256, RFC 4231 case 3 (key and data longer than the block size logic)', async () => {
     const digest = bytesToHex(
-      await hashBytes('sha256', hexToBytes('dd'.repeat(50)), hexToBytes('aa'.repeat(20))),
+      await hashBytes('sha256', hexToBytes('dd'.repeat(50)), {
+        hmacKey: hexToBytes('aa'.repeat(20)),
+      }),
     );
     expect(digest).toBe('773ea91e36800e46854db8ebd09181a72959098b3ef8c122d9635514ced565fe');
   });
@@ -194,17 +197,168 @@ describe('Keccak uses the original padding, not SHA-3 padding', () => {
 
 /** From the BLAKE3 team's test_vectors.json, which uses a repeating 0..250 byte pattern. */
 describe('BLAKE3 official vectors', () => {
+  /** The input schedule the BLAKE3 team's test_vectors.json uses. */
   function pattern(length: number): Uint8Array {
     return new Uint8Array(length).map((_, i) => i % 251);
   }
 
-  const vectors: ReadonlyArray<[number, string]> = [
-    [0, 'af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262'],
-    [1, '2d3adedff11b61f14c886e35afa036736dcd87a74d27b5c1510225d0f592e213'],
-    [1024, '42214739f095a406f3fc83deb889744ac00df831c10daa55189b5d121c855af7'],
+  /** The 32-byte key those vectors are keyed with, verbatim. */
+  const KEY = textToBytes('whats the Elvish word for friend', 'utf-8');
+
+  /**
+   * Each published case carries 131 bytes of output, which is what makes these
+   * vectors worth using twice over: they pin the extended-output path and the
+   * keyed path at once, from the same authority.
+   */
+  const vectors: ReadonlyArray<[number, string, string]> = [
+    [0, 'af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262e00f03e7b69af26b7faaf09fcd333050338ddfe085b8cc869ca98b206c08243a26f5487789e8f660afe6c99ef9e0c52b92e7393024a80459cf91f476f9ffdbda7001c22e159b402631f277ca96f2defdf1078282314e763699a31c5363165421cce14d',
+      '92b2b75604ed3c761f9d6f62392c8a9227ad0ea3f09573e783f1498a4ed60d26b18171a2f22a4b94822c701f107153dba24918c4bae4d2945c20ece13387627d3b73cbf97b797d5e59948c7ef788f54372df45e45e4293c7dc18c1d41144a9758be58960856be1eabbe22c2653190de560ca3b2ac4aa692a9210694254c371e851bc8f'],
+    [1, '2d3adedff11b61f14c886e35afa036736dcd87a74d27b5c1510225d0f592e213c3a6cb8bf623e20cdb535f8d1a5ffb86342d9c0b64aca3bce1d31f60adfa137b358ad4d79f97b47c3d5e79f179df87a3b9776ef8325f8329886ba42f07fb138bb502f4081cbcec3195c5871e6c23e2cc97d3c69a613eba131e5f1351f3f1da786545e5',
+      '6d7878dfff2f485635d39013278ae14f1454b8c0a3a2d34bc1ab38228a80c95b6568c0490609413006fbd428eb3fd14e7756d90f73a4725fad147f7bf70fd61c4e0cf7074885e92b0e3f125978b4154986d4fb202a3f331a3fb6cf349a3a70e49990f98fe4289761c8602c4e6ab1138d31d3b62218078b2f3ba9a88e1d08d0dd4cea11'],
+    [1024, '42214739f095a406f3fc83deb889744ac00df831c10daa55189b5d121c855af71cf8107265ecdaf8505b95d8fcec83a98a6a96ea5109d2c179c47a387ffbb404756f6eeae7883b446b70ebb144527c2075ab8ab204c0086bb22b7c93d465efc57f8d917f0b385c6df265e77003b85102967486ed57db5c5ca170ba441427ed9afa684e',
+      '75c46f6f3d9eb4f55ecaaee480db732e6c2105546f1e675003687c31719c7ba4a78bc838c72852d4f49c864acb7adafe2478e824afe51c8919d06168414c265f298a8094b1ad813a9b8614acabac321f24ce61c5a5346eb519520d38ecc43e89b5000236df0597243e4d2493fd626730e2ba17ac4d8824d09d1a4a8f57b8227778e2de'],
   ];
 
-  it.each(vectors)('input_len %i', async (length, expected) => {
-    expect(bytesToHex(await hashBytes('blake3', pattern(length)))).toBe(expected);
+  it.each(vectors)('input_len %i, default 32-byte digest', async (length, expected) => {
+    expect(bytesToHex(await hashBytes('blake3', pattern(length)))).toBe(expected.slice(0, 64));
+  });
+
+  it.each(vectors)('input_len %i, extended to 131 bytes', async (length, expected) => {
+    const out = await hashBytes('blake3', pattern(length), { dkLen: 131 });
+    expect(bytesToHex(out)).toBe(expected);
+  });
+
+  it.each(vectors)('input_len %i, keyed', async (length, _unkeyed, expected) => {
+    const out = await hashBytes('blake3', pattern(length), { key: KEY, dkLen: 131 });
+    expect(bytesToHex(out)).toBe(expected);
+  });
+
+  it('extends rather than replaces: a short output is a prefix of a long one', async () => {
+    const short = bytesToHex(await hashBytes('blake3', pattern(1024), { dkLen: 32 }));
+    const long = bytesToHex(await hashBytes('blake3', pattern(1024), { dkLen: 131 }));
+    expect(long.startsWith(short)).toBe(true);
+  });
+});
+
+/**
+ * Keyed BLAKE2, and BLAKE2 at a length other than its default.
+ *
+ * These expected values come from two implementations sharing no code with
+ * @noble/hashes, and were confirmed to agree with it before being written
+ * down: OpenSSL 3.5.5 for the keyed cases, reached as
+ * `openssl mac -macopt hexkey:<key> -macopt size:<n> BLAKE2BMAC`, and GNU
+ * coreutils `b2sum -l <bits>` for the unkeyed short digests.
+ *
+ * They are fixed vectors here rather than live comparisons in parity.test.ts
+ * because OpenSSL exposes BLAKE2 keying only through EVP_MAC, which
+ * node:crypto does not surface -- createHmac would give HMAC-BLAKE2, a
+ * different construction that happens to have the same output shape.
+ */
+describe('BLAKE2 native keying and digest length', () => {
+  const KEY = hexToBytes('000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f');
+
+  const vectors: ReadonlyArray<[string, HashId, HashParams, string]> = [
+    ['blake2b keyed, default 64 bytes', 'blake2b', { key: KEY },
+      '9af0244b7da7fe29d90a89727e06a0c93977ce1ad7edcb76ac0b24142194ea00' +
+      'c77be4a1d3fededd31d5a593625a508e742fc90d708f8b48a5c246e4e8e42d94'],
+    ['blake2b keyed, 32 bytes', 'blake2b', { key: KEY, dkLen: 32 },
+      'd63a32d3e44738d7907f964316c241adaba0abfeabc32349677578a15a203f7f'],
+    ['blake2s keyed, default 32 bytes', 'blake2s', { key: KEY },
+      'a281f725754969a702f6fe36fc591b7def866e4b70173ece402fc01c064d6b65'],
+    ['blake2s keyed, 16 bytes', 'blake2s', { key: KEY, dkLen: 16 },
+      '61ba5f165c194692e09d12520cc4c74a'],
+    ['blake2b unkeyed, 16 bytes', 'blake2b', { dkLen: 16 },
+      'cf4ab791c62b8d2b2109c90275287816'],
+    ['blake2b unkeyed, 32 bytes', 'blake2b', { dkLen: 32 },
+      'bddd813c634239723171ef3fee98579b94964e3bb1cb3e427262c8c068d52319'],
+  ];
+
+  it.each(vectors)('%s', async (_name, id, params, expected) => {
+    expect(await hex(id, 'abc', params)).toBe(expected);
+  });
+
+  it('reseeds rather than truncates when the length changes', async () => {
+    const short = await hex('blake2b', 'abc', { dkLen: 32 });
+    const full = await hex('blake2b', 'abc');
+    // Unlike BLAKE3, BLAKE2 folds the requested length into the parameter
+    // block that seeds the state, so a shorter digest is a different value
+    // rather than a prefix. Getting this wrong would look plausible.
+    expect(full.startsWith(short)).toBe(false);
+  });
+});
+
+describe('parameters the algorithm does not accept are refused', () => {
+  const data = textToBytes('abc', 'utf-8');
+
+  it('rejects a key for an algorithm that takes none', async () => {
+    await expect(hashBytes('sha256', data, { key: new Uint8Array(32) })).rejects.toThrow(
+      /does not take a key/,
+    );
+  });
+
+  it('rejects a key of the wrong size', async () => {
+    await expect(hashBytes('blake3', data, { key: new Uint8Array(16) })).rejects.toThrow(
+      /needs a key of exactly 32 bytes; got 16/,
+    );
+  });
+
+  it('rejects a digest length for a fixed-length algorithm', async () => {
+    await expect(hashBytes('sha256', data, { dkLen: 16 })).rejects.toThrow(
+      /always produces 32 bytes/,
+    );
+  });
+
+  it('rejects a digest length outside the declared range', async () => {
+    await expect(hashBytes('blake2s', data, { dkLen: 33 })).rejects.toThrow(
+      /produces 1 to 32 bytes; got 33/,
+    );
+    await expect(hashBytes('blake2s', data, { dkLen: 0 })).rejects.toThrow(/got 0/);
+    await expect(hashBytes('blake2s', data, { dkLen: 8.5 })).rejects.toThrow(/got 8.5/);
+  });
+
+  it('rejects an HMAC key and a native key together', async () => {
+    await expect(
+      hashBytes('blake2b', data, { hmacKey: new Uint8Array(8), key: new Uint8Array(8) }),
+    ).rejects.toThrow(/does not support HMAC/);
+  });
+});
+
+describe('every declared capability is real', () => {
+  const data = textToBytes('the quick brown fox', 'utf-8');
+  const keyed = HASH_IDS.filter((id) => HASHES[id].key !== undefined);
+  const sized = HASH_IDS.filter((id) => HASHES[id].dkLen !== undefined);
+
+  it('is claimed by the BLAKE family and nobody else', () => {
+    expect(keyed).toEqual(['blake2b', 'blake2s', 'blake3']);
+    expect(sized).toEqual(['blake2b', 'blake2s', 'blake3']);
+  });
+
+  it.each(keyed)('%s accepts a key at both ends of its range', async (id) => {
+    const range = HASHES[id].key!;
+    const unkeyed = bytesToHex(await hashBytes(id, data));
+
+    for (const size of [range.min, range.max]) {
+      const key = new Uint8Array(size).fill(7);
+      const digest = bytesToHex(await hashBytes(id, data, { key }));
+      expect(digest, `key of ${size} bytes`).not.toBe(unkeyed);
+    }
+  });
+
+  it.each(sized)('%s honours both ends of its length range', async (id) => {
+    const range = HASHES[id].dkLen!;
+    expect((await hashBytes(id, data, { dkLen: range.min })).length).toBe(range.min);
+    expect((await hashBytes(id, data, { dkLen: range.max })).length).toBe(range.max);
+    expect((await hashBytes(id, data)).length).toBe(HASHES[id].bits / 8);
+  });
+
+  it.each(sized)('%s streams to the same digest as it hashes in one piece', async (id) => {
+    const params: HashParams = {
+      key: new Uint8Array(HASHES[id].key!.min).fill(3),
+      dkLen: HASHES[id].dkLen!.max,
+    };
+    const bytes = new Uint8Array(300_000).map((_, i) => i % 256);
+
+    const streamed = await hashBlob(id, new Blob([bytes]), params);
+    expect(bytesToHex(streamed)).toBe(bytesToHex(await hashBytes(id, bytes, params)));
   });
 });

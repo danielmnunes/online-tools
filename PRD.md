@@ -171,6 +171,13 @@ Se a decisão for revertida, o caminho está descrito: entrada na tabela de `has
 módulo em `impl/`, MDX, e registo explícito em `VERIFIED_ELSEWHERE` — a guarda de cobertura
 dos testes obriga a essa declaração.
 
+Em contrapartida, os algoritmos que ficam são expostos por inteiro: BLAKE2b, BLAKE2s e
+BLAKE3 aceitam chave nativa — a construção que os seus autores analisaram, e não HMAC — e
+produzem digests do comprimento pedido. A tabela de metadados declara os intervalos, e
+`hash.ts` recusa uma chave ou um comprimento que o algoritmo não aceite em vez de os
+ignorar em silêncio: receber de volta um digest sem chave é uma falha que ninguém deteta
+até ser tarde.
+
 ---
 
 ## 6. Verificação
@@ -198,7 +205,7 @@ Correção criptográfica não se verifica a olho. Três camadas independentes:
 | Transferido numa página de ferramenta | < 100 KB gz | **~38 KB gz** |
 | Crescimento por algoritmo adicionado | ~0 nas outras páginas | confirmado |
 | Pedidos a hosts externos | 0 | **0** |
-| Lighthouse (Performance, SEO, A11y) | ≥ 95 | por medir |
+| Lighthouse (Performance, SEO, A11y, Best Practices) | ≥ 95 | **100** na home e em `/md5/` |
 
 ---
 

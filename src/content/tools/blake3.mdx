@@ -30,7 +30,9 @@ references:
 ## What BLAKE3 does
 
 BLAKE3 produces a digest of any length — 256 bits by default, shown here as 64 hexadecimal
-characters. Internally it splits input into 1 KiB chunks, hashes each chunk independently,
+characters, and as much as you ask for from the length box. Because the output comes from an
+extendable-output function, a shorter digest is exactly the prefix of a longer one, which is
+not true of BLAKE2. Internally it splits input into 1 KiB chunks, hashes each chunk independently,
 and combines the results in a binary Merkle tree.
 
 ## Why the tree changes everything
@@ -50,7 +52,8 @@ content-addressed storage and streaming verification.
 
 The same construction runs in three modes: plain hashing, keyed hashing for MACs, and key
 derivation with a context string. There is no need for HMAC, and no need for a separate KDF
-— which is why this tool offers no HMAC checkbox.
+— which is why this tool offers a "Keyed" box, taking the 32-byte key BLAKE3 requires,
+rather than an HMAC one.
 
 ## The honest caveat
 

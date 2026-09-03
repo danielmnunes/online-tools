@@ -86,14 +86,14 @@ describe.each(OPENSSL_IDS)('%s matches OpenSSL', (id) => {
     const key = new Uint8Array(randomBytes(keyLength));
     const data = new Uint8Array(randomBytes(300));
     const expected = createHmac(OPENSSL_NAME[id], key).update(data).digest('hex');
-    expect(bytesToHex(await hashBytes(id, data, key))).toBe(expected);
+    expect(bytesToHex(await hashBytes(id, data, { hmacKey: key }))).toBe(expected);
   });
 
   it('refuses HMAC when the algorithm does not offer it', async () => {
     if (HASHES[id].hmac) return;
-    await expect(hashBytes(id, new Uint8Array(1), new Uint8Array(8))).rejects.toThrow(
-      /does not support HMAC/,
-    );
+    await expect(
+      hashBytes(id, new Uint8Array(1), { hmacKey: new Uint8Array(8) }),
+    ).rejects.toThrow(/does not support HMAC/);
   });
 });
 

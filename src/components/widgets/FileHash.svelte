@@ -1,7 +1,15 @@
 <script lang="ts">
-  import { HASHES, type HashId } from '~/lib/algo/hashes';
-  import { hashBlob } from '~/lib/algo/hash';
-  import { OUTPUT_ENCODINGS, bytesToText, type OutputEncoding } from '~/lib/encoding';
+  import { untrack } from 'svelte';
+  import { HASHES, defaultDkLen, describeRange, type HashId } from '~/lib/algo/hashes';
+  import { hashBlob, type HashParams } from '~/lib/algo/hash';
+  import {
+    INPUT_ENCODINGS,
+    OUTPUT_ENCODINGS,
+    bytesToText,
+    textToBytes,
+    type InputEncoding,
+    type OutputEncoding,
+  } from '~/lib/encoding';
   import { formatBytes, formatDuration } from '~/lib/format';
   import Field from '~/components/ui/Field.svelte';
   import Select from '~/components/ui/Select.svelte';
@@ -24,7 +32,26 @@
   let elapsed = $state<number | undefined>(undefined);
   let expected = $state('');
 
+  // Only the BLAKE family reaches these: they take a key directly and let the
+  // caller pick the digest length. Everything else renders neither control.
+  let useKey = $state(false);
+  let keyText = $state('');
+  let keyEncoding = $state<InputEncoding>('utf-8');
+  // untrack because capturing the initial value is the intent: one page is
+  // one algorithm, so `algorithm` never changes for a mounted island.
+  let dkLen = $state(untrack(() => defaultDkLen(algorithm)));
+
+  const digestBits = $derived((meta.dkLen ? dkLen : meta.bits / 8) * 8);
+
   let controller: AbortController | undefined;
+
+  /** Throws if the key does not decode, which run() reports like any error. */
+  function hashParams(): HashParams {
+    const params: HashParams = {};
+    if (useKey && meta.key) params.key = textToBytes(keyText, keyEncoding);
+    if (meta.dkLen) params.dkLen = dkLen;
+    return params;
+  }
 
   const digest = $derived(
     digestBytes ? bytesToText(digestBytes, outputEncoding) : '',
@@ -63,6 +90,7 @@
     const startedAt = performance.now();
     try {
       const out = await hashBlob(algorithm, selected, {
+        ...hashParams(),
         signal,
         onProgress: (fraction) => {
           if (!signal.aborted) progress = fraction;
@@ -78,6 +106,20 @@
       if (!signal.aborted) running = false;
     }
   }
+
+  // A key or a length change makes the digest on screen wrong, so hash again
+  // rather than leaving a stale value beside the new settings. `file` is read
+  // untracked: selecting a file already calls run() through the drop target,
+  // and tracking it here would hash every new file twice.
+  $effect(() => {
+    void useKey;
+    void keyText;
+    void keyEncoding;
+    void dkLen;
+
+    const current = untrack(() => file);
+    if (current !== undefined) void run(current);
+  });
 
   function cancel() {
     controller?.abort();
@@ -143,16 +185,74 @@
     {/if}
   {/if}
 
-  <Field label="Output encoding" for="output-encoding">
-    <Select id="output-encoding" bind:value={outputEncoding} options={OUTPUT_ENCODINGS} />
-  </Field>
+  <div class="flex flex-wrap gap-x-5 gap-y-3">
+    <Field label="Output encoding" for="output-encoding">
+      <Select id="output-encoding" bind:value={outputEncoding} options={OUTPUT_ENCODINGS} />
+    </Field>
+
+    {#if meta.dkLen}
+      <Field label="Output length" for="output-length">
+        <div class="flex items-center gap-2">
+          <input
+            id="output-length"
+            type="number"
+            bind:value={dkLen}
+            min={meta.dkLen.min}
+            max={meta.dkLen.max}
+            step="1"
+            class="w-24 rounded-md border border-border bg-surface px-2.5 py-1.5 font-mono text-sm text-fg
+                   focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
+          />
+          <span class="text-xs text-muted">bytes ({describeRange(meta.dkLen)})</span>
+        </div>
+      </Field>
+    {/if}
+
+    {#if meta.key}
+      <div class="flex items-end pb-1.5">
+        <label class="flex cursor-pointer items-center gap-2 text-sm text-fg">
+          <input
+            type="checkbox"
+            bind:checked={useKey}
+            class="size-4 rounded border-border accent-accent"
+          />
+          Keyed
+        </label>
+      </div>
+    {/if}
+  </div>
+
+  {#if useKey && meta.key}
+    <div class="flex flex-wrap items-end gap-x-5 gap-y-3 rounded-lg border border-border bg-surface p-3">
+      <div class="min-w-56 flex-1">
+        <Field label="Key" for="key">
+          <input
+            id="key"
+            type="text"
+            bind:value={keyText}
+            spellcheck="false"
+            autocomplete="off"
+            class="w-full rounded-md border border-border bg-bg px-2.5 py-1.5 font-mono text-sm text-fg
+                   focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
+          />
+        </Field>
+      </div>
+      <Field label="Key encoding" for="key-encoding">
+        <Select id="key-encoding" bind:value={keyEncoding} options={INPUT_ENCODINGS} />
+      </Field>
+      <p class="w-full text-xs text-muted">
+        Keyed {meta.label} is a MAC, not a checksum: the same file gives a different
+        value under a different key. Needs {describeRange(meta.key)} bytes.
+      </p>
+    </div>
+  {/if}
 
   <OutputArea
     value={digest}
     {error}
     pending={running}
-    label="{meta.label} checksum"
-    meta="{meta.bits} bits"
+    label={useKey ? `${meta.label} MAC` : `${meta.label} checksum`}
+    meta="{digestBits} bits"
   />
 
   <div class="flex flex-col gap-1.5">

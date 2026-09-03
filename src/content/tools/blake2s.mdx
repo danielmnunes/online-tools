@@ -9,11 +9,11 @@ faq:
   - q: >-
         What is the maximum digest length?
     a: >-
-        32 bytes for BLAKE2s, against 64 for BLAKE2b. BLAKE2s also caps its key at 32 bytes and its input counter at 2^64 bytes, all consequences of the narrower word size.
+        32 bytes for BLAKE2s, against 64 for BLAKE2b. BLAKE2s also caps its key at 32 bytes and its input counter at 2^64 bytes, all consequences of the narrower word size. Shorter digests are available from the length box above, but note that a shorter BLAKE2 digest is a different value, not the first bytes of a longer one: the length is folded into the parameter block that seeds the state.
   - q: >-
         Why no HMAC option?
     a: >-
-        BLAKE2 takes a key natively, mixed into its initial state, which is both faster and simpler than HMAC's nested construction. That is the intended way to use it as a MAC.
+        BLAKE2 takes a key natively, mixed into its initial state, which is both faster and simpler than HMAC's nested construction. That is the intended way to use it as a MAC, and it is what the "Keyed" box above does.
 references:
   - label: >-
         RFC 7693 — The BLAKE2 Cryptographic Hash and MAC

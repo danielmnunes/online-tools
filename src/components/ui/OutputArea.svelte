@@ -16,7 +16,7 @@
   <div class="flex items-center justify-between gap-2">
     <div class="flex items-baseline gap-2">
       <span class="text-xs font-medium text-muted">{label}</span>
-      {#if meta}<span class="text-xs text-muted/70">{meta}</span>{/if}
+      {#if meta}<span class="text-xs text-muted">{meta}</span>{/if}
     </div>
     <CopyButton text={error ? '' : value} />
   </div>

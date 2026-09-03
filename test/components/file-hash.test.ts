@@ -106,3 +106,36 @@ describe('FileHash', () => {
     expect(screen.getByRole('status')).toHaveTextContent(/Result appears here/);
   });
 });
+
+describe('FileHash with a natively keyed algorithm', () => {
+  it('re-hashes the same file when the key changes', async () => {
+    const user = userEvent.setup();
+    render(FileHash, { algorithm: 'blake2b' });
+    await dropFile(user);
+
+    // blake2b of "abc" at the default 64 bytes, unkeyed.
+    const unkeyed =
+      'ba80a53f981c4d0d6a2797b69f12f6e94c212f14685ac4b74b12bb6fdbffa2d1' +
+      '7d87c5392aab792dc252d5de4533cc9518d38aa8dbf1925ab92386edd4009923';
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(unkeyed));
+
+    await user.click(screen.getByLabelText('Keyed'));
+    await user.selectOptions(screen.getByLabelText('Key encoding'), 'hex');
+    await user.type(
+      screen.getByLabelText('Key'),
+      '000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f',
+    );
+
+    // OpenSSL BLAKE2BMAC of the same three bytes under that key.
+    const keyed =
+      '9af0244b7da7fe29d90a89727e06a0c93977ce1ad7edcb76ac0b24142194ea00' +
+      'c77be4a1d3fededd31d5a593625a508e742fc90d708f8b48a5c246e4e8e42d94';
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(keyed));
+  });
+
+  it('offers neither control for an algorithm that takes neither', () => {
+    render(FileHash, { algorithm: 'sha256' });
+    expect(screen.queryByLabelText('Keyed')).toBeNull();
+    expect(screen.queryByLabelText('Output length')).toBeNull();
+  });
+});

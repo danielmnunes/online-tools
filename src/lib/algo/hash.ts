@@ -15,11 +15,20 @@
  * buffering, so the practical ceiling is patience rather than memory.
  */
 import type { CHash } from '@noble/hashes/utils.js';
-import { HASHES, type HashId } from './hashes';
+import { HASHES, describeRange, type HashId } from './hashes';
 
 export interface StreamingHasher {
   update(data: Uint8Array): unknown;
   digest(): Uint8Array;
+}
+
+/**
+ * Per-call settings the BLAKE family accepts. Algorithms that take neither
+ * simply ignore the argument, which is why the contract below can be uniform.
+ */
+export interface HashOpts {
+  key?: Uint8Array;
+  dkLen?: number;
 }
 
 /**
@@ -28,10 +37,27 @@ export interface StreamingHasher {
  * exports, satisfy the same contract.
  */
 export interface HashFn {
-  (message: Uint8Array): Uint8Array;
-  create(): StreamingHasher;
+  (message: Uint8Array, opts?: HashOpts): Uint8Array;
+  create(opts?: HashOpts): StreamingHasher;
   readonly outputLen: number;
   readonly blockLen: number;
+}
+
+/**
+ * How an algorithm should be keyed and how long its digest should be.
+ *
+ * `hmacKey` and `key` are deliberately separate rather than one field: they
+ * are different constructions, available on disjoint sets of algorithms, and
+ * conflating them would let a caller silently get HMAC-BLAKE2b when it asked
+ * for keyed BLAKE2b -- a different value with the same shape.
+ */
+export interface HashParams {
+  /** Key for the HMAC construction, for algorithms declaring `hmac: true`. */
+  hmacKey?: Uint8Array;
+  /** Key passed to the algorithm itself, for those declaring a `key` range. */
+  key?: Uint8Array;
+  /** Digest length in bytes, for algorithms declaring a `dkLen` range. */
+  dkLen?: number;
 }
 
 /**
@@ -67,46 +93,92 @@ const LOADERS: Readonly<Record<HashId, () => Promise<HashFn>>> = {
   blake3: () => import('./impl/blake3').then((m) => m.default),
 };
 
-function assertHmacSupported(id: HashId): void {
-  if (!HASHES[id].hmac) {
-    throw new Error(`${HASHES[id].label} does not support HMAC.`);
+/**
+ * Rejects parameters the algorithm does not accept, rather than letting them
+ * be silently dropped. Getting an unkeyed digest back from a call that asked
+ * for a keyed one is the kind of failure nobody notices until it matters.
+ */
+function assertParams(id: HashId, { hmacKey, key, dkLen }: HashParams): void {
+  const meta = HASHES[id];
+
+  if (hmacKey !== undefined && !meta.hmac) {
+    throw new Error(`${meta.label} does not support HMAC.`);
+  }
+  if (hmacKey !== undefined && key !== undefined) {
+    throw new Error(`${meta.label} takes either an HMAC key or its own key, not both.`);
+  }
+
+  if (key !== undefined) {
+    if (meta.key === undefined) {
+      throw new Error(`${meta.label} does not take a key.`);
+    }
+    if (key.length < meta.key.min || key.length > meta.key.max) {
+      throw new Error(
+        `${meta.label} needs a key of ${describeRange(meta.key)} bytes; got ${key.length}.`,
+      );
+    }
+  }
+
+  if (dkLen !== undefined) {
+    if (meta.dkLen === undefined) {
+      throw new Error(`${meta.label} always produces ${meta.bits / 8} bytes.`);
+    }
+    if (!Number.isInteger(dkLen) || dkLen < meta.dkLen.min || dkLen > meta.dkLen.max) {
+      throw new Error(
+        `${meta.label} produces ${describeRange(meta.dkLen)} bytes; got ${dkLen}.`,
+      );
+    }
   }
 }
 
-/** Hash an in-memory byte string, optionally as HMAC with the given key. */
+/** The subset noble understands, or undefined when there is nothing to pass. */
+function nobleOpts({ key, dkLen }: HashParams): HashOpts | undefined {
+  if (key === undefined && dkLen === undefined) return undefined;
+  const opts: HashOpts = {};
+  if (key !== undefined) opts.key = key;
+  if (dkLen !== undefined) opts.dkLen = dkLen;
+  return opts;
+}
+
+/** Hash an in-memory byte string, keyed and sized as the parameters ask. */
 export async function hashBytes(
   id: HashId,
   data: Uint8Array,
-  hmacKey?: Uint8Array,
+  params: HashParams = {},
 ): Promise<Uint8Array> {
+  assertParams(id, params);
   const hash = await LOADERS[id]();
-  if (hmacKey === undefined) return hash(data);
 
-  assertHmacSupported(id);
-  const { hmac } = await import('@noble/hashes/hmac.js');
-  // Safe because every hmac-capable algorithm is a noble CHash; the composed
-  // ones that are not are all declared hmac: false above.
-  return hmac(hash as unknown as CHash, hmacKey, data);
+  if (params.hmacKey !== undefined) {
+    const { hmac } = await import('@noble/hashes/hmac.js');
+    // Safe because every hmac-capable algorithm is a noble CHash; the composed
+    // ones that are not are all declared hmac: false above.
+    return hmac(hash as unknown as CHash, params.hmacKey, data);
+  }
+
+  return hash(data, nobleOpts(params));
 }
 
 /** Start an incremental hash, for input that does not fit in memory at once. */
 export async function createStreamingHasher(
   id: HashId,
-  hmacKey?: Uint8Array,
+  params: HashParams = {},
 ): Promise<StreamingHasher> {
+  assertParams(id, params);
   const hash = await LOADERS[id]();
-  if (hmacKey === undefined) return hash.create();
 
-  assertHmacSupported(id);
-  const { hmac } = await import('@noble/hashes/hmac.js');
-  return hmac.create(hash as unknown as CHash, hmacKey);
+  if (params.hmacKey !== undefined) {
+    const { hmac } = await import('@noble/hashes/hmac.js');
+    return hmac.create(hash as unknown as CHash, params.hmacKey);
+  }
+
+  return hash.create(nobleOpts(params));
 }
 
-export interface HashBlobOptions {
+export interface HashBlobOptions extends HashParams {
   /** Called with a value from 0 to 1 as the file is consumed. */
   onProgress?: (fraction: number) => void;
   signal?: AbortSignal;
-  hmacKey?: Uint8Array;
 }
 
 /**
@@ -130,14 +202,14 @@ const CHUNK_SIZE = 4 * 1024 * 1024;
 export async function hashBlob(
   id: HashId,
   blob: Blob,
-  { onProgress, signal, hmacKey }: HashBlobOptions = {},
+  { onProgress, signal, ...params }: HashBlobOptions = {},
 ): Promise<Uint8Array> {
   function throwIfAborted(): void {
     if (signal?.aborted) throw new DOMException('Hashing cancelled.', 'AbortError');
   }
 
   throwIfAborted();
-  const hasher = await createStreamingHasher(id, hmacKey);
+  const hasher = await createStreamingHasher(id, params);
   const total = blob.size;
 
   for (let offset = 0; offset < total; ) {

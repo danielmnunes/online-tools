@@ -2,7 +2,7 @@
 
 Estado de execução do [PRD.md](PRD.md). `[x]` feito e verificado · `[ ]` por fazer.
 
-**Agora:** 42 ferramentas em produção, 461 testes, CI a fazer deploy automático.
+**Agora:** 42 ferramentas em produção, 497 testes, CI a fazer deploy automático.
 **Alvo:** ~188 ferramentas. A categoria Hash está **fechada** em 21 algoritmos.
 
 ```
@@ -44,6 +44,8 @@ Generator     ░░░░░░░░░░░░░░░░░░░░   0 /
 - [x] `FileHash.svelte` — leitura por chunks de 4 MB, progresso, cancelamento
 - [x] Comparação com checksum publicado: aceita hex ou Base64, qualquer capitalização, com nome de ficheiro à cola
 - [x] Primitivas de UI: `CopyButton`, `Field`, `Select`, `FileDrop`, `OutputArea`
+- [x] **Keying nativo** para BLAKE2b/2s e BLAKE3, distinto de HMAC e recusado onde não se aplica
+- [x] **Comprimento de digest variável** para os mesmos três, nos dois widgets
 - [x] 42 ficheiros MDX escritos de raiz, cada um com ângulo próprio, FAQ e referências
 - [x] Home com cap de 8 por categoria e link "ver todas"
 
@@ -62,9 +64,14 @@ Ver [PRD §5.1](PRD.md).
 - [x] Paridade OpenSSL via `node:crypto` em fronteiras de bloco (388 testes)
 - [x] Guarda de cobertura: algoritmo sem verificação cruzada faz a suite falhar
 - [x] Testes de componente em jsdom: race guard, erros de decode, caixa de comparação
-- [x] **461 testes**, `astro check` com 0 erros / 0 avisos / 0 hints
+- [x] Vetores oficiais BLAKE3 para *keyed hash* e saída estendida a 131 bytes
+- [x] BLAKE2 com chave contra o OpenSSL (`BLAKE2BMAC`/`BLAKE2SMAC`) e o `b2sum` do coreutils
+- [x] **497 testes**, `astro check` com 0 erros / 0 avisos / 0 hints
 - [x] Verificação em Chrome real contra produção — os digests batem no browser, não só no Node
-- [ ] Lighthouse na home e numa página de ferramenta (alvo ≥ 95)
+- [x] Lighthouse: **100** em Performance, Acessibilidade, Best Practices e SEO, na home e em `/md5/`
+      (a primeira medição deu 96 de acessibilidade em `/md5/`: contraste de 4.19:1 no texto de
+      12 px do `OutputArea`, e o botão de tema com um nome acessível que não continha o texto
+      visível — ambos corrigidos)
 
 ### Deploy
 
@@ -77,13 +84,6 @@ Ver [PRD §5.1](PRD.md).
 ---
 
 ## Por fazer
-
-### Fase 1 — opções por expor no widget
-
-Não são algoritmos novos: são opções que os algoritmos já entregues suportam e a UI não expõe.
-
-- [ ] **Keying nativo** para BLAKE2b/2s e BLAKE3 — não oferecem HMAC porque aceitam chave diretamente
-- [ ] **Comprimento de digest variável** para os mesmos três
 
 ### Fase 2 — XOF, MAC e derivação de chaves (~35 páginas)
 
