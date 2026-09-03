@@ -1,0 +1,71 @@
+---
+description: >-
+    Check a password against an Argon2 hash — paste any $argon2d$, $argon2i$ or $argon2id$ string and the password.
+faq:
+  - q: >-
+        Does it matter which Argon2 variant produced the hash?
+    a: >-
+        Not to you. The variant is the first field of the PHC string, so this page reads it and uses the right one. An $argon2i$ hash is checked as Argon2i even though this page is reached from the Argon2id side.
+  - q: >-
+        Do I need the salt and parameters?
+    a: >-
+        No, if you have the PHC string — it carries the variant, the version, m, t, p and the salt. That is the format's purpose. You do need to supply the secret key and associated data again if the hash was made with them, because those are deliberately not in the string.
+  - q: >-
+        My hash has no v= field. Will it still work?
+    a: >-
+        Yes. A missing version field means version 0x10, the pre-2015 layout, and that is how it is interpreted here. Current hashes all carry v=19.
+  - q: >-
+        Why is verification as slow as hashing?
+    a: >-
+        Because it is hashing. The password is run through Argon2 again with the parameters from the string, and the results compared. Anything faster would mean an attacker's guesses were faster too.
+references:
+  - label: >-
+        RFC 9106 — Argon2 Memory-Hard Function for Password Hashing
+    url: https://www.rfc-editor.org/rfc/rfc9106
+  - label: >-
+        The PHC string format specification
+    url: https://github.com/P-H-C/phc-string-format/blob/master/phc-sf-spec.md
+---
+
+## Checking an Argon2 hash
+
+Paste the stored string, type the password, press the button. Everything else — the variant,
+the version, the memory and time costs, the salt — comes out of the string itself.
+
+The derivation runs in a background thread, which matters here more than anywhere else on the
+site: an Argon2id check at 2 GiB is several seconds of solid work and would otherwise lock the
+tab.
+
+## Anatomy of the string
+
+```
+$argon2id$v=19$m=19456,t=2,p=1$c29tZXNhbHQ$RdescudvJCsgt3ub+b+dWRWJTmaaJObG
+ └───┬──┘ └─┬─┘ └──────┬─────┘ └────┬────┘ └──────────────┬──────────────┘
+ variant  version   parameters     salt                  digest
+```
+
+Salt and digest are base64 without padding. Everything a verifier needs is present, which is
+what lets you raise m and t next year without invalidating a single existing password: each
+hash is checked at its own settings, and can be re-hashed at the new ones when its owner next
+logs in.
+
+## The two things the string does not carry
+
+If the hash was made with a **secret key** (RFC 9106's K, sometimes called a pepper) or with
+**associated data** (X), those are not in the string and never will be — the secret key is
+useful precisely because it lives somewhere the database does not. Supply them in the fields
+above, from wherever you keep them, or verification will fail with a correct password.
+
+## Reading the parameters as an audit
+
+The result line reports what the check ran with. Some quick calibration:
+
+- **m below 8192** (8 MiB) — low. Argon2's whole advantage is memory, and this is barely using
+  any.
+- **m = 19456, t = 2** — OWASP's current baseline. Fine for a web login.
+- **m = 65536, t = 3** — comfortable.
+- **m = 2097152, t = 1** — RFC 9106's first recommendation, for backends that can afford 2 GiB
+  per login.
+
+A password that verifies against an m = 1024 hash is a password protected by about as much work
+as a fast PBKDF2, which is to say not much.

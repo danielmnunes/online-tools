@@ -1,0 +1,72 @@
+---
+description: >-
+    Compute a KMACXOF128 tag — the extendable-output form of KMAC128, where a short tag is the prefix of a long one.
+faq:
+  - q: >-
+        How does this differ from KMAC128?
+    a: >-
+        One field in the input. KMAC128 appends right_encode(L), committing to the requested length; KMACXOF128 appends right_encode(0) and squeezes instead. So KMACXOF128 at 32 bytes is the first half of the same call at 64 bytes, and KMAC128 at 32 bytes has nothing to do with KMAC128 at 64.
+  - q: >-
+        Which of the two should I use for authentication?
+    a: >-
+        KMAC128, the non-XOF form. Committing to the length means a tag cannot be reinterpreted as a truncation of a longer one, which removes a class of protocol confusion for free. Use the XOF form when you genuinely want a stream.
+  - q: >-
+        When is the XOF form the right one?
+    a: >-
+        When you want keyed output of a length the caller decides later, or several keys from one call. Deriving a 16-byte IV and a 32-byte key from one KMACXOF stream is natural; doing it with the fixed form means two calls and two length commitments.
+  - q: >-
+        Does truncating a KMACXOF tag weaken it?
+    a: >-
+        Yes, in the ordinary way: an n-byte tag gives 8n bits of forgery resistance. What the XOF form adds is that truncation is meaningful at all — the first half of the output is a valid, weaker tag rather than an unrelated value.
+references:
+  - label: >-
+        NIST SP 800-185 — SHA-3 Derived Functions, section 4.3
+    url: https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-185.pdf
+  - label: >-
+        FIPS 202 — SHA-3 Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
+---
+
+## What KMACXOF128 does
+
+A keyed extendable-output function. Same key handling as KMAC128, same customization string,
+same 128-bit security strength — but the output is squeezed rather than committed to, so it
+behaves like a keyed SHAKE.
+
+Ask for 16 bytes and then for 64, with the same key and message, and the 16 will be the opening
+of the 64. That is the whole distinction, and it is worth understanding before choosing.
+
+## The one-line difference
+
+```
+KMAC128   (K, X, L, S) = cSHAKE128(… || X || right_encode(L), L, "KMAC", S)
+KMACXOF128(K, X, L, S) = cSHAKE128(… || X || right_encode(0), L, "KMAC", S)
+```
+
+`right_encode(L)` versus `right_encode(0)`. Everything else is identical, which is why the two
+functions produce completely different values for the same inputs — the trailing bytes differ,
+so the sponge state differs, so all output differs.
+
+## Why the fixed form is the safer default
+
+Encoding the length binds the tag to it. A verifier expecting 32 bytes cannot be fed the first
+32 bytes of a 64-byte tag and accept them, because those bytes are not what a 32-byte call
+produces. With the XOF form they are, and any protocol that lets an attacker influence the
+expected length now has something to work with.
+
+That is not a flaw in KMACXOF — it is what an XOF is for. It is a reason to reach for the fixed
+form unless you want the stream.
+
+## Where the stream earns its place
+
+Deriving several values at once:
+
+```
+stream  = KMACXOF128(key, transcript, 48, "record layer v1")
+enc_key = stream[0..32]
+iv      = stream[32..48]
+```
+
+One call, one label, no chance of two calls disagreeing about the label. The same job with
+KMAC128 needs two calls with two different customization strings — also correct, and more
+verbose.

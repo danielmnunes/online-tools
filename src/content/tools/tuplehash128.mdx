@@ -1,0 +1,70 @@
+---
+description: >-
+    Hash an ordered list of strings unambiguously with TupleHash128 — no two different tuples can collide by concatenation.
+faq:
+  - q: >-
+        What problem does TupleHash solve?
+    a: >-
+        Concatenation ambiguity. Hashing "ab" followed by "cd" and hashing "a" followed by "bcd" give the same input to an ordinary hash, so they give the same digest — even though the two tuples are different data. TupleHash encodes each element's length before its bytes, so the encoding can be read back exactly one way.
+  - q: >-
+        Is that a real attack or a theoretical one?
+    a: >-
+        Real, and it has bitten production systems. Any place a digest is computed over user-controlled fields joined together — a username and a domain, a path and a query, an amount and a recipient — an attacker who can move a character across the boundary produces a different pair with the same digest, and then a signature over one authorises the other.
+  - q: >-
+        Could I not just use a separator?
+    a: >-
+        Only if the separator cannot appear in the data, which is a claim that stops being true the moment someone adds a field. Length prefixing needs no such assumption, which is why every serious framing format uses it.
+  - q: >-
+        Is TupleHash128 an XOF?
+    a: >-
+        This variant is not: it encodes the requested output length into its input, so asking for 32 bytes and 64 bytes gives unrelated values. TupleHashXOF128 is the extendable version.
+references:
+  - label: >-
+        NIST SP 800-185 — SHA-3 Derived Functions, section 5
+    url: https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-185.pdf
+  - label: >-
+        FIPS 202 — SHA-3 Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
+---
+
+## What TupleHash128 does
+
+It hashes a list of byte strings, in order, so that the list — not the concatenation — is what
+the digest commits to. Add elements above and each is hashed as its own field.
+
+The mechanism is one line of the specification:
+
+```
+z = encode_string(X1) || encode_string(X2) || … || right_encode(L)
+```
+
+`encode_string` writes the bit length of each element before the element. Read `z` back and
+there is exactly one way to split it into the original tuple. No separator, no escaping, no
+assumption about what the data can contain.
+
+## The collision it prevents
+
+Try it above. Put `ab` and `cd` in two elements, note the digest, then change them to `a` and
+`bcd`. The digest changes completely. Now imagine the same two pairs going through SHA3-256
+after a plain join: identical input, identical digest.
+
+That difference is the whole function. Where it matters:
+
+- A signature over `user || domain` that an attacker can shift by one character.
+- A cache key over `tenant || resource` where one tenant can name a resource that impersonates
+  another tenant's key.
+- A transaction digest over `amount || recipient` where moving a digit changes both and cancels
+  out.
+
+## The customization string
+
+TupleHash also takes an S string, and it behaves exactly as it does for cSHAKE: public
+domain separation, so the same tuple hashed for two purposes gives two unrelated values. Use it
+to name what the digest is for.
+
+## Choosing between TupleHash and doing it by hand
+
+You can get the same guarantee by length-prefixing fields yourself before any hash, and plenty
+of well-built systems do. TupleHash's advantages are that the framing is specified rather than
+invented, it has published test vectors, and the reader of your code does not have to check
+whether the hand-rolled version got the edge cases right.

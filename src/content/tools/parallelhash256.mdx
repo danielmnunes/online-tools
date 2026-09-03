@@ -1,0 +1,63 @@
+---
+description: >-
+    Compute a ParallelHash256 digest — tree-structured hashing at the 256-bit level, with the block size as a parameter.
+faq:
+  - q: >-
+        What does the 256 change compared with ParallelHash128?
+    a: >-
+        The security strength, the leaf hash size and the rate. ParallelHash256 hashes each block to 64 bytes rather than 32 with cSHAKE256, and its sponge absorbs 136 bytes per permutation rather than 168. The output defaults to 64 bytes.
+  - q: >-
+        Can I verify a value produced by a multi-core implementation?
+    a: >-
+        Yes, as long as the block size and output length match. The tree structure is part of the specification, so a sequential implementation and a sixteen-core one produce the same digest for the same parameters.
+  - q: >-
+        Why is the default block size only 8 bytes?
+    a: >-
+        Because that is what the published NIST sample values use, and matching them is what lets this page be verified. It is not a recommendation — 8-byte blocks mean one hash call per 8 bytes of input, which is very slow. Set it to whatever your counterpart uses.
+  - q: >-
+        Is a ParallelHash digest the same as a Merkle root?
+    a: >-
+        The shape is similar but the encoding is not, so no ParallelHash value will match a Merkle root from any other scheme. ParallelHash is a flat tree of depth two with the block count and output length folded into the final hash.
+references:
+  - label: >-
+        NIST SP 800-185 — SHA-3 Derived Functions, section 6
+    url: https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-185.pdf
+  - label: >-
+        The Keccak sponge construction
+    url: https://keccak.team/sponge_duplex.html
+---
+
+## What ParallelHash256 does
+
+The message is cut into B-byte blocks. Each block is hashed independently to 64 bytes with
+cSHAKE256. Those results are concatenated, prefixed with the encoded block size, followed by
+the block count and the requested output length, and the whole thing is hashed once more.
+
+The result is a digest that a machine with many cores can compute much faster than a sequential
+hash, because the expensive part — the per-block hashing — has no ordering constraint.
+
+## Depth two, and why that is enough
+
+BLAKE3 builds a full binary Merkle tree and gets logarithmic depth and incremental verification
+out of it. ParallelHash has exactly one level of leaves and one final hash, which is simpler and
+gives up the ability to verify a slice of the message without the rest.
+
+For the job it was designed for — hashing one large object quickly on one machine — depth two
+is enough. The parallelism is already there; a deeper tree would only help if the final hash
+were itself a bottleneck, and with kilobyte blocks it is not.
+
+## The parameters you must record
+
+- **B**, the block size, which is encoded into the digest.
+- **L**, the output length, which is also encoded into the digest for this non-XOF variant.
+- **S**, the customization string, if used.
+
+None of these can be recovered from the digest. A value with no note of its B is a value only
+its producer can reproduce.
+
+## When to choose something else
+
+Single-threaded and free to choose? SHAKE256 or SHA3-512 do the same job with one fewer
+parameter to agree on. Hashing multi-gigabyte files on many cores and free to choose? BLAKE3 is
+faster still and gives incremental verification as well. ParallelHash is the right answer when
+a specification names it.

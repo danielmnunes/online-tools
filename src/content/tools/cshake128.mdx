@@ -1,0 +1,62 @@
+---
+description: >-
+    Compute a cSHAKE128 hash with a customization string — SHAKE128 plus domain separation, from NIST SP 800-185.
+faq:
+  - q: >-
+        What is the customization string for?
+    a: >-
+        Domain separation. Two parts of a system that hash the same bytes for different reasons should not produce the same digest, because a value computed for one purpose then cannot be replayed into the other. Giving each purpose its own S string guarantees that, without needing to invent a prefixing convention and get it right everywhere.
+  - q: >-
+        Why not just prepend the string to the message?
+    a: >-
+        Because prefixing is ambiguous. With a plain prefix, the pair ("ab", "cd") and the pair ("a", "bcd") produce identical input. cSHAKE encodes the length of each field before its contents, so there is exactly one way to read the result — the same reasoning that gives TupleHash its existence.
+  - q: >-
+        What is the function-name field N, and should I use it?
+    a: >-
+        No. SP 800-185 reserves N for functions NIST itself defines — it is what makes KMAC, TupleHash and ParallelHash distinct from each other and from raw cSHAKE. Applications are told to use S instead. The field is offered here because this is the raw primitive and hiding it would make the page a worse reference.
+  - q: >-
+        What happens if I leave both strings empty?
+    a: >-
+        You get SHAKE128, exactly. That is not a coincidence or an implementation shortcut: SP 800-185 defines cSHAKE with empty N and S to be SHAKE, so the two agree bit for bit. The tool says so under the fields when it happens.
+references:
+  - label: >-
+        NIST SP 800-185 — SHA-3 Derived Functions
+    url: https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-185.pdf
+  - label: >-
+        FIPS 202 — the SHAKE functions cSHAKE is built on
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
+---
+
+## What cSHAKE128 does
+
+cSHAKE128 is SHAKE128 with a label attached. You give it a message, an optional customization
+string, and a length; it gives you that many bytes, and changing the label changes every one of
+them.
+
+The label is not concatenated onto the message. It goes through `encode_string`, which writes
+the length of the string before the string itself, and the pair is padded out to a whole block
+before your message begins. That framing is what makes the separation airtight.
+
+## Why domain separation is worth a whole function
+
+Consider a system that hashes user records for two purposes: a cache key and an audit
+fingerprint. If both use SHA3-256 over the same serialised record, they produce the same value,
+and any place that accepts one will accept the other. Nothing is obviously broken — until the
+day the audit fingerprint is treated as authoritative and someone can produce it from the cache.
+
+Give the two purposes different customization strings and the problem cannot arise. It is
+cheap, it is local, and it removes an entire class of confusion that is otherwise very hard to
+audit for.
+
+## The identity worth remembering
+
+With both strings empty, cSHAKE128 *is* SHAKE128. The specification says so directly, and this
+tool's test suite checks it against OpenSSL's SHAKE at a range of input lengths. It means you
+can reach for cSHAKE by default without paying anything when you have nothing to separate.
+
+## Choosing an S string
+
+Make it descriptive and stable. `"MyApp v1 session cookie"` is a good customization string;
+`"key"` is a bad one, because two subsystems will both think it describes them. The string is
+not secret and not a key — it goes in the source code, not in the config file. If you want a
+secret, you want KMAC128, one page over.

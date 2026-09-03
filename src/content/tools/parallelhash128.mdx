@@ -1,0 +1,65 @@
+---
+description: >-
+    Compute a ParallelHash128 digest — the SP 800-185 tree hash whose block size is part of the input.
+faq:
+  - q: >-
+        Is ParallelHash actually parallel here?
+    a: >-
+        No. The design allows the blocks to be hashed independently, which is what lets a native implementation use several cores; this page runs them in sequence in one JavaScript thread. The output is identical either way — parallelism is an implementation freedom, not a property of the value.
+  - q: >-
+        Then why use it?
+    a: >-
+        Because the digest is defined by the tree structure, so a value produced here matches one produced by a parallel implementation elsewhere. If a specification or a peer system uses ParallelHash, this computes the same thing; if you are choosing freely and running single-threaded, SHAKE128 is simpler.
+  - q: >-
+        Does the block size change the digest?
+    a: >-
+        Yes, completely. B is encoded into the input, so the same message under B = 8 and B = 16 gives unrelated values. It is a parameter of the hash, not a performance knob you can retune later.
+  - q: >-
+        What block size should I use?
+    a: >-
+        Whatever the other side uses. Failing that, something large enough that the per-block overhead is small — kilobytes rather than the 8 bytes the NIST examples use, which was chosen to make the samples short.
+references:
+  - label: >-
+        NIST SP 800-185 — SHA-3 Derived Functions, section 6
+    url: https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-185.pdf
+  - label: >-
+        FIPS 202 — SHA-3 Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
+---
+
+## What ParallelHash128 does
+
+It splits the message into blocks of B bytes, hashes each block on its own with cSHAKE128 to
+32 bytes, and then hashes the concatenation of those results together with the block count and
+the requested length.
+
+```
+z = left_encode(B) || H(block1) || H(block2) || … || right_encode(n) || right_encode(L)
+digest = cSHAKE128(z, L, "ParallelHash", S)
+```
+
+Because the block hashes do not depend on each other, an implementation with several cores can
+compute them at once. That is the design's purpose, and it is also the reason B is baked into
+the value: a receiver has to know how the tree was shaped to reproduce it.
+
+## B is part of the digest, not a setting
+
+This trips people up. In a Merkle tree used for storage you can often retune the chunk size and
+still verify old data by remembering which size was used. Here, B goes through `left_encode`
+into the final hash input, so the digest depends on it directly.
+
+The tool defaults to 8 bytes because that is what the NIST sample values use, and those are
+what the test suite checks against. It is a terrible choice for real data — with 8-byte blocks
+you compute one cSHAKE call per 8 bytes of message, which is far slower than hashing the
+message directly. Real deployments use kilobyte blocks.
+
+## Honest advice
+
+If you are not interoperating with something that already uses ParallelHash, use SHAKE128 or
+SHA3-256. ParallelHash's benefit is throughput on many cores, and it costs you a parameter that
+must be agreed and recorded. In a browser, with one thread, you get the cost and none of the
+benefit.
+
+Where it does pay: a native implementation hashing a large file across sixteen cores, or a
+protocol that already specifies it. This page exists so you can check such a value without a
+native toolchain.

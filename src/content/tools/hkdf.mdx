@@ -1,0 +1,82 @@
+---
+description: >-
+    Expand a key with HKDF — RFC 5869 extract-and-expand, with salt, info string and any output length.
+faq:
+  - q: >-
+        Is HKDF a password hash?
+    a: >-
+        No, and using it as one is a serious mistake. HKDF is deliberately fast: it assumes its input already has enough entropy and only needs reshaping. Feeding it a password gives an attacker a derivation they can run millions of times a second. Argon2id, scrypt and PBKDF2 are the slow-on-purpose functions.
+  - q: >-
+        What is the info string for?
+    a: >-
+        Binding the output to a context. One input key can safely produce many unrelated keys as long as each derivation uses a different info string — "client write key", "server write key", "exporter". Without it you would need a separate input secret per key.
+  - q: >-
+        Is the salt required?
+    a: >-
+        No. RFC 5869 makes it optional and substitutes a string of zeros when it is absent, which is what happens here when the field is empty. A salt improves the extract step when the input key material has structure, so use one where you have one, but its absence is not a flaw.
+  - q: >-
+        How much output can I ask for?
+    a: >-
+        Up to 255 times the hash's output size — 8160 bytes with SHA-256. The expand step is a counter chain and the counter is one byte, which is where the limit comes from.
+references:
+  - label: >-
+        RFC 5869 — HMAC-based Extract-and-Expand Key Derivation Function
+    url: https://www.rfc-editor.org/rfc/rfc5869
+  - label: >-
+        Krawczyk, "Cryptographic Extraction and Key Derivation: The HKDF Scheme"
+    url: https://eprint.iacr.org/2010/264
+---
+
+## What HKDF does
+
+Two steps, and the separation between them is the whole design.
+
+**Extract** takes input key material that may be non-uniform — a Diffie–Hellman shared secret,
+say, which is a group element with structure, not a random string — and condenses it into one
+uniformly pseudorandom key:
+
+```
+PRK = HMAC(salt, input_key_material)
+```
+
+**Expand** takes that key and stretches it to any length, bound to a context:
+
+```
+OKM = HMAC(PRK, info || 0x01) || HMAC(PRK, T1 || info || 0x02) || …
+```
+
+Most naive KDFs do only the second half, and that is fine when the input is already a good key
+and wrong when it is not. Krawczyk's paper is largely an argument for why the first half needs
+to exist.
+
+## Where you have already used it
+
+TLS 1.3's entire key schedule is HKDF-Expand-Label calls. The Signal protocol derives chain and
+message keys with it. WireGuard, QUIC and Noise all use it. If you have read a modern protocol
+specification, you have read HKDF pseudocode.
+
+The pattern is always the same: extract once from the handshake secret, then expand repeatedly
+with different info strings for every key the session needs.
+
+## Choosing the info string
+
+Make it specific and version it:
+
+```
+HKDF(shared_secret, salt, "myapp v2 client->server encryption", 32)
+HKDF(shared_secret, salt, "myapp v2 server->client encryption", 32)
+```
+
+Two keys that cannot be confused, from one secret, with the difference stated in the source. If
+the protocol changes shape, change the version in the string so old and new derivations cannot
+accidentally agree.
+
+## What HKDF does not do
+
+It does not stretch. There is no cost parameter and there is no way to add one — HKDF is two
+HMAC chains and it runs in microseconds. That is correct for its job and catastrophic for
+passwords.
+
+The rule is simple: if the input is a random key, HKDF. If the input is something a human
+chose, run it through Argon2id first, and then HKDF the result if you need several keys from
+it.

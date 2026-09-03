@@ -1,0 +1,64 @@
+---
+description: >-
+    ParallelHashXOF128 — the extendable-output form of ParallelHash128, where a short digest prefixes a longer one.
+faq:
+  - q: >-
+        What does the XOF form change?
+    a: >-
+        The final length encoding. ParallelHash128 folds the requested output length into its last hash; the XOF form writes zero there and squeezes. Everything about the tree — the block size, the leaf hashes, the block count — is identical.
+  - q: >-
+        Does the block size still change the value?
+    a: >-
+        Yes. B is encoded regardless of variant, so ParallelHashXOF128 with B = 8 and B = 1024 give unrelated streams for the same message.
+  - q: >-
+        What is this for?
+    a: >-
+        Deriving a variable amount of output from a large message that was hashed in parallel — a mask, a key stream, or a digest whose length the consumer decides. For a fixed-size digest, the non-XOF form commits to the length and is the better default.
+  - q: >-
+        Will it match a parallel implementation?
+    a: >-
+        Yes, given the same B, the same customization string and the same number of output bytes taken. The tree is specified, so the value does not depend on how many cores computed it.
+references:
+  - label: >-
+        NIST SP 800-185 — SHA-3 Derived Functions, section 6.3
+    url: https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-185.pdf
+  - label: >-
+        FIPS 202 — SHA-3 Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
+---
+
+## What ParallelHashXOF128 does
+
+The same two-level tree as ParallelHash128 — blocks of B bytes, each hashed to 32 bytes with
+cSHAKE128, then one hash over the results — but the output is squeezed rather than committed
+to. Ask for 32 bytes and then 200, and the 32 will be the opening of the 200.
+
+## The difference, in the specification's terms
+
+```
+ParallelHash128   : … || right_encode(n) || right_encode(L)
+ParallelHashXOF128: … || right_encode(n) || right_encode(0)
+```
+
+`n` is the block count and is present in both. Only `L` differs. That one field is why the two
+functions never agree on a value, and why only one of them can be safely truncated.
+
+## Where the stream form is the right one
+
+When the parallel tree is there for speed on a large input and the output is key material
+rather than a digest:
+
+```
+stream = ParallelHashXOF128(large_blob, B = 65536, 64, "content key v1")
+```
+
+The blob is hashed with whatever parallelism the implementation has; the caller takes as many
+bytes as it needs.
+
+## A caution about parameters
+
+This function has three inputs that all change the answer and none of which appear in it: the
+block size, the customization string, and — for the non-XOF sibling — the length. Systems that
+use ParallelHash tend to hard-code all of them in one place and version that place. Scattering
+them across call sites is how two components end up computing different digests for the same
+data and nobody can see why.

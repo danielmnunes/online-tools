@@ -1,0 +1,55 @@
+---
+description: >-
+    Compute a KMAC128 authentication tag over a file in your browser — a keyed MAC, not a checksum.
+faq:
+  - q: >-
+        How is this different from a SHA-256 checksum?
+    a: >-
+        A checksum answers "did this file change". A MAC answers "did someone with the key produce this file's tag". Anyone can recompute a SHA-256 checksum, including whoever tampered with the file and the checksum together; only a key holder can produce a valid KMAC tag.
+  - q: >-
+        Can I use this to distribute a file with an authenticated checksum?
+    a: >-
+        Only if the recipient already has the key. That is the whole difficulty with MACs for distribution: the key has to reach the other end some other way. For public downloads, a signature is the right primitive; a MAC works inside a system where both ends already share a secret.
+  - q: >-
+        Does the key ever leave my browser?
+    a: >-
+        No. The key is typed into a field, converted to bytes and used locally, the same as the file. Nothing on this page makes a network request.
+  - q: >-
+        What has to match for a tag to verify?
+    a: >-
+        The key, the customization string, the output length, and of course the file. All but the last are invisible in the tag, so a mismatch in any of them looks the same as a modified file.
+references:
+  - label: >-
+        NIST SP 800-185 — SHA-3 Derived Functions, section 4
+    url: https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-185.pdf
+  - label: >-
+        FIPS 202 — SHA-3 Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
+---
+
+## Authenticating a file with KMAC128
+
+Drop a file, supply the key, and this page produces a tag over the file's whole contents. The
+key is absorbed first, then the file streams through 4 MB at a time; neither is uploaded.
+
+Recomputing the tag later, with the same key, tells you the file is both unmodified and
+produced by someone who had that key — which a plain checksum cannot tell you at all.
+
+## Checksum versus MAC, stated plainly
+
+Publish a SHA-256 checksum next to a download and you protect against corruption: a truncated
+transfer or a bad disk changes the file and the checksum stops matching. You do not protect
+against an attacker, because an attacker who can replace the file can replace the checksum on
+the same page.
+
+A MAC closes that gap, at the cost of key distribution. If the recipient does not already have
+the key, the tag is no better than a checksum; if they do, forgery requires the key. For
+distributing software publicly, signatures solve the same problem without the shared secret,
+and that is why release pipelines use them.
+
+## Keys, briefly
+
+Sixteen bytes minimum for KMAC128. A random 32-byte key entered as hex is a good default —
+switch the encoding dropdown to Hex and paste it. A passphrase typed as UTF-8 works
+mechanically but is a low-entropy key, and KMAC does no stretching whatsoever; if a passphrase
+is what you have, run it through Argon2id first and use the result as the key.

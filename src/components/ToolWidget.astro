@@ -2,6 +2,10 @@
 import type { Tool } from '~/tools/types';
 import TextHash from '~/components/widgets/TextHash.svelte';
 import FileHash from '~/components/widgets/FileHash.svelte';
+import XofHash from '~/components/widgets/XofHash.svelte';
+import XofFile from '~/components/widgets/XofFile.svelte';
+import HmacTool from '~/components/widgets/HmacTool.svelte';
+import KdfTool from '~/components/widgets/KdfTool.svelte';
 
 interface Props {
   tool: Tool;
@@ -21,3 +25,11 @@ const { tool } = Astro.props;
 }
 {tool.widget === 'text-hash' && <TextHash algorithm={tool.config.algorithm} client:load />}
 {tool.widget === 'file-hash' && <FileHash algorithm={tool.config.algorithm} client:load />}
+{tool.widget === 'text-xof' && <XofHash algorithm={tool.config.algorithm} client:load />}
+{tool.widget === 'file-xof' && <XofFile algorithm={tool.config.algorithm} client:load />}
+{tool.widget === 'hmac' && <HmacTool client:load />}
+{
+  tool.widget === 'kdf' && (
+    <KdfTool algorithm={tool.config.algorithm} mode={tool.config.mode} client:load />
+  )
+}

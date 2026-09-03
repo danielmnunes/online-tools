@@ -1,0 +1,68 @@
+---
+description: >-
+    Compute a KMAC128 tag — the Keccak message authentication code from NIST SP 800-185, keyed without HMAC.
+faq:
+  - q: >-
+        Why does Keccak need its own MAC instead of HMAC?
+    a: >-
+        HMAC exists to work around a weakness Keccak does not have. Merkle–Damgård hashes like SHA-256 are vulnerable to length extension, so a naive key-then-message MAC is forgeable, and HMAC's nested construction is the fix. A sponge is not length-extendable, so KMAC can simply absorb the key first — one pass instead of two, and a cleaner security argument.
+  - q: >-
+        What is the difference between KMAC128 and KMACXOF128?
+    a: >-
+        The requested output length. KMAC128 encodes it into the input, so a 32-byte tag and a 64-byte tag are unrelated values. KMACXOF128 encodes zero instead and squeezes, so a 32-byte output is the first half of a 64-byte one. Same key, same message, different answers — pick deliberately.
+  - q: >-
+        How long should the key be?
+    a: >-
+        At least 16 bytes for KMAC128, matching its 128-bit security strength; SP 800-185 says as much. The function accepts any length, including zero, which is a convenience for testing and a mistake in production.
+  - q: >-
+        Is KMAC faster than HMAC-SHA3?
+    a: >-
+        Yes, by roughly a factor of two on short messages, because HMAC hashes everything twice and KMAC does one pass. On long messages the fixed overhead stops mattering and they converge.
+references:
+  - label: >-
+        NIST SP 800-185 — SHA-3 Derived Functions, section 4
+    url: https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-185.pdf
+  - label: >-
+        RFC 2104 — HMAC, the construction KMAC replaces
+    url: https://www.rfc-editor.org/rfc/rfc2104
+---
+
+## What KMAC128 does
+
+KMAC128 takes a key, a message and an output length, and produces a tag that only someone with
+the key can compute. Anyone can check it, given the key; nobody can forge it without.
+
+Under the hood it is cSHAKE128 with the function name fixed to `"KMAC"`:
+
+```
+KMAC128(K, X, L, S) = cSHAKE128(bytepad(encode_string(K), 168) || X || right_encode(L), L, "KMAC", S)
+```
+
+The key is length-encoded and padded to a block, the message follows, and the requested output
+length is written on the end. That trailing `right_encode(L)` is the entire difference between
+this and the XOF variant.
+
+## Why the sponge does not need HMAC
+
+The reason HMAC has a nested structure is length extension. Given SHA-256(key || message) and
+the message length, an attacker can compute SHA-256(key || message || padding || extra) without
+knowing the key — the digest *is* the internal state. So the naive MAC is broken, and HMAC's
+two-pass design is the repair.
+
+Keccak's capacity is never output. There is no way to reconstruct the internal state from the
+tag, so absorbing the key first is safe, and KMAC does exactly that. One pass, no nesting, and
+a proof that does not depend on the compression function being a pseudorandom function.
+
+## The customization string, alongside the key
+
+KMAC takes both. The key is the secret; S is a public label separating one use of that key from
+another. Authenticating both API requests and session tokens with one key? Give them different
+S strings and a tag from one context cannot be replayed into the other, even though the key is
+shared.
+
+## Choosing an output length
+
+32 bytes is the default and is enough for authentication — a forger has to guess the whole tag,
+so 128 bits of tag is 128 bits of work. Truncating below 16 bytes weakens forgery resistance
+directly, and because KMAC128 is not an XOF, "truncating" means asking for a shorter length,
+which produces a different value rather than a prefix.

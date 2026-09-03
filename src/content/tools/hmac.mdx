@@ -1,0 +1,90 @@
+---
+description: >-
+    Compute an HMAC with any supported hash — verify webhook signatures, sign API requests, check a shared-secret tag.
+faq:
+  - q: >-
+        What does HMAC give me that a plain hash does not?
+    a: >-
+        Proof of who computed it. Anyone can hash a message; only someone with the key can produce its HMAC. That is what makes it usable for webhook signatures and API request signing, where the question is not "did this change" but "did this come from you".
+  - q: >-
+        Why not just hash the key and the message together?
+    a: >-
+        Because SHA-256 and its relatives are vulnerable to length extension. Given the hash of key-then-message, an attacker can extend the message without knowing the key, because the digest is the internal state. HMAC's two-pass nesting closes that, which is the entire reason it exists.
+  - q: >-
+        How long should the key be?
+    a: >-
+        At least as long as the digest — 32 bytes for HMAC-SHA-256. HMAC will accept anything, including an empty key, and it hashes anything longer than the block size down first, so a very long key adds no strength past that point.
+  - q: >-
+        Why is HMAC-BLAKE2b not in the list?
+    a: >-
+        Because BLAKE2 takes a key natively, and that construction is both faster and the one its designers analysed. Wrapping it in HMAC is defined but pointless. The BLAKE2b and BLAKE3 pages in the Hash category have a "Keyed" option instead.
+  - q: >-
+        Should I compare signatures with ==?
+    a: >-
+        No. A comparison that stops at the first differing byte tells an attacker, through timing, how many bytes they got right — enough to forge a signature one byte at a time against a service that keeps answering. Every language has a constant-time comparison; use it.
+references:
+  - label: >-
+        RFC 2104 — HMAC: Keyed-Hashing for Message Authentication
+    url: https://www.rfc-editor.org/rfc/rfc2104
+  - label: >-
+        RFC 4231 — HMAC-SHA-2 test vectors
+    url: https://www.rfc-editor.org/rfc/rfc4231
+  - label: >-
+        FIPS 198-1 — The Keyed-Hash Message Authentication Code
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.198-1.pdf
+---
+
+## What HMAC does
+
+You have a message and a secret both sides know. HMAC turns them into a tag that anyone with
+the secret can verify and nobody without it can produce. It is the standard answer for webhook
+signatures, API request signing, session cookies and anything else where two parties share a
+key.
+
+Every hash on this site that can drive HMAC is in the dropdown. HMAC-SHA-256 is the default and
+is what most systems mean when they say "HMAC".
+
+## The construction, and the bug it fixes
+
+```
+HMAC(K, m) = H((K' xor opad) || H((K' xor ipad) || m))
+```
+
+The nesting looks arbitrary until you know what it is defending against. SHA-256 processes a
+message block by block, and its digest is the internal state at the end. So given
+`SHA-256(key || message)` and the message's length, an attacker can resume from that state and
+compute `SHA-256(key || message || padding || anything)` — a valid tag for a message they
+never had the key to sign. That is length extension, and the naive MAC falls to it completely.
+
+Hashing the result a second time under a different key-derived constant hides the internal
+state, and the attack disappears. It costs one extra compression of one block.
+
+Sponge-based hashes do not have this problem — their capacity is never output — which is why
+SHA-3 gets KMAC instead, one page over in this category, and why KMAC needs only one pass.
+
+## Verifying a webhook
+
+Most providers send the tag in a header, hex-encoded, sometimes with a prefix:
+
+```
+X-Hub-Signature-256: sha256=<64 hex characters>
+Stripe-Signature: t=<timestamp>,v1=<64 hex characters>
+```
+
+Paste the exact request body into the message box, the signing secret into the key box, and the
+signature into the comparison box below the result. A leading `sha256=` is stripped for you.
+
+Two things catch people out:
+
+- **The body must be byte-identical.** Parsing JSON and re-serialising it changes whitespace and
+  key order, and the signature is over the bytes that arrived. Capture the raw body before any
+  middleware touches it.
+- **Some providers sign more than the body.** Stripe signs `timestamp + "." + body`; others
+  include the method and path. Read their documentation and build the same string here.
+
+## Choosing the hash
+
+SHA-256 unless something tells you otherwise. HMAC-SHA-1 is still secure as a MAC — the
+collision attacks on SHA-1 do not break HMAC — but it is a bad look and a bad default, and
+HMAC-MD5 likewise. Both are here because plenty of existing systems use them and you may need
+to reproduce a value rather than approve of it.

@@ -1,0 +1,62 @@
+---
+description: >-
+    Compute a KMAC256 authentication tag over a file in the browser — keyed integrity at the 256-bit level.
+faq:
+  - q: >-
+        Why would I MAC a file rather than hash it?
+    a: >-
+        Because a hash only proves the file is unchanged since the hash was taken, and anyone can take a new one. A MAC proves the tag was produced by someone holding the key, so a file swapped in transit cannot be re-tagged by whoever swapped it.
+  - q: >-
+        Is this suitable for backup integrity?
+    a: >-
+        It is a good fit. Tag each archive as it is written, keep the key somewhere the backup system cannot reach, and a later verification distinguishes bit rot from tampering — a plain checksum stored next to the backup distinguishes neither.
+  - q: >-
+        What key length should I use?
+    a: >-
+        32 bytes, matching the 256-bit strength. Generate it with a random-byte source rather than typing one, switch the encoding to Hex, and paste it in.
+  - q: >-
+        Does the file get uploaded?
+    a: >-
+        No. It is read in your browser 4 MB at a time and fed through the sponge. The key is handled the same way. There are no network requests on this page at all.
+references:
+  - label: >-
+        NIST SP 800-185 — SHA-3 Derived Functions, section 4
+    url: https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-185.pdf
+  - label: >-
+        RFC 2104 — HMAC, for comparison
+    url: https://www.rfc-editor.org/rfc/rfc2104
+---
+
+## Authenticating a file with KMAC256
+
+Drop a file and supply a 32-byte key. The key is absorbed into the sponge first, then the file
+streams through in 4 MB slices with progress and a working cancel button. The resulting tag is
+64 bytes by default.
+
+## What the tag proves
+
+That the file is exactly what it was when the tag was made, *and* that whoever made the tag had
+the key. Those are two different claims and a checksum only supports the first.
+
+The practical consequence: a checksum published next to a download is worth having against
+corruption and worth almost nothing against an attacker who controls the page. A MAC is worth
+having against an attacker who does not control the key — which is why it belongs inside a
+system with shared secrets rather than on a public download page, where a signature is the
+right primitive.
+
+## Storing what you need to verify
+
+The tag alone is not enough. Record, alongside it:
+
+- which key was used, or at least a key identifier,
+- the customization string, if any,
+- the output length.
+
+None of these can be recovered from the tag, and getting any of them wrong produces a mismatch
+that looks exactly like a modified file.
+
+## Keys are not passwords
+
+KMAC does no key stretching. A key of "hunter2" is a key an attacker guesses in microseconds,
+and the 256 in the name does nothing about it. Use random bytes. If a human has to remember the
+secret, run it through Argon2id first and use the derived key here.

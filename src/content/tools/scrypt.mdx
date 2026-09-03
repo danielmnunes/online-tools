@@ -1,0 +1,80 @@
+---
+description: >-
+    Derive a key with scrypt — the memory-hard password function from RFC 7914, with N, r and p under your control.
+faq:
+  - q: >-
+        What does "memory-hard" actually buy me?
+    a: >-
+        It makes parallel attacks expensive. PBKDF2 needs a few dozen bytes of state, so a GPU runs tens of thousands of guesses at once. scrypt with N = 16384 and r = 8 needs 16 MiB per guess, so the same GPU runs a handful — memory, not arithmetic, becomes the bottleneck, and memory is expensive to replicate on custom silicon.
+  - q: >-
+        Why must N be a power of two?
+    a: >-
+        Because the second phase indexes into the array of N blocks using the block's own contents, and the specification takes that index modulo N by masking the low bits. That only works when N is a power of two, so anything else is rejected rather than silently rounded.
+  - q: >-
+        How do I choose N, r and p?
+    a: >-
+        RFC 7914 suggests N = 16384, r = 8, p = 1 for interactive logins, which is the default here and uses about 16 MiB. Raise N to raise both time and memory together; raise r to raise memory with less time; raise p to raise time without raising memory. Most people should move N and leave the others.
+  - q: >-
+        scrypt or Argon2id?
+    a: >-
+        Argon2id, for something new. It won the Password Hashing Competition, its parameters separate time and memory more cleanly, and RFC 9106 gives concrete recommendations. scrypt is older, well-analysed and thoroughly deployed, and is a perfectly defensible choice — especially where a library you already trust ships it.
+references:
+  - label: >-
+        RFC 7914 — The scrypt Password-Based Key Derivation Function
+    url: https://www.rfc-editor.org/rfc/rfc7914
+  - label: >-
+        Percival, "Stronger Key Derivation via Sequential Memory-Hard Functions"
+    url: https://www.tarsnap.com/scrypt/scrypt.pdf
+  - label: >-
+        OWASP Password Storage Cheat Sheet
+    url: https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
+---
+
+## What scrypt does
+
+It fills a large array with pseudorandom data derived from your password, then walks that array
+in an order that depends on the data itself, mixing as it goes. Reproducing the walk requires
+having the array; skipping the memory means recomputing blocks on demand, which costs far more
+time than the memory would have cost.
+
+That trade — memory against time, with a bad exchange rate for whoever skips the memory — is
+what Percival's paper formalises and what the whole design exists to create.
+
+## Reading the parameters
+
+**N** is the cost factor: the number of blocks in the array. Memory use is roughly `128 · N · r`
+bytes, so N is the knob that moves both time and space together. It must be a power of two, and
+the tool says so if it is not.
+
+**r** is the block size in 128-byte units. Raising r raises memory without raising the number
+of sequential steps, which favours you over an attacker whose bottleneck is bandwidth rather
+than capacity. RFC 7914's value of 8 has aged well.
+
+**p** is parallelism: p independent passes, mixed at the end. It multiplies time and leaves
+memory alone. In this implementation the passes run in sequence, so raising p simply makes the
+derivation take longer.
+
+The estimate under the fields tells you how much memory the current settings want, which is
+worth glancing at before pressing the button on a phone.
+
+## Where scrypt is deployed
+
+Litecoin and Dogecoin used it as a proof-of-work, and the results are instructive: the whole
+point was to resist custom hardware, and scrypt ASICs shipped anyway. What they demonstrated is
+that memory-hardness raises the cost of specialised hardware substantially without making it
+impossible — which is the honest claim, and still a much better position than PBKDF2's.
+
+For password storage it remains a sound choice, and it is in every major language's standard
+library or first-tier package set.
+
+## Storing the result
+
+The storage form below the output is a PHC string:
+
+```
+$scrypt$ln=14,r=8,p=1$<salt>$<hash>
+```
+
+`ln` is log2(N), which is how the format guarantees the power-of-two constraint. That string is
+what belongs in a database — it carries the parameters, so raising N later does not invalidate
+existing passwords.

@@ -11,8 +11,12 @@ visitor's browser. No backend, no uploads, no accounts.
   drives routing, navigation, breadcrumbs, related links, the sitemap and page metadata.
   Adding a tool means adding one typed entry plus one MDX file — never a new page file.
 - **Svelte islands.** A handful of generic widgets serve the whole catalogue: one
-  `TextHash` component backs every text hashing tool. Pages with no widget — the home
-  page, category pages — ship no JavaScript at all.
+  `TextHash` component backs every text hashing tool, one `XofHash` backs all sixteen
+  SP 800-185 functions, one `KdfTool` backs every key-derivation page in both directions.
+  Pages with no widget — the home page, category pages — ship no JavaScript at all.
+- **Workers for the slow-on-purpose functions.** Argon2 and bcrypt run for seconds by
+  design, so `src/lib/worker/` puts them on another thread, with progress, cancellation by
+  termination, and an inline fallback where `Worker` does not exist.
 - **Per-algorithm code splitting.** `src/lib/algo/impl/` holds one thin module per
   algorithm so the bundler emits one chunk each. `/md5/` downloads the MD5 code and
   nothing else, and that stays true as the catalogue grows — every algorithm on the site
@@ -21,14 +25,27 @@ visitor's browser. No backend, no uploads, no accounts.
 
 ## Verification
 
-Cryptographic correctness is not something to eyeball, so it is checked three ways:
+Cryptographic correctness is not something to eyeball, so it is checked several ways:
 
-- **Published vectors** — RFC 1321, 3174, 2202, 4231, FIPS 180-4, FIPS 202, RFC 7693, and
-  the BLAKE3 team's own test vectors.
-- **Parity with OpenSSL** — every algorithm OpenSSL implements is compared against it
-  through `node:crypto`, across lengths chosen to sit on the block boundaries where padding
-  bugs live. Algorithms OpenSSL lacks (Keccak, BLAKE3) are listed explicitly in
-  `test/parity.test.ts`, so adding one with no cross-check fails the suite.
+- **Published vectors** — RFCs 1321, 3174, 2202, 4231, 5869, 6070, 7693, 7914, 8018 and
+  9106; FIPS 180-4 and FIPS 202; the NIST SP 800-185 samples; the BLAKE3 team's own
+  vectors; and the bcrypt suite that ships with OpenBSD.
+- **Parity with independent implementations** — every algorithm OpenSSL implements is
+  compared against it through `node:crypto` or the command line, across lengths chosen to
+  sit on the block boundaries where padding bugs live. Where OpenSSL falls short, Bouncy
+  Castle and the Rust-backed Python `bcrypt` module take over. Algorithms with no
+  cross-check are listed explicitly in `test/parity.test.ts`, so adding one silently fails
+  the suite.
+- **Re-derivation from the specification** — TupleHash and ParallelHash are rebuilt inside
+  the tests from the text of SP 800-185, on top of OpenSSL's SHAKE, across parameter
+  combinations no vector table covers. This is the layer that settled a disagreement
+  between two implementations: Bouncy Castle's `ParallelHash.doFinal(out, off, outLen)`
+  does not fold a non-default `outLen` into the `right_encode(L)` that §6.2 requires. The
+  divergence is recorded in `test/vectors/sp800-185.ts`.
+- **Constants derived, not transcribed** — bcrypt is the one algorithm here written from
+  the specification, because no browser has Blowfish. Its 1042-word initial state is the
+  hexadecimal fraction of pi, and the test suite recomputes pi with Machin's formula and
+  checks every word rather than trusting a careful copy.
 - **Widget behaviour** — the components are mounted in jsdom and driven the way a person
   drives them, which covers the wiring the algorithm tests cannot see: recomputation on
   option changes, decode errors surfacing instead of stale digests, and the guard that
@@ -50,6 +67,10 @@ Cryptographic correctness is not something to eyeball, so it is checked three wa
 2. Add `src/content/tools/<slug>.mdx` with a description, FAQ and references.
 3. If it needs a new widget kind, add an arm to the `Tool` union in `src/tools/types.ts`
    and a branch in `src/components/ToolWidget.astro`.
+
+For a family with a table behind it — hashes, or the SP 800-185 functions — add the entry
+to `src/lib/algo/hashes.ts` or `src/lib/algo/xofs.ts` instead and the registry generates
+the pages from it.
 
 The build fails if a registry entry has no content file, if a content file has no registry
 entry, or if a tool slug collides with a category page.

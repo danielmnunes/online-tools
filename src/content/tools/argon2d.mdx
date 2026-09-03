@@ -1,0 +1,63 @@
+---
+description: >-
+    Hash with Argon2d — the data-dependent variant, strongest against GPU attacks and unsuitable for shared hosts.
+faq:
+  - q: >-
+        What is Argon2d for?
+    a: >-
+        Settings with no side-channel risk, where maximum resistance to time-memory trade-offs is what matters. Cryptocurrency proof-of-work is the canonical case: the input is public, nobody is watching your cache, and the only question is how expensive the computation is on custom hardware.
+  - q: >-
+        Why not use it for passwords?
+    a: >-
+        Because its memory access pattern depends on the password, so anything that can observe that pattern — a co-resident process, a cache-timing attack — learns something. For password storage RFC 9106 recommends Argon2id, which gets Argon2d's strength for most of the computation without the leak.
+  - q: >-
+        Is Argon2d actually stronger than Argon2id?
+    a: >-
+        Marginally, against trade-off attacks, because all of its passes use data-dependent indexing rather than all but the first half-pass. The difference is small enough that it does not justify the side channel for password storage, which is the whole reason the hybrid exists.
+  - q: >-
+        Does the tool produce a standard hash string?
+    a: >-
+        Yes, a PHC string beginning $argon2d$, which the Argon2 verify page reads back. The variant is part of the string, so nothing has to be remembered separately.
+references:
+  - label: >-
+        RFC 9106 — Argon2 Memory-Hard Function for Password Hashing
+    url: https://www.rfc-editor.org/rfc/rfc9106
+  - label: >-
+        The Argon2 reference implementation
+    url: https://github.com/P-H-C/phc-winner-argon2
+---
+
+## What Argon2d does
+
+Fills m kibibytes with password-derived blocks and makes t passes over them, choosing which
+block to mix with each time based on the contents of the block it just produced.
+
+That data-dependent choice is the entire difference from Argon2i, and it cuts both ways. It is
+what makes the computation hardest to shortcut — an attacker cannot plan the access order in
+advance, so recomputing blocks instead of storing them means recomputing unpredictably deep
+chains. It is also what makes the access pattern reveal something about the password.
+
+## Where the trade lands well
+
+Proof-of-work. The input is not secret, so there is nothing for a side channel to leak, and the
+only design goal is that specialised hardware should not be much better at it than a general
+CPU. Several cryptocurrencies use Argon2d for precisely this.
+
+More generally: any place the input is public and the cost is the product. Rate limiting,
+client puzzles, anti-spam tokens.
+
+## Where it lands badly
+
+Password storage on shared infrastructure. If another tenant on the same physical machine can
+observe cache behaviour, the address sequence Argon2d walks is correlated with the password,
+and that is a leak you cannot patch away.
+
+The three-variant design exists because this trade-off is real and does not have one right
+answer. Argon2id is the compromise, and for passwords it is the one RFC 9106 tells you to take.
+
+## Parameters
+
+Identical to the other variants: m for memory in kibibytes, t for passes, p for lanes. For
+proof-of-work the tuning is different from password storage — you are choosing a cost that is
+tolerable per honest attempt and painful in bulk, which usually means lower memory and more
+attempts than a login endpoint would want.

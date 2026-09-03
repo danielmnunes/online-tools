@@ -146,7 +146,7 @@
       <div class="min-w-0">
         <p class="truncate font-mono text-sm text-fg">{file.name}</p>
         <p class="text-xs text-muted">
-          {formatBytes(file.size)}{#if elapsed !== undefined} · hashed in {formatDuration(elapsed)}{/if}
+          {formatBytes(file.size)}{#if elapsed !== undefined}{` · hashed in ${formatDuration(elapsed)}`}{/if}
         </p>
       </div>
       <div class="flex gap-2">

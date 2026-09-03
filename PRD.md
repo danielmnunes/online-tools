@@ -21,8 +21,8 @@ utilizador** — e onde essa afirmação é verificável abrindo o separador de 
 
 ### Objetivos
 
-1. Cobertura funcional próxima da do site de referência (~188 ferramentas). A categoria Hash
-   fecha em 21 algoritmos, com exclusões deliberadas listadas em §5.
+1. Cobertura funcional próxima da do site de referência (~188 ferramentas). As categorias
+   Hash, XOF/MAC e KDF fecham com exclusões deliberadas listadas em §5.
 2. Processamento 100% client-side, sem exceções.
 3. Cada ferramenta num URL próprio, com HTML estático real — o tráfego desta categoria vem
    de pesquisa orgânica ("md5 online", "base64 decode").
@@ -60,6 +60,7 @@ protegidos por direitos de autor. Todo o código, design e conteúdo é escrito 
 | Estilos | **Tailwind CSS 4** (`@tailwindcss/vite`) | Sem CSS runtime; dark mode por classe |
 | Conteúdo SEO | **MDX + Content Collections** (schema Zod) | Prosa e FAQ versionados e validados no build |
 | Criptografia | **@noble/hashes** e, onde faltar, implementação própria | Ver §5 |
+| Trabalho pesado | **Web Workers** com um pool próprio (`src/lib/worker/`) | Argon2 e bcrypt bloqueiam a UI thread durante segundos |
 | Linguagem | TypeScript `strict` | O registry só funciona se for tipado |
 | Testes | **Vitest** + **jsdom** + `@testing-library/svelte` | Vetores, paridade, e comportamento dos widgets |
 | Deploy | **Cloudflare Workers static assets** + Wrangler | Via recomendada pela Cloudflare e pelo Astro para projetos novos |
@@ -80,22 +81,26 @@ páginas, para um site que é essencialmente HTML estático com um widget cada.
 índice de pesquisa e metadados**. Adicionar uma ferramenta é adicionar uma entrada tipada,
 nunca escrever uma página.
 
-As ferramentas de hash vão mais longe: são geradas a partir da tabela de algoritmos
-(`src/lib/algo/hashes.ts`), porque cada algoritmo produz sempre uma ferramenta de texto e uma
-de ficheiro com os mesmos metadados. 21 entradas na tabela → 42 páginas.
+As ferramentas de hash e as de XOF/MAC vão mais longe: são geradas a partir das tabelas de
+algoritmos (`src/lib/algo/hashes.ts`, `src/lib/algo/xofs.ts`), porque cada entrada produz
+sempre o mesmo formato de ferramenta com os mesmos metadados. 21 hashes → 42 páginas; 16
+funções SP 800-185 → 22. As páginas de KDF são escritas à mão, porque não têm essa
+regularidade: só algumas têm página de *verify*, e três variantes do Argon2 partilham uma.
 
 `Tool` é uma união discriminada por widget, portanto uma configuração que não corresponda ao
 seu widget é erro de tipos, não uma página em branco em runtime.
 
 ### 4.2 Poucos widgets, muitas ferramentas
 
-~13 componentes Svelte servem as ~188 ferramentas:
+~15 componentes Svelte servem as ~188 ferramentas:
 
 | Widget | Cobre | ≈ páginas |
 |---|---|---|
 | `TextHash` | hashes de texto | 21 |
 | `FileHash` | checksums de ficheiro, por chunks, com progresso | 21 |
-| `XofHash` | shake, cshake, kmac, tuplehash, parallelhash | 22 |
+| `XofHash` | shake, cshake, kmac, tuplehash, parallelhash | 16 |
+| `XofFile` | as variantes de ficheiro das que se streamam | 6 |
+| `HmacTool` | HMAC autónomo, com escolha de hash | 1 |
 | `Codec` | base16/32/58/64, html, url, cbor | 16 |
 | `FileCodec` | as variantes de ficheiro dos codecs | 10 |
 | `SymmetricCipher` | aes, des, 3des, rc4, chacha20, poly1305, speck, xxtea | 16 |
@@ -150,8 +155,16 @@ hashing de ficheiros se provar demasiado lento, o caminho de ficheiro — e só 
 carregar o build WASM, decidido com números e não por antecipação.
 
 Onde nem o noble nem a Web Crypto cobrem um algoritmo (DES, RC4, SPECK, XXTEA — todos da
-secção de cifras), a implementação é própria, em `src/lib/algo/legacy/`, com vetores de
-teste da especificação.
+secção de cifras, e o **bcrypt**, já entregue), a implementação é própria, em
+`src/lib/algo/legacy/`, com vetores de teste da especificação.
+
+O bcrypt é o primeiro caso e vale como precedente. Não há Blowfish em nenhum browser, portanto
+não havia atalho. Duas coisas tornaram a implementação própria aceitável em vez de temerária:
+o estado inicial do Blowfish — 1042 palavras de P-array e S-boxes — é **derivado dos dígitos
+hexadecimais de π** em vez de transcrito, o que elimina a maior fonte de erro de cópia; e o
+resultado é verificado contra três implementações independentes (os vetores publicados do
+OpenBSD, o Bouncy Castle, e o módulo `bcrypt` do Python). O teste que recalcula π e compara
+palavra a palavra é o que faz da tabela algo verificado, e não algo em que se confia.
 
 ### 5.1 Âmbito da categoria Hash
 
@@ -178,22 +191,53 @@ produzem digests do comprimento pedido. A tabela de metadados declara os interva
 ignorar em silêncio: receber de volta um digest sem chave é uma falha que ninguém deteta
 até ser tarde.
 
+### 5.2 Âmbito das categorias XOF/MAC e KDF
+
+A categoria XOF/MAC fecha nas **16 funções** da FIPS 202 e da SP 800-185, mais um calculador
+de HMAC autónomo. Ficam de fora o KangarooTwelve, o TurboSHAKE e o HopMAC: o noble expõe-nos,
+mas o K12 tem procura orgânica quase nula e o HopMAC não tem vetores publicados — os próprios
+comentários do noble dizem *use at your own risk*, e este projeto não publica uma ferramenta
+que não consegue verificar.
+
+Só seis das dezasseis ganham página de ficheiro. O TupleHash recebe um tuplo ordenado, não um
+stream, e um ficheiro é um elemento só; o ParallelHash prometeria uma velocidade que em
+JavaScript de uma thread não existe. As duas exclusões são de utilidade, não de capacidade.
+
+A categoria KDF fecha em **8 funções e 12 páginas**: PBKDF2, EvpKDF, HKDF, scrypt, bcrypt e as
+três variantes do Argon2, com página de *verify* para as quatro que têm um formato de
+armazenamento legível. O Argon2 tem uma página de verificação para as três variantes, porque a
+string PHC diz qual delas a produziu.
+
 ---
 
 ## 6. Verificação
 
 Correção criptográfica não se verifica a olho. Três camadas independentes:
 
-1. **Vetores publicados** — RFC 1321, 3174, 2202, 4231, 7693; FIPS 180-4, FIPS 202;
-   SP 800-185; e os vetores oficiais da equipa BLAKE3.
-2. **Paridade com o OpenSSL**, através do `node:crypto` — uma implementação sem código em
-   comum com o noble — em comprimentos escolhidos para cair nas fronteiras de bloco
+1. **Vetores publicados** — RFC 1321, 3174, 2202, 4231, 5869, 6070, 7693, 7914, 8018, 9106;
+   FIPS 180-4, FIPS 202; SP 800-185; os vetores oficiais da equipa BLAKE3; e os vetores do
+   bcrypt distribuídos com o OpenBSD.
+2. **Paridade com implementações independentes.** O OpenSSL, através do `node:crypto` e da
+   linha de comandos, é o oráculo principal — não partilha código com o noble. Onde não chega,
+   entram o Bouncy Castle 1.83 (SP 800-185, Argon2, bcrypt) e o módulo `bcrypt` do Python. Os
+   comprimentos são escolhidos para cair nas fronteiras de bloco
    (0, 1, 55, 56, 63, 64, 65, 71, 72, 111, 112, 127, 128, 135, 136, 137, 1000, 4096), que é
    onde vivem os bugs de padding. Os algoritmos que o OpenSSL não tem estão listados
    explicitamente: **adicionar um algoritmo sem verificação cruzada faz a suite falhar**.
-3. **Comportamento dos widgets** em jsdom — recálculo ao mudar opções, erros de
+3. **Re-derivação da especificação**, onde nenhuma das duas primeiras chega. O TupleHash e o
+   ParallelHash são reconstruídos dentro dos testes a partir do texto da SP 800-185 — com o
+   `left_encode`, o `right_encode` e o `encode_string` escritos à mão sobre o SHAKE do OpenSSL
+   — e comparados em combinações de parâmetros que nenhuma tabela de vetores cobre. Foi esta
+   camada que resolveu uma discordância entre duas implementações: o
+   `ParallelHash.doFinal(out, off, outLen)` do Bouncy Castle não codifica um `outLen`
+   não-predefinido no `right_encode(L)` que a §6.2 exige. O noble está certo, e a divergência
+   ficou registada em `test/vectors/sp800-185.ts` para quem vier a seguir.
+4. **Comportamento dos widgets** em jsdom — recálculo ao mudar opções, erros de
    descodificação a aparecerem em vez de digests obsoletos, e o guard que impede um hash
    lento antigo de sobrescrever um resultado mais recente.
+5. **Guardas estruturais do registry** — slugs únicos, links relacionados que resolvem,
+   configuração que bate com a tabela do algoritmo. Um erro aqui não parte o build: produz uma
+   página que renderiza e está errada, que é o pior tipo.
 
 ---
 
@@ -202,7 +246,8 @@ Correção criptográfica não se verifica a olho. Três camadas independentes:
 | Métrica | Alvo | Estado atual |
 |---|---|---|
 | JS na home e páginas de categoria | 0 KB | **0 KB, 0 ilhas** |
-| Transferido numa página de ferramenta | < 100 KB gz | **~38 KB gz** |
+| Transferido numa página de ferramenta | < 100 KB gz | **23–29 KB gz** (a mais pesada é uma de KDF) |
+| Trabalho pesado fora da main thread | sempre | Argon2id a 19 MiB: 571 ms, **0 ms** de bloqueio |
 | Crescimento por algoritmo adicionado | ~0 nas outras páginas | confirmado |
 | Pedidos a hosts externos | 0 | **0** |
 | Lighthouse (Performance, SEO, A11y, Best Practices) | ≥ 95 | **100** na home e em `/md5/` |
@@ -214,8 +259,8 @@ Correção criptográfica não se verifica a olho. Três camadas independentes:
 | Categoria | Ferramentas |
 |---|---|
 | **Hash** | MD5, SHA-1, SHA-2 (224/256/384/512/512-224/512-256), Double SHA-256, SHA-3 (×4), Keccak (×4), RIPEMD-160, BLAKE2b/2s, BLAKE3 — cada um com variante de ficheiro. **Entregue.** Exclusões em §5 |
-| **XOF e MAC** | SHAKE128/256, cSHAKE128/256, KMAC(XOF)128/256, TupleHash(XOF)128/256, ParallelHash(XOF)128/256, HMAC calculator |
-| **KDF** | PBKDF2, EvpKDF, HKDF, scrypt, Argon2; bcrypt/scrypt/Argon2 com variante *verify* |
+| **XOF e MAC** | SHAKE128/256, cSHAKE128/256, KMAC(XOF)128/256, TupleHash(XOF)128/256, ParallelHash(XOF)128/256, HMAC calculator — com variante de ficheiro nas seis que se streamam. **Entregue.** Exclusões em §5.2 |
+| **KDF** | PBKDF2, EvpKDF, HKDF, scrypt, Argon2d/i/id; PBKDF2/scrypt/bcrypt/Argon2 com variante *verify*. **Entregue.** Ver §5.2 |
 | **Encoding** | Hex/Base16, Base32, Base58, Base64 (texto e ficheiro), Hex dump, HTML entities, URL encode/decode, URL parser, CBOR, JWT decoder |
 | **Format** | JSON validator/minifier/formatter/viewer/compare, XML validator/minifier/formatter, text compare, syntax highlight |
 | **Convert** | 7 conversores de case, time converter |

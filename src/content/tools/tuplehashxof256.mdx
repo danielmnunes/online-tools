@@ -1,0 +1,67 @@
+---
+description: >-
+    TupleHashXOF256 — 256-bit unambiguous tuple hashing with extendable output for key streams and long digests.
+faq:
+  - q: >-
+        How is this different from TupleHash256?
+    a: >-
+        The output length is squeezed rather than encoded into the input. TupleHashXOF256 at 32 bytes is the opening of the same call at 128 bytes; TupleHash256 at those two lengths gives unrelated values.
+  - q: >-
+        Is the tuple framing identical between the two?
+    a: >-
+        Yes. Every element is length-encoded the same way, and the customization string works the same way. Only the final right_encode differs — L for the fixed form, 0 for this one.
+  - q: >-
+        What is this good for that TupleHash256 is not?
+    a: >-
+        Producing a variable or large amount of output from structured input: a key schedule, a mask, a deterministic byte stream keyed by a context tuple. For a digest of fixed size, the non-XOF form is the better default.
+  - q: >-
+        Does an empty tuple work?
+    a: >-
+        The specification permits it and this page will compute it, but a digest over no elements commits to nothing except the customization string. If you find yourself hashing an empty tuple, it is usually a bug upstream.
+references:
+  - label: >-
+        NIST SP 800-185 — SHA-3 Derived Functions, section 5.2
+    url: https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-185.pdf
+  - label: >-
+        Keccak team reference material
+    url: https://keccak.team/keccak.html
+---
+
+## What TupleHashXOF256 does
+
+Unambiguous hashing of an ordered list of strings, at the 256-bit security level, with as much
+output as you ask for. The elements are length-encoded so no rearrangement of bytes across a
+boundary produces the same input; the output is a stream, so a short result prefixes a long one.
+
+## The combination that makes it useful
+
+Two properties come together here:
+
+- The **input** is structured and cannot be confused with a differently-divided input.
+- The **output** is a stream of arbitrary length.
+
+That is exactly the shape of a key-derivation step in a protocol, where the context is several
+distinct fields and the result is several distinct keys. Doing it with a plain hash means
+inventing a framing for the input and a counter mode for the output; this replaces both with
+one specified function.
+
+## A worked shape
+
+```
+stream = TupleHashXOF256([client_random, server_random, transcript], 96, "handshake v2")
+client_key = stream[0..32]
+server_key = stream[32..64]
+exporter   = stream[64..96]
+```
+
+Three keys, one call, no ambiguity about where one random value ends and the next begins even
+if they contain arbitrary bytes.
+
+## Two cautions
+
+**Version the label.** If the byte layout above ever changes, everything after the changed
+field shifts. Putting a version in the customization string turns that into an obvious break
+instead of a subtle one.
+
+**This is not a password KDF.** It is fast, deliberately. Anything derived from a
+human-remembered secret should go through Argon2id or scrypt first.

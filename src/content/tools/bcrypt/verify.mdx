@@ -1,0 +1,69 @@
+---
+description: >-
+    Check a password against a bcrypt hash — paste the $2a$ string and the password, get a straight answer.
+faq:
+  - q: >-
+        Do I need to know the salt or the cost?
+    a: >-
+        No. A bcrypt hash carries both: the two digits after the second dollar sign are the cost, and the following 22 characters are the salt. That is what makes bcrypt strings self-verifying, and it is why they are safe to store as a single column.
+  - q: >-
+        Will it read $2b$ and $2y$ hashes?
+    a: >-
+        Yes. The prefix records which implementation wrote the hash — the differences date to bugs fixed in 1999 and 2011 — but all three key identically in current implementations, and this page handles all three.
+  - q: >-
+        Why does verification take as long as generation?
+    a: >-
+        Because it is generation. There is no shortcut: the tool re-derives the hash from your password using the salt and cost read out of the stored string, then compares. A verification that were fast would mean a cracking attempt were fast too.
+  - q: >-
+        Does the password leave my browser?
+    a: >-
+        No. Everything runs in a background thread inside this tab, and there are no network requests on this page. Open the network panel and check — that claim is the reason the site exists.
+references:
+  - label: >-
+        Provos and Mazières, "A Future-Adaptable Password Scheme" (USENIX 1999)
+    url: https://www.usenix.org/legacy/events/usenix99/provos.html
+  - label: >-
+        OpenBSD bcrypt implementation
+    url: https://github.com/openbsd/src/blob/master/lib/libc/crypt/bcrypt.c
+---
+
+## Checking a bcrypt hash
+
+Paste the stored `$2a$…` string, type the password, press the button. The cost and salt come
+out of the string, so nothing else needs setting.
+
+The work runs off the main thread, which matters at cost 14 and above where a single check can
+take several seconds in JavaScript.
+
+## What the answer means
+
+**Match** means this password, run through bcrypt with the salt and cost embedded in that
+string, produces exactly those 23 bytes. There is no other password known to do that.
+
+**No match** means it does not — and for bcrypt, unlike the raw-digest cases elsewhere in this
+category, there is nothing else it could mean. The parameters came from the hash, so they
+cannot be wrong.
+
+The only genuine ambiguity is encoding: a password with non-ASCII characters must be given to
+the tool as the same bytes the original system used. Almost everything modern uses UTF-8, which
+is the default here.
+
+## Reading the cost as an audit signal
+
+The result line names the cost it used. Some rough guidance for a stored hash you have just
+found:
+
+- **4 to 7** — a test fixture, or something very old. Not a defence.
+- **8 to 9** — was reasonable in 2010.
+- **10 to 12** — the current sensible band for a web login.
+- **13 and up** — deliberate, and someone has thought about it.
+
+If a production database is full of cost-8 hashes, the fix is to raise the cost in the
+application and re-hash each password at next login. You cannot upgrade a stored hash without
+the password, which is exactly the property you wanted.
+
+## Comparing in your own code
+
+Use the library's own verify function — `bcrypt.checkpw`, `BCrypt.checkpw`, `password_verify`.
+Do not re-derive and compare with `==`: a string comparison that stops at the first difference
+leaks how far it got, and the library's version does not.

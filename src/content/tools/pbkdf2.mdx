@@ -1,0 +1,87 @@
+---
+description: >-
+    Derive a key from a password with PBKDF2 — pick the hash, the iteration count and the output length.
+faq:
+  - q: >-
+        How many iterations should I use?
+    a: >-
+        OWASP's 2023 figure for PBKDF2-HMAC-SHA256 is 600,000, and that is the default here. The number is not a constant of nature: it is chosen so that verifying one password costs you a few hundred milliseconds, which makes guessing billions cost an attacker real money. Revisit it as hardware moves.
+  - q: >-
+        Is PBKDF2 still a reasonable choice?
+    a: >-
+        It is acceptable and it is often required — FIPS-validated systems have little else — but it is the weakest of the modern options. PBKDF2 uses almost no memory, so a GPU or an ASIC runs thousands of guesses in parallel at little extra cost. Argon2id and scrypt are designed to make that expensive. Choose PBKDF2 when a standard names it, not when you are free.
+  - q: >-
+        Which hash should I pick?
+    a: >-
+        SHA-256 unless something else demands otherwise. SHA-512 is faster per byte on 64-bit CPUs but that cuts both ways — it is faster for the attacker too, and the iteration counts are calibrated per hash. SHA-1 appears here because WPA2 and older systems use it, not as a recommendation.
+  - q: >-
+        Does a longer output make it stronger?
+    a: >-
+        No, and past the hash's own output size it makes it slower for you and not for the attacker. PBKDF2 produces extra bytes by running the whole iteration chain again for each block, so a 64-byte key from SHA-256 costs twice a 32-byte one — while an attacker checking a password only ever needs the first block.
+references:
+  - label: >-
+        RFC 8018 — PKCS #5, which defines PBKDF2
+    url: https://www.rfc-editor.org/rfc/rfc8018
+  - label: >-
+        OWASP Password Storage Cheat Sheet
+    url: https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
+  - label: >-
+        RFC 6070 — PBKDF2-HMAC-SHA1 test vectors
+    url: https://www.rfc-editor.org/rfc/rfc6070
+---
+
+## What PBKDF2 does
+
+It takes a password, a salt and an iteration count, and produces key bytes. The iteration count
+is the security: PBKDF2 runs HMAC over and over, so a password that takes you 300 milliseconds
+to check takes an attacker 300 milliseconds per guess too.
+
+The derivation runs in a background thread, so the page stays usable while 600,000 iterations
+of HMAC-SHA-256 grind through.
+
+## The mechanism, and its weakness
+
+For each output block, PBKDF2 computes:
+
+```
+U1 = HMAC(password, salt || block_number)
+U2 = HMAC(password, U1)
+...
+Ui = HMAC(password, U(i-1))
+block = U1 xor U2 xor … xor Ui
+```
+
+A long chain of HMAC calls, each depending on the last. That serial dependency is real — you
+cannot skip ahead — but notice what it does not need: memory. The whole computation fits in a
+few dozen bytes of state.
+
+That is PBKDF2's problem. An attacker does not run one chain faster; they run fifty thousand
+chains at once on a GPU, or a hundred thousand on custom silicon, because each one costs
+almost nothing to keep in flight. Doubling your iteration count doubles their cost too, but
+they started from a position thousands of times cheaper than yours.
+
+scrypt and Argon2 exist to change that arithmetic by demanding memory, which is expensive to
+replicate.
+
+## The salt
+
+A salt is not secret and does not need to be. Its job is to make one attacker's precomputed
+table useless against everybody: with per-user salts, cracking a thousand hashes costs a
+thousand times cracking one.
+
+Use 16 random bytes, generated fresh per password. The Generate button here does that with
+`crypto.getRandomValues`. Never reuse a salt across users, and never derive one from the
+username — that is a salt an attacker can predict and precompute against.
+
+## Storing the result
+
+Below the derived bytes, this page shows a Django-style string:
+
+```
+pbkdf2_sha256$600000$<salt>$<base64 digest>
+```
+
+That is what belongs in a database. It carries the hash, the iteration count and the salt, so a
+future verification knows how to reproduce it — and so that raising the iteration count later
+does not invalidate every existing password. Storing the bare digest means storing something
+you cannot check without also remembering, somewhere else, exactly how it was made.

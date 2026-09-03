@@ -1,0 +1,65 @@
+---
+description: >-
+    ParallelHashXOF256 — 256-bit tree-structured hashing with extendable output, for long or variable-length results.
+faq:
+  - q: >-
+        How does it differ from ParallelHash256?
+    a: >-
+        Only in the final length field: this variant encodes zero and squeezes, so its output is a prefix-stable stream. The block size, the 64-byte leaf hashes and the customization string all behave identically.
+  - q: >-
+        Is the output limited?
+    a: >-
+        Not by the specification. This page caps it far above any practical use, purely so a mistyped length cannot lock up the tab.
+  - q: >-
+        Do I still need to record the block size?
+    a: >-
+        Yes. B is encoded into the input in every ParallelHash variant, so it must match for two parties to agree on a value. It cannot be recovered from the output.
+  - q: >-
+        Is this a good choice for hashing large files?
+    a: >-
+        In a native, multi-core implementation, it is a reasonable one. In a browser it is not — this page runs the blocks sequentially, so you pay the tree's overhead and get none of its speed. Use it here to check values, not to produce them at scale.
+references:
+  - label: >-
+        NIST SP 800-185 — SHA-3 Derived Functions, section 6.3
+    url: https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-185.pdf
+  - label: >-
+        Keccak team reference material
+    url: https://keccak.team/keccak.html
+---
+
+## What ParallelHashXOF256 does
+
+Splits the message into B-byte blocks, hashes each to 64 bytes with cSHAKE256, hashes the
+collected results together with the block count, and then squeezes as many output bytes as you
+ask for. Security strength is 256 bits; the default output is 64 bytes.
+
+## Two levels of parameterisation
+
+ParallelHash is the most heavily parameterised function in SP 800-185, and it is worth listing
+what actually affects the value:
+
+| Parameter | Affects the digest? | Recoverable from it? |
+|---|---|---|
+| Message | yes | no |
+| Block size B | yes | no |
+| Customization string S | yes | no |
+| Output length L | no, for the XOF form | — |
+| Number of cores used | no | — |
+
+The last row is the point of the design: parallelism is an implementation choice and does not
+show up in the answer. The rows above it are the price — three inputs that must be agreed out
+of band.
+
+## Prefix stability, and what it costs
+
+Because L is not encoded, a 32-byte result opens a 64-byte result. That is convenient for key
+streams and a hazard anywhere an attacker influences how much digest a verifier expects. The
+non-XOF form removes the hazard by committing to the length; prefer it for anything that
+functions as a digest.
+
+## The realistic use
+
+Checking a value someone else produced. If a protocol or a native tool computed
+ParallelHashXOF256 over some data and you need to confirm it without installing a toolchain,
+set the same B and customization string here and compare. Producing such values at volume is a
+job for a compiled implementation with cores to use.

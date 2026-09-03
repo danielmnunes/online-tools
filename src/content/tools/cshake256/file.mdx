@@ -1,0 +1,52 @@
+---
+description: >-
+    Compute a cSHAKE256 digest of a file with a customization string — 256-bit strength, computed in your browser.
+faq:
+  - q: >-
+        What does the customization string change?
+    a: >-
+        Everything after it. The string is absorbed before the first byte of the file, so a different S gives a completely unrelated digest for the same file. That is the point: two purposes that fingerprint the same file end up with values that cannot be swapped.
+  - q: >-
+        Is this the same as SHA3-512 of the file?
+    a: >-
+        No. Even with an empty customization string and 64 bytes of output, cSHAKE256 is SHAKE256, which uses different padding bits from SHA3-512. The values are unrelated.
+  - q: >-
+        How big a file can I hash?
+    a: >-
+        As large as you have patience for. The file is read in 4 MB slices, so memory does not grow with the file, and the progress bar and cancel button both keep working throughout.
+  - q: >-
+        Why is there no key field on this page?
+    a: >-
+        Because cSHAKE has no key. A customization string is public labelling; a key is a secret only one party holds. The KMAC256 file page is the keyed version of this one.
+references:
+  - label: >-
+        NIST SP 800-185 — SHA-3 Derived Functions
+    url: https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-185.pdf
+  - label: >-
+        Keccak team reference material
+    url: https://keccak.team/keccak.html
+---
+
+## Hashing a file with cSHAKE256
+
+Drop a file above, optionally set a customization string, and choose an output length. The
+customization string is absorbed first, then the file streams through in 4 MB slices. Nothing
+is uploaded; the network tab will confirm it.
+
+## What you have to record alongside the digest
+
+The digest does not carry its own parameters. To check it later you need the same output
+length and the same customization string, character for character. A digest with no note of
+which S produced it is a digest that can only be recomputed by guessing.
+
+This is different from the password hashes in the Key derivation category, which pack their
+parameters into the string itself. A raw XOF output has nowhere to put them.
+
+## When this is the right tool
+
+- A specification or protocol names cSHAKE256 over file contents.
+- You are separating two fingerprints of the same file inside one system.
+- You need a digest of a length that no standard hash produces.
+
+For publishing a download checksum, SHA-256 remains the answer: it is what verification tooling
+speaks, and interoperability beats elegance for that job.

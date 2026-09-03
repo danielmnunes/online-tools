@@ -1,0 +1,65 @@
+---
+description: >-
+    Hash a password with Argon2i — the side-channel-resistant variant, with data-independent memory access.
+faq:
+  - q: >-
+        When is Argon2i the right variant?
+    a: >-
+        When an attacker might observe your memory access pattern — a shared host, a co-resident tenant, a process you do not fully trust on the same machine. Argon2i's indexing does not depend on the password, so watching which addresses are touched reveals nothing about it. For most systems Argon2id gives you that protection where it matters and Argon2d's strength elsewhere.
+  - q: >-
+        Is Argon2i weaker than Argon2d?
+    a: >-
+        Against time-memory trade-off attacks, yes, and measurably so — published analyses reduce its effective memory cost when t is small. RFC 9106 responds by telling Argon2i users to use at least three passes. That is the trade: side-channel resistance costs you some resistance to an attacker who can rent a lot of hardware.
+  - q: >-
+        Why is the default t here 2 rather than 3?
+    a: >-
+        The defaults on this page are shared across the three variants for consistency. If you are choosing Argon2i deliberately, raise t to at least 3, as RFC 9106 section 4 recommends for this variant specifically.
+  - q: >-
+        Can I verify an Argon2i hash on the verify page?
+    a: >-
+        Yes. The Argon2 verify page reads the variant out of the PHC string, so an $argon2i$ hash is checked as Argon2i without any extra setting.
+references:
+  - label: >-
+        RFC 9106 — Argon2 Memory-Hard Function for Password Hashing
+    url: https://www.rfc-editor.org/rfc/rfc9106
+  - label: >-
+        Alwen and Blocki, "Efficiently Computing Data-Independent Memory-Hard Functions"
+    url: https://eprint.iacr.org/2016/115
+---
+
+## What Argon2i does
+
+The same memory-filling and mixing as the other Argon2 variants, with one difference: the index
+of the block to mix with is generated from a counter stream rather than from the data in
+memory.
+
+That sounds minor and is not. It means the sequence of memory addresses Argon2i touches is
+identical for every password, which is precisely what makes it immune to an attacker who can
+watch the access pattern but not the contents.
+
+## The side channel it closes
+
+On shared hardware, one process can often infer another's memory access pattern — through cache
+timing, through page faults, through hardware counters. If those addresses depend on the
+password, that inference is a partial oracle, and partial oracles combine.
+
+Argon2d's indexing depends on the data in memory, which depends on the password. Argon2i's does
+not. On a machine where that observation is possible, the difference is real.
+
+## The cost of closing it
+
+Data-independent indexing gives an attacker something to work with: because the access pattern
+is known in advance, blocks can be recomputed in a planned order rather than stored. Alwen and
+Blocki showed this reduces Argon2i's effective memory cost, particularly at low pass counts.
+
+RFC 9106's answer is to require more passes — at least three for Argon2i, where Argon2id is
+fine at one or two. So the side-channel resistance is not free; it is paid for in time.
+
+## Which to choose
+
+Unless you have a specific reason to fear an observer on the same machine, Argon2id. It runs
+the first half-pass as Argon2i, which is where the observable pattern would otherwise leak, and
+Argon2d thereafter, and RFC 9106 names it the default for exactly that reason.
+
+Argon2i is the right answer when the threat model puts an adversary on your hardware, or when a
+specification names it. Choose it deliberately, and set t to 3 or more when you do.

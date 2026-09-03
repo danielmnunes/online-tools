@@ -2,19 +2,20 @@
 
 Estado de execução do [PRD.md](PRD.md). `[x]` feito e verificado · `[ ]` por fazer.
 
-**Agora:** 42 ferramentas em produção, 497 testes, CI a fazer deploy automático.
+**Agora:** 77 ferramentas em produção, 890 testes, CI a fazer deploy automático.
 **Alvo:** ~188 ferramentas. A categoria Hash está **fechada** em 21 algoritmos.
 
 ```
 Hash          ████████████████████  42 / 42  (âmbito fechado)
-XOF e KDF     ░░░░░░░░░░░░░░░░░░░░   0 / 35
+XOF e MAC     ████████████████████  23 / 23  (âmbito fechado)
+KDF           ████████████████████  12 / 12  (âmbito fechado)
 Encoding      ░░░░░░░░░░░░░░░░░░░░   0 / 26
 Format+Conv   ░░░░░░░░░░░░░░░░░░░░   0 / 20
 Cryptography  ░░░░░░░░░░░░░░░░░░░░   0 / 26
 Compression   ░░░░░░░░░░░░░░░░░░░░   0 / 30
 Generator     ░░░░░░░░░░░░░░░░░░░░   0 / 9
                                     ─────────
-                                    42 / 188
+                                    77 / 188
 ```
 
 ---
@@ -73,6 +74,67 @@ Ver [PRD §5.1](PRD.md).
       12 px do `OutputArea`, e o botão de tema com um nome acessível que não continha o texto
       visível — ambos corrigidos)
 
+### Fase 2 — XOF, MAC e derivação de chaves (35 páginas) — âmbito fechado
+
+- [x] Tabela de funções SP 800-185 (`src/lib/algo/xofs.ts`) — **16 funções**, cada flag da tabela
+      liga um controlo do widget, sem ramos por algoritmo no componente
+- [x] `XofHash.svelte` — comprimento variável, string de customização S, function name N,
+      chave, block size B, e editor de tuplos para o TupleHash
+- [x] `XofFile.svelte` — as seis funções que se streamam (SHAKE, cSHAKE, KMAC), por chunks
+- [x] SHAKE128/256, cSHAKE128/256, KMAC(XOF)128/256, TupleHash(XOF)128/256,
+      ParallelHash(XOF)128/256 — 16 páginas de texto + 6 de ficheiro
+- [x] HMAC calculator autónomo, com caixa de comparação que aceita o prefixo `sha256=`
+- [x] `KdfTool.svelte` — PBKDF2, EvpKDF, HKDF, scrypt, bcrypt, Argon2d/i/id
+- [x] Variante *verify* para PBKDF2, scrypt, bcrypt e Argon2 (uma página para as três variantes)
+- [x] **bcrypt escrito de raiz** (`src/lib/algo/legacy/bcrypt.ts`) — não existe no noble nem na
+      Web Crypto; o estado inicial do Blowfish é **derivado de π**, não transcrito
+- [x] `src/lib/phc.ts` — strings PHC (Argon2, scrypt) e o formato do Django (PBKDF2)
+- [x] **Worker pool** (`src/lib/worker/pool.ts`) com fallback inline onde não há `Worker`
+- [x] Argon2 com `key` (pepper) e `associatedData` de RFC 9106, expostos no widget
+- [x] 35 ficheiros MDX escritos de raiz, cada um com ângulo próprio, FAQ e referências
+
+Funções entregues: `shake128` `shake256` `cshake128` `cshake256` `kmac128` `kmac256`
+`kmacxof128` `kmacxof256` `tuplehash128` `tuplehash256` `tuplehashxof128` `tuplehashxof256`
+`parallelhash128` `parallelhash256` `parallelhashxof128` `parallelhashxof256` `hmac`
+`pbkdf2` `evpkdf` `hkdf` `scrypt` `bcrypt` `argon2d` `argon2i` `argon2id`
+
+**Fora de âmbito, por decisão:** KangarooTwelve, TurboSHAKE e HopMAC. O noble expõe-nos, mas
+o K12 tem procura orgânica quase nula e o HopMAC não tem vetores publicados — os próprios
+comentários do noble dizem "use at your own risk". Ficheiros para TupleHash e ParallelHash
+também não: o primeiro recebe um tuplo e não um stream, e o segundo prometia um paralelismo
+que em JavaScript não existe.
+
+### Verificação da Fase 2
+
+- [x] SHAKE contra o OpenSSL via `node:crypto`, em fronteiras de rate (136 e 168 bytes) e em
+      vários comprimentos de saída
+- [x] Vetores SP 800-185 gerados com **Bouncy Castle 1.83** e confirmados três vezes: batem com
+      os *samples* publicados pelo NIST, o KMAC bate com `openssl mac`, e o cSHAKE com strings
+      vazias bate com o SHAKE do OpenSSL
+- [x] **TupleHash e ParallelHash re-derivados da especificação** dentro dos testes, sobre o SHAKE
+      do OpenSSL, em parâmetros que nenhuma tabela de vetores cobre
+- [x] Encontrado um bug real no Bouncy Castle: `ParallelHash.doFinal(out, off, outLen)` não
+      codifica um `outLen` não-predefinido no `right_encode(L)` que a §6.2 exige. O noble está
+      certo; ficou documentado em `test/vectors/sp800-185.ts`
+- [x] PBKDF2, HKDF e scrypt contra o OpenSSL via `node:crypto`; os quatro Keccak, que o OpenSSL
+      não tem, contra a RFC 8018 escrita à mão no teste
+- [x] Vetores RFC 6070, RFC 5869, RFC 7914 e RFC 9106 (estes com *secret* e *associated data*)
+- [x] EvpKDF contra a linha de comandos `openssl enc -P`, com o comando registado ao lado
+- [x] bcrypt: os vetores publicados do OpenBSD, paridade com o Bouncy Castle **e** com o módulo
+      `bcrypt` do Python, e um teste que recalcula os dígitos hexadecimais de π e compara os
+      1042 valores do estado inicial do Blowfish
+- [x] Worker pool testado com um `Worker` falso: fila, progresso, cancelamento por `terminate()`,
+      e o worker novo que nasce a seguir
+- [x] Testes de componente para os três widgets novos, incluindo o editor de tuplos
+- [x] Guardas estruturais do registry: slugs únicos, links relacionados que resolvem, config que
+      bate com a tabela do algoritmo
+- [x] **890 testes**, `astro check` com 0 erros / 0 avisos / 0 hints
+- [x] Verificação em Chrome real contra o build: o KMAC bate com o *sample* do NIST, o bcrypt com
+      o vetor do OpenBSD, e o Argon2id com o `node:crypto` local — no browser, não só no Node
+- [x] Worker confirmado no browser: 571 ms de Argon2id a 19 MiB **sem bloquear** a main thread,
+      progresso a subir, cancelamento a matar o worker e o seguinte a nascer limpo
+- [x] Contraste e nomes acessíveis verificados nos dois temas: 0 falhas
+
 ### Deploy
 
 - [x] Cloudflare Workers static assets — **https://online-tools.dnhub.workers.dev**
@@ -84,16 +146,6 @@ Ver [PRD §5.1](PRD.md).
 ---
 
 ## Por fazer
-
-### Fase 2 — XOF, MAC e derivação de chaves (~35 páginas)
-
-- [ ] `XofHash.svelte` — comprimento de saída variável, string de customização, chave
-- [ ] SHAKE128/256, cSHAKE128/256, KMAC(XOF)128/256, TupleHash(XOF)128/256, ParallelHash(XOF)128/256 (`@noble/hashes/sha3-addons`)
-- [ ] HMAC calculator autónomo
-- [ ] `KdfTool.svelte` — PBKDF2, EvpKDF, HKDF, scrypt, Argon2
-- [ ] bcrypt, scrypt e Argon2 com variante *verify*
-- [ ] **Worker pool** (`src/lib/worker/pool.ts`) — Argon2 e bcrypt bloqueiam a UI thread
-- [ ] Vetores SP 800-185, RFC 8018, RFC 7914, RFC 9106
 
 ### Fase 3 — Encoding (~26 páginas)
 

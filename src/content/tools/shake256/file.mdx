@@ -1,0 +1,53 @@
+---
+description: >-
+    Compute a SHAKE256 checksum of a file in the browser, at any output length. The file is never uploaded.
+faq:
+  - q: >-
+        How does this differ from the SHA3-512 file page?
+    a: >-
+        SHA3-512 gives you exactly 64 bytes and always will. SHAKE256 gives you 64 by default and any other number on request, and its padding differs so the two never agree even at the same length. If you want a standard fixed digest, use SHA3-512; if you need a specific unusual length, use this.
+  - q: >-
+        Can I verify a post-quantum key file with this?
+    a: >-
+        You can compute the digest a specification calls for, which is often the useful half. Whether that digest means the file is valid depends on what the specification does with it — SHAKE256 is a hash here, not a signature check.
+  - q: >-
+        Is the output length part of the digest?
+    a: >-
+        Not for SHAKE. Asking for more bytes extends the same stream rather than changing it, so a 32-byte result is the first half of a 64-byte one. The SP 800-185 functions in this category behave differently, and each of those pages says so.
+  - q: >-
+        Why does the progress bar pause on very large files?
+    a: >-
+        Each 4 MB slice is read and hashed in one go before the next is requested. On a slow disk the read dominates; on a fast one the hashing does. Either way the page stays responsive between slices, which is what the chunking is for.
+references:
+  - label: >-
+        FIPS 202 — SHA-3 Standard, including SHAKE128 and SHAKE256
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
+  - label: >-
+        Keccak team reference material
+    url: https://keccak.team/keccak.html
+---
+
+## Hashing a file with SHAKE256
+
+Drop a file above. It is read 4 MB at a time and absorbed into the Keccak sponge slice by
+slice, so memory use stays flat whether the file is a kilobyte or twenty gigabytes, and nothing
+is uploaded anywhere.
+
+## Choosing the length
+
+The default is 64 bytes, matching `openssl dgst -shake256`. Two rules make the choice easy:
+
+- Comparing against a published value? Match its length exactly. A correct file with the wrong
+  length set looks identical to a corrupt file, and the tool cannot tell you which it was.
+- Choosing freely? 64 bytes gives you everything SHAKE256 has. Beyond that you are producing
+  more bytes, not more security.
+
+## Speed, honestly
+
+This is pure JavaScript. SHA-256 on a modern CPU runs through dedicated instructions and will
+be several times faster; BLAKE3 in a native binary faster still. What you get in exchange is
+that the bytes never leave the machine, which for a file you would rather not upload is the
+whole point.
+
+For a routine integrity check of a large download, `sha256sum` on the command line is the
+better tool. For a file you cannot hand to a website, this one runs where the file already is.

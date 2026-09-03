@@ -1,0 +1,54 @@
+---
+description: >-
+    Compute a SHAKE128 checksum of a file in your browser, at whatever output length you need. Nothing is uploaded.
+faq:
+  - q: >-
+        Does this match "openssl dgst -shake128"?
+    a: >-
+        Yes, provided the lengths agree. OpenSSL defaults to 32 bytes and so does this page; if you passed -xoflen, set the same number in the output length box before comparing.
+  - q: >-
+        Should I use SHAKE128 for file checksums at all?
+    a: >-
+        Rarely. Published checksums are almost always SHA-256 or BLAKE2b, and a checksum nobody else computes is not much use for verification. This page exists for the cases where a specification or a protocol names SHAKE — post-quantum key formats, for one — rather than as a general-purpose choice.
+  - q: >-
+        How large a file can it handle?
+    a: >-
+        There is no size limit imposed here. The file is read 4 MB at a time and fed through the sponge, so memory stays flat regardless of size; a multi-gigabyte file is a question of patience, not of capacity.
+  - q: >-
+        Why is it slower than sha256sum?
+    a: >-
+        Two reasons. This runs in JavaScript, which has no access to the SHA extensions modern CPUs use for SHA-256, and Keccak's permutation is more work per byte than SHA-256's compression function to begin with.
+references:
+  - label: >-
+        FIPS 202 — SHA-3 Standard, including SHAKE128 and SHAKE256
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
+  - label: >-
+        OpenSSL dgst manual page
+    url: https://docs.openssl.org/master/man1/openssl-dgst/
+---
+
+## Hashing a file with SHAKE128
+
+Drop a file above and choose how many bytes you want out. The file never leaves your machine:
+it is read in 4 MB slices and absorbed into the sponge one slice at a time, which is why the
+progress bar moves and why a very large file does not exhaust memory.
+
+## Choosing a length for a checksum
+
+For a file checksum, the length question has a simple answer: match whatever produced the value
+you are comparing against. If nothing produced it and you are choosing freely, 32 bytes gives
+you the full 128-bit security SHAKE128 can offer, and more only makes the string longer.
+
+Because SHAKE is extendable, a 16-byte result is the first half of the 32-byte one. That makes
+truncation safe here in a way it is not for BLAKE2 — but it also means a short SHAKE checksum
+gives an attacker a smaller target, so do not truncate to save screen space.
+
+## The comparison box
+
+Paste a published value below the result and it is checked against every form this page can
+produce — lowercase hex, uppercase hex and Base64 — so a Base64 checksum still matches while
+the display is set to hex. A trailing filename, as in a `sha256sum`-style listing, is ignored.
+
+What it cannot do is guess the output length. A published 64-byte SHAKE value will not match a
+32-byte computation, and the tool has no way to tell that from a genuinely corrupt file, so set
+the length first.

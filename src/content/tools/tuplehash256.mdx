@@ -1,0 +1,67 @@
+---
+description: >-
+    Hash an ordered list of strings with TupleHash256 — unambiguous tuple hashing at the 256-bit security level.
+faq:
+  - q: >-
+        When is TupleHash256 worth the extra cost over TupleHash128?
+    a: >-
+        When the digest is long-lived or authenticates something valuable. The cost is about 20% throughput; the gain is 256-bit rather than 128-bit collision resistance. For a signature input or a transaction commitment, take the larger one.
+  - q: >-
+        Does element order matter?
+    a: >-
+        Yes. TupleHash commits to the sequence as well as the contents, so swapping two elements changes the digest even when they are the same length. If you need order not to matter, sort before hashing — the function will not do it for you.
+  - q: >-
+        Can an element be empty?
+    a: >-
+        Yes, and an empty element is not the same as no element. encode_string of an empty string still writes a length field, so a tuple of one string differs from a tuple of that string plus an empty one. That is the correct behaviour and worth knowing when serialising optional fields.
+  - q: >-
+        How does this compare with hashing a JSON object?
+    a: >-
+        JSON gives you the same unambiguity only if the serialisation is canonical — fixed key order, fixed number formatting, fixed escaping — which is famously hard. TupleHash gives it to you from the structure itself, with no parser involved.
+references:
+  - label: >-
+        NIST SP 800-185 — SHA-3 Derived Functions, section 5
+    url: https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-185.pdf
+  - label: >-
+        The Keccak sponge construction
+    url: https://keccak.team/sponge_duplex.html
+---
+
+## What TupleHash256 does
+
+The same unambiguous tuple hashing as TupleHash128, at 256-bit security strength and with a
+64-byte default output. Each element is length-encoded before it is absorbed, so the tuple —
+its contents and its order — is what the digest commits to.
+
+## Structured data without a serialisation format
+
+The usual way to hash structured data is to serialise it and hash the bytes. That works, but it
+makes the digest depend on every quirk of the serialiser: key ordering, whitespace, how the
+number 1.0 is written, which characters get escaped. Two implementations that disagree about
+any of those produce different digests for the same data, and reconciling them is a familiar
+kind of misery.
+
+TupleHash sidesteps the question. Hand it the fields and it commits to them directly:
+
+```
+digest = TupleHash256([tenant, resource, action], 64, "authz cache key v2")
+```
+
+No canonical form to specify, no parser to agree on, and no possibility of a field boundary
+moving.
+
+## Order and emptiness
+
+Two properties worth stating because they surprise people:
+
+- **Order is part of the input.** `[a, b]` and `[b, a]` hash differently. If your data is a set
+  rather than a list, sort it before hashing and say so in the code.
+- **An empty element is an element.** `[x]` and `[x, ""]` hash differently, because the empty
+  string still contributes a length field. When a field is optional, decide whether "absent" and
+  "empty" are the same thing, and encode that decision rather than leaving it to chance.
+
+## Versioning the customization string
+
+Put a version in S, as in the example above. When the tuple layout changes — a field added, two
+fields merged — the old digests should stop matching rather than silently mean something new.
+Bumping the label makes that happen by construction.

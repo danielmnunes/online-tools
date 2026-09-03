@@ -1,0 +1,82 @@
+---
+description: >-
+    Hash a password with Argon2id — the RFC 9106 recommendation, with memory, time and parallelism you control.
+faq:
+  - q: >-
+        What parameters should I use?
+    a: >-
+        OWASP's baseline for Argon2id is m = 19456 KiB, t = 2, p = 1, which is the default here and uses about 19 MiB. RFC 9106's first recommendation is far heavier — 2 GiB, t = 1 — and is meant for backend systems that can afford it. Pick the most memory you can spare per concurrent login, then raise t until the time is what you want.
+  - q: >-
+        Why Argon2id rather than Argon2i or Argon2d?
+    a: >-
+        Because it is both. Argon2d indexes memory based on the data, which is fastest to attack with a GPU but leaks timing; Argon2i indexes independently of the data, which is side-channel safe but weaker against time-memory trade-offs. Argon2id runs the first half as Argon2i and the second as Argon2d, and RFC 9106 names it the one to use unless you have a specific reason.
+  - q: >-
+        Is more memory always better?
+    a: >-
+        Up to what your server can allocate per concurrent login, yes — memory is the parameter attackers find hardest to buy. But m × concurrent logins is real RAM, and a login endpoint that allocates 2 GiB per request is a denial-of-service target. Size it against your traffic.
+  - q: >-
+        What are the secret key and associated data fields?
+    a: >-
+        RFC 9106's optional inputs K and X. The secret key is a pepper, held outside the database, so a stolen table alone cannot be attacked offline. Associated data binds the hash to context such as a user id. Both are genuinely useful and both are omitted from the PHC string, so you must supply them again at verification.
+references:
+  - label: >-
+        RFC 9106 — Argon2 Memory-Hard Function for Password Hashing
+    url: https://www.rfc-editor.org/rfc/rfc9106
+  - label: >-
+        OWASP Password Storage Cheat Sheet
+    url: https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
+  - label: >-
+        The Password Hashing Competition
+    url: https://www.password-hashing.net/
+---
+
+## What Argon2id does
+
+It allocates m kibibytes of memory, fills it with blocks derived from your password and salt,
+then makes t passes over the whole array, overwriting each block with a mix of itself and
+another block chosen by an index that changes as it goes. The final block is the hash.
+
+An attacker has two choices: allocate the same memory per guess, or recompute blocks on demand.
+The design makes the second choice cost far more time than the memory would have cost, and the
+first choice is what stops a GPU running fifty thousand guesses at once.
+
+This is the same idea as scrypt, worked out more carefully and with the parameters separated
+more cleanly.
+
+## Why it is the default recommendation
+
+Argon2 won the Password Hashing Competition in 2015, a multi-year open evaluation that existed
+precisely because the field had no clear answer. Argon2id is what RFC 9106 tells you to use,
+what OWASP tells you to use, and what libsodium gives you when you ask for a password hash.
+
+The hybrid is the interesting part. Argon2d's data-dependent indexing resists time-memory
+trade-offs best but makes memory access patterns depend on the password — observable from a
+co-resident process. Argon2i's data-independent indexing removes that leak but gives an
+attacker more room. Argon2id runs the first half of the first pass as Argon2i, by which point
+the observable pattern reveals nothing useful, then switches to Argon2d for the rest.
+
+## Reading the parameters
+
+**m** is memory in kibibytes and is the parameter that matters most. 19456 is 19 MiB; 65536 is
+64 MiB; 2097152 is 2 GiB.
+
+**t** is the number of passes. Raise it when you have as much memory as you can spare and still
+want the derivation to take longer.
+
+**p** is lanes. It is meant for parallel implementations; this one runs the lanes in sequence,
+so raising p here costs time without the benefit it would have natively. Leave it at 1 unless
+you are reproducing a hash made elsewhere.
+
+## The PHC string
+
+```
+$argon2id$v=19$m=19456,t=2,p=1$<salt>$<hash>
+```
+
+Everything needed to verify: the variant, the version, all three cost parameters and the salt.
+This is what goes in the database. Raising the parameters later leaves old hashes verifying at
+their own settings, and each can be upgraded at next login.
+
+Note what it does not contain: the secret key and the associated data. If you use those, they
+must be supplied again at verification from wherever you keep them — which is the point of the
+secret key, since keeping it out of the database is what makes it useful.

@@ -94,6 +94,17 @@ const LOADERS: Readonly<Record<HashId, () => Promise<HashFn>>> = {
 };
 
 /**
+ * The loader for one algorithm, for callers outside this module.
+ *
+ * PBKDF2, HKDF and EvpKDF are all parameterised by a hash, and they want the
+ * same lazily-loaded, separately-chunked function this module already knows
+ * how to fetch.
+ */
+export function loadHash(id: HashId): Promise<HashFn> {
+  return LOADERS[id]();
+}
+
+/**
  * Rejects parameters the algorithm does not accept, rather than letting them
  * be silently dropped. Getting an unkeyed digest back from a call that asked
  * for a keyed one is the kind of failure nobody notices until it matters.

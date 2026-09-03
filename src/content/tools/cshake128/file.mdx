@@ -1,0 +1,55 @@
+---
+description: >-
+    Compute a cSHAKE128 digest of a file with a customization string, entirely in your browser.
+faq:
+  - q: >-
+        Why would a file checksum need a customization string?
+    a: >-
+        When the checksum is part of a protocol rather than a download page. A system that fingerprints uploaded files for deduplication and also fingerprints them for a signed manifest wants those two values to be unrelated, so that one cannot be substituted for the other. Distinct S strings do that.
+  - q: >-
+        Is a cSHAKE128 file digest with no S the same as SHAKE128?
+    a: >-
+        Yes. Leave both string fields empty and this page computes exactly what the SHAKE128 file page computes, because the specification defines it that way.
+  - q: >-
+        Do I need to remember the customization string to verify later?
+    a: >-
+        Yes, along with the output length. Neither is stored in the digest, and neither can be recovered from it — a wrong S produces a value that looks like any other mismatch. Record both wherever you record the digest.
+  - q: >-
+        Can I stream a file into cSHAKE with a customization string?
+    a: >-
+        Yes, and that is what happens here. The string is absorbed first, before any of your file, so it costs one extra block and then the rest is ordinary streaming. The comparison box works exactly as it does for a plain hash.
+references:
+  - label: >-
+        NIST SP 800-185 — SHA-3 Derived Functions
+    url: https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-185.pdf
+  - label: >-
+        The Keccak sponge construction
+    url: https://keccak.team/sponge_duplex.html
+---
+
+## Hashing a file with cSHAKE128
+
+Drop a file above, set a customization string if you have one, and choose an output length. The
+string is absorbed into the sponge before the first byte of your file, and then the file
+streams through 4 MB at a time without leaving the browser.
+
+## What has to match to verify
+
+Three things, all of which live outside the digest:
+
+- the **customization string**, byte for byte,
+- the **output length**,
+- the **function name** N, if whatever produced the value used one.
+
+Get any of them wrong and you see "no match", which is indistinguishable from a corrupted file.
+This is the cost of domain separation: the label is not recoverable from the result, by design.
+Write it down next to the digest.
+
+## Where this fits
+
+For publishing a download checksum, use SHA-256 or BLAKE2b — those are what verification tools
+and package managers already speak, and a cSHAKE value is one nobody else will compute.
+
+This page is for the other case: a file digest inside a system you control, where you want the
+value to mean "the manifest hash of this file" and nothing else, and want that to be true by
+construction rather than by convention.

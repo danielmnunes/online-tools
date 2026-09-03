@@ -1,0 +1,65 @@
+---
+description: >-
+    TupleHashXOF128 — unambiguous tuple hashing with extendable output, where a short digest prefixes a longer one.
+faq:
+  - q: >-
+        What does the XOF variant change?
+    a: >-
+        Only the trailing length encoding. TupleHash128 writes the requested output length into its input; TupleHashXOF128 writes zero and squeezes. So the XOF version's 16-byte output is the start of its 64-byte output, and the fixed version's are unrelated values.
+  - q: >-
+        Which should I use?
+    a: >-
+        The fixed one, unless you want a stream. Committing to the length is free and removes a way for two parts of a protocol to disagree about how much digest they meant.
+  - q: >-
+        Why would a tuple hash need extendable output?
+    a: >-
+        To derive several values from structured input in one call — a key and an IV from a context tuple, say. The tuple framing keeps the context unambiguous; the XOF gives you the bytes to divide up.
+  - q: >-
+        Is it still collision-resistant if I take only 8 bytes?
+    a: >-
+        No more than any 8-byte digest is: 64 bits is within reach of a birthday search. Take at least 32 bytes if collisions matter. The tuple framing prevents one class of collision; it does not make a short digest long.
+references:
+  - label: >-
+        NIST SP 800-185 — SHA-3 Derived Functions, section 5.2
+    url: https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-185.pdf
+  - label: >-
+        FIPS 202 — SHA-3 Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
+---
+
+## What TupleHashXOF128 does
+
+It hashes an ordered list of strings unambiguously, like TupleHash128, and then produces as
+many output bytes as you ask for as a continuous stream. Each element is still length-encoded
+before absorption, so `["ab", "cd"]` and `["a", "bcd"]` remain different inputs.
+
+## Why both variants exist
+
+SP 800-185 defines an XOF form of each of its functions for one reason: sometimes the caller
+does not know, at the time of the call, how many bytes the consumer wants. A fixed-output
+function forces that decision into the input, which is right for a digest and wrong for a key
+schedule.
+
+The cost of getting it backwards is confusion rather than compromise. A verifier that computes
+TupleHash128 at 32 bytes will never accept a TupleHashXOF128 tag, because they are unrelated
+values — so a mismatch shows up immediately rather than silently.
+
+## Deriving several values from structured context
+
+```
+stream = TupleHashXOF128([tenant, session_id, "v1"], 48, "record keys")
+key    = stream[0..32]
+nonce  = stream[32..48]
+```
+
+The tuple keeps `tenant` and `session_id` from bleeding into each other regardless of what
+characters they contain; the stream lets one call produce both outputs.
+
+If the layout ever changes, bump the customization string. A key schedule that silently shifts
+by sixteen bytes is a very unpleasant bug to find.
+
+## The property to keep in mind
+
+A short output is a prefix of a long one. That is useful when it is what you want and a hazard
+when a protocol lets an attacker choose the length. If in doubt, use TupleHash128, which cannot
+be truncated into a different valid value.

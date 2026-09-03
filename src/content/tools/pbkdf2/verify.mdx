@@ -1,0 +1,68 @@
+---
+description: >-
+    Check a password against a PBKDF2 hash — reads Django's format, or compares a bare digest with your parameters.
+faq:
+  - q: >-
+        What formats does this accept?
+    a: >-
+        Django's, which looks like pbkdf2_sha256$600000$salt$base64digest and carries everything needed to check it. Failing that, a bare digest in hex or Base64, checked against whatever hash, salt and iteration count you set in the fields.
+  - q: >-
+        Why does the tool say which parameters it used?
+    a: >-
+        Because a "no match" from the wrong iteration count looks exactly like a "no match" from the wrong password, and quietly using the form's values when the hash carried its own would be the worst of both. The result line names what it actually ran with.
+  - q: >-
+        My hash starts with $pbkdf2-sha256$. Will this read it?
+    a: >-
+        Not directly — that is passlib's PHC-style format, which uses a modified Base64 alphabet with dots instead of plus signs. Decode the salt and digest yourself and paste the digest as hex, with the iteration count set by hand.
+  - q: >-
+        Is checking a password in a browser safe?
+    a: >-
+        The password and the hash stay in the tab; nothing is uploaded, and the network panel will show that. What you should think about is the machine and the browser extensions on it, which is a different question from whether the page phones home.
+references:
+  - label: >-
+        RFC 8018 — PKCS #5, which defines PBKDF2
+    url: https://www.rfc-editor.org/rfc/rfc8018
+  - label: >-
+        Django's password management documentation
+    url: https://docs.djangoproject.com/en/stable/topics/auth/passwords/
+---
+
+## Checking a password against a stored hash
+
+Paste the stored value, type the password, press the button. If the stored value is a
+self-describing string, its salt and iteration count are used and the fields above are ignored;
+if it is a bare digest, the fields are what the check runs with. The result says which
+happened.
+
+## Why a hash has to carry its parameters
+
+PBKDF2 output depends on four things: the password, the salt, the iteration count and the hash
+function. Three of those are not secret, and all three have to be known to check a password
+later.
+
+A system that stores only the digest has to remember the rest somewhere — usually a constant in
+the code. That works right up until the day the iteration count is raised, at which point every
+existing password stops verifying, because the stored digests were made with the old number and
+nothing recorded that.
+
+Storing the parameters with the hash solves it. Old rows verify with their own iteration count;
+new rows get the new one; and a login can transparently re-hash at the higher setting. Django's
+format does this, and so does the PHC string format the Argon2 and scrypt pages use.
+
+## Verifying without leaking timing
+
+This page compares the whole digest rather than stopping at the first difference, and your code
+should do the same. A comparison that returns early tells an attacker how many leading bytes
+they got right, and against a service that keeps answering, that turns an infeasible search
+into a byte-at-a-time one.
+
+Use the constant-time comparison your language provides: `hmac.compare_digest` in Python,
+`crypto.timingSafeEqual` in Node, `subtle.ConstantTimeCompare` in Go.
+
+## When a match is not enough
+
+A correct password against a hash with 1,000 iterations is a correct password protected by
+almost nothing. If you are auditing a system, look at the parameters this page reports, not
+only at whether the check passed. Anything below six figures for PBKDF2-HMAC-SHA256 is
+overdue for an upgrade — and the upgrade path is to re-hash on next login, since you cannot
+re-derive from a stored digest.

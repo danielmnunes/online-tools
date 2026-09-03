@@ -1,0 +1,63 @@
+---
+description: >-
+    Compute a cSHAKE256 hash with domain separation — 256-bit strength, customization string, and any output length.
+faq:
+  - q: >-
+        When should I choose cSHAKE256 over cSHAKE128?
+    a: >-
+        When the value has to hold up for a long time or against a well-funded search. The cost is about 20% throughput, because the larger capacity leaves a smaller block; the benefit is 256-bit security instead of 128. For anything not performance-critical, take the larger one.
+  - q: >-
+        Is the customization string secret?
+    a: >-
+        No, and treating it as one is a mistake. S separates domains; it does not authenticate anything. An attacker who knows your S — and they will, it is in your source — can still compute any digest they like. If you need a value only a key holder can produce, that is KMAC256.
+  - q: >-
+        Does S have a length limit?
+    a: >-
+        Formally, under 2^2040 bits, which is not a limit anyone will meet. Practically, keep it short and readable: it costs a block of sponge to absorb and it is meant to be a label, not a payload.
+  - q: >-
+        Can I use cSHAKE256 as a KDF?
+    a: >-
+        It is a reasonable building block, and several standards do use it that way — absorb a shared secret and a context string, squeeze key material. What it does not have is HKDF's extract step, which is what makes a non-uniform input like a Diffie-Hellman shared secret safe to expand. If your input is not already a uniform key, use HKDF.
+references:
+  - label: >-
+        NIST SP 800-185 — SHA-3 Derived Functions
+    url: https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-185.pdf
+  - label: >-
+        FIPS 202 — SHA-3 Standard
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
+---
+
+## What cSHAKE256 does
+
+Everything cSHAKE128 does, with the security level doubled and the block a little smaller. You
+supply a message, an optional customization string S, an optional function name N, and a
+length; you get that many bytes, and any change to any input changes all of them.
+
+The default here is 64 bytes, which is the full 256-bit strength the function offers.
+
+## The framing, concretely
+
+Before your message is absorbed, cSHAKE builds a prefix:
+
+```
+bytepad(encode_string(N) || encode_string(S), 136)
+```
+
+`encode_string` writes each string's bit length first, so the two fields cannot bleed into each
+other; `bytepad` rounds the pair up to a whole 136-byte block, so the message always starts on
+a block boundary. Then the sponge absorbs your message with the domain-separation bits `00`
+rather than SHAKE's `1111`, which is what keeps cSHAKE-with-empty-strings from colliding with
+SHA3.
+
+Note the consequence: with empty N and S the prefix is empty, the padding rule reverts, and
+cSHAKE256 becomes exactly SHAKE256.
+
+## Picking N versus S
+
+Use S. N is reserved for NIST-defined functions, and it is what distinguishes KMAC256 from
+TupleHash256 internally — `"KMAC"` and `"TupleHash"` are literally the N values those functions
+pass down. Setting your own N puts you in NIST's namespace for no benefit that S does not
+already give you.
+
+The field is on this page because cSHAKE is the raw primitive and a reference tool that hides
+half of it is a worse reference. Leave it empty in your own designs.

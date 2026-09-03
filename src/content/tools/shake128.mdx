@@ -1,0 +1,70 @@
+---
+description: >-
+    Compute a SHAKE128 hash of any length — the extendable-output function from FIPS 202, with output you choose.
+faq:
+  - q: >-
+        Why does SHAKE128 have no fixed digest size?
+    a: >-
+        Because it is a sponge, and a sponge does not fill up. SHA3-256 absorbs your input and squeezes exactly 32 bytes out; SHAKE128 absorbs the same way and then squeezes as long as you keep asking. There is no natural stopping point, so the length is a parameter rather than a property.
+  - q: >-
+        What does the 128 mean, if not the output length?
+    a: >-
+        Security strength, not size. SHAKE128 offers 128 bits of resistance against collisions and preimages no matter how much output you take — asking for 64 bytes does not buy you 256-bit security. That is the single most common misreading of the name.
+  - q: >-
+        Is a 32-byte SHAKE256 output the same as SHA3-256?
+    a: >-
+        No, and the same goes for SHAKE128 against SHA3-224. They use different domain-separation bits during padding, precisely so that the two families cannot be confused with each other. The values are unrelated.
+  - q: >-
+        When would I use this instead of SHA3-256?
+    a: >-
+        When you need a length the standard hashes do not offer: a 20-byte identifier, a 48-byte key block, a mask in RSA-OAEP, or a stream of bytes for a deterministic random generator. Where a fixed 256-bit digest is what you want, SHA3-256 says so more clearly.
+references:
+  - label: >-
+        FIPS 202 — SHA-3 Standard, including SHAKE128 and SHAKE256
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
+  - label: >-
+        The Keccak sponge construction
+    url: https://keccak.team/sponge_duplex.html
+---
+
+## What SHAKE128 does
+
+SHAKE128 takes any input and produces as many bytes as you ask for. The box above defaults to
+32, which is what `openssl dgst -shake128` gives you, but 1 byte and 1000 bytes are equally
+valid and the short one is exactly the prefix of the long one.
+
+That prefix property matters. Take 16 bytes now and 32 bytes later from the same input, and the
+first 16 will be identical. Nothing about the output commits to how much of it you intended to
+use — which is convenient, and is also the difference between this and KMAC128, further down
+this category.
+
+## Strength and length are different numbers
+
+The 128 in the name is a security level. Against a collision search, SHAKE128 gives you 128
+bits of resistance; taking 512 bits of output does not change that, because the internal
+capacity is what bounds it, not the size of the hole the bytes come out of.
+
+The practical rule: if you want *n* bits of collision resistance from a SHAKE, take at least
+2*n* bits of output and pick the SHAKE whose number is at least *n*. Taking less output than
+that throws security away; taking more does not add any.
+
+## Where the extra length is actually used
+
+- **Mask generation.** RSA-OAEP and RSA-PSS need a pseudorandom function of arbitrary length,
+  and SHAKE is the natural fit where MGF1 was the older answer.
+- **Post-quantum signatures.** ML-KEM and ML-DSA — Kyber and Dilithium as they were — use
+  SHAKE128 and SHAKE256 for essentially all their symmetric needs, expanding seeds into
+  matrices and noise.
+- **Deterministic byte streams.** Any place you would otherwise chain a counter into a hash,
+  a single SHAKE call replaces the whole construction.
+
+## Matching the command line
+
+```
+openssl dgst -shake128 file.bin
+openssl dgst -shake128 -xoflen 64 file.bin
+```
+
+Without `-xoflen`, OpenSSL gives 32 bytes, which is the default here too. Python spells the
+same thing `hashlib.shake_128(data).hexdigest(32)` — note that its argument is a byte count,
+and that forgetting it is an error rather than a default.

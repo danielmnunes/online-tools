@@ -1,7 +1,11 @@
 import type { HashId } from '~/lib/algo/hashes';
+import type { KdfId } from '~/lib/algo/kdfs';
+import type { XofId } from '~/lib/algo/xofs';
 
 export type ToolCategory =
   | 'hash'
+  | 'xof'
+  | 'kdf'
   | 'crypto'
   | 'compression'
   | 'encoding'
@@ -18,6 +22,16 @@ export interface CategoryMeta {
 
 export const CATEGORIES: ReadonlyArray<CategoryMeta> = [
   { id: 'hash', label: 'Hash', blurb: 'Checksums, message digests and keyed hashes.' },
+  {
+    id: 'xof',
+    label: 'XOF & MAC',
+    blurb: 'Extendable-output functions and keyed authentication from SP 800-185.',
+  },
+  {
+    id: 'kdf',
+    label: 'Key derivation',
+    blurb: 'Password hashing and key derivation: PBKDF2, scrypt, bcrypt, Argon2.',
+  },
   { id: 'encoding', label: 'Encoding', blurb: 'Base64, hex, URL and HTML encoding.' },
   { id: 'crypto', label: 'Cryptography', blurb: 'Symmetric ciphers, signatures and key pairs.' },
   { id: 'compression', label: 'Compression', blurb: 'Compress, decompress and inspect archives.' },
@@ -61,6 +75,21 @@ export type Tool = ToolBase &
   (
     | { readonly widget: 'text-hash'; readonly config: { readonly algorithm: HashId } }
     | { readonly widget: 'file-hash'; readonly config: { readonly algorithm: HashId } }
+    | { readonly widget: 'text-xof'; readonly config: { readonly algorithm: XofId } }
+    | { readonly widget: 'file-xof'; readonly config: { readonly algorithm: XofId } }
+    /** The standalone HMAC calculator, which picks its own hash at runtime. */
+    | { readonly widget: 'hmac'; readonly config: Record<string, never> }
+    | {
+        readonly widget: 'kdf';
+        readonly config: {
+          readonly algorithm: KdfId;
+          /**
+           * Derive shows the result; verify checks a password against one that
+           * was stored earlier. Same inputs, opposite direction.
+           */
+          readonly mode: 'derive' | 'verify';
+        };
+      }
   );
 
 export type WidgetKind = Tool['widget'];

@@ -1,0 +1,71 @@
+---
+description: >-
+    Compute a SHAKE256 hash of any length — 256-bit security strength with output you choose, from FIPS 202.
+faq:
+  - q: >-
+        What is the difference between SHAKE128 and SHAKE256?
+    a: >-
+        Security strength and speed, not output size — both produce as many bytes as you ask for. SHAKE256 keeps a larger internal capacity, which gives 256 bits of resistance instead of 128 and leaves a smaller rate, so it absorbs 136 bytes per permutation where SHAKE128 absorbs 168. That is roughly a 20% throughput cost for double the security margin.
+  - q: >-
+        Which one should I pick?
+    a: >-
+        Unless a specification names one, SHAKE256. The speed difference is small, and 128-bit security is the floor rather than a comfortable margin for anything long-lived. Where a standard names SHAKE128 — as ML-KEM does for matrix expansion — use what it names.
+  - q: >-
+        Is SHAKE256 quantum-resistant?
+    a: >-
+        Grover's algorithm reduces preimage resistance by roughly half the exponent, so 256-bit SHAKE256 output offers about 128 bits against a quantum preimage search — still far beyond reach. This is why the post-quantum signature schemes lean on SHAKE256 rather than replacing it.
+  - q: >-
+        Can I use it as a stream cipher?
+    a: >-
+        Mechanically, yes: absorb a key and nonce, squeeze a keystream. It is a real construction and it is what several designs do. But a stream cipher needs nonce discipline that this tool cannot enforce, and reusing a nonce destroys it completely, so do not build one by pasting into a web page.
+references:
+  - label: >-
+        FIPS 202 — SHA-3 Standard, including SHAKE128 and SHAKE256
+    url: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
+  - label: >-
+        NIST post-quantum standards, which build on SHAKE
+    url: https://csrc.nist.gov/projects/post-quantum-cryptography
+---
+
+## What SHAKE256 does
+
+Same construction as SHAKE128, tuned differently. Input goes into a 1600-bit Keccak state; the
+state is split into a *rate* that touches your data and a *capacity* that never does. SHAKE256
+gives 512 bits to the capacity and 1088 to the rate, which is where its 256-bit security level
+and its 136-byte block both come from.
+
+Output length is yours to choose, and the default here is 64 bytes — matching `openssl dgst
+-shake256` and giving the full strength the function offers.
+
+## The rate–capacity trade
+
+Everything about a sponge follows from where that line is drawn:
+
+| | SHAKE128 | SHAKE256 |
+|---|---|---|
+| Capacity | 256 bits | 512 bits |
+| Rate (block) | 168 bytes | 136 bytes |
+| Security strength | 128 bits | 256 bits |
+| Relative speed | faster | about 20% slower |
+
+More capacity is more security and less throughput, and that is the entire design space. There
+is no third knob.
+
+## Where SHAKE256 shows up
+
+ML-DSA — the signature scheme standardised from Dilithium — uses SHAKE256 for hashing messages,
+expanding seeds and sampling noise. SPHINCS+ uses it as essentially its only primitive. When a
+post-quantum scheme says "we need a hash", it usually means this.
+
+Outside that world, SHAKE256 is the right answer whenever you need a specific number of bytes
+and want to say why: a 48-byte key block, a 20-byte identifier, an arbitrarily long mask.
+
+## Matching the command line
+
+```
+openssl dgst -shake256 file.bin
+openssl dgst -shake256 -xoflen 32 file.bin
+python3 -c "import hashlib,sys; print(hashlib.shake_256(sys.stdin.buffer.read()).hexdigest(64))"
+```
+
+All three produce what this page produces, given the same length.

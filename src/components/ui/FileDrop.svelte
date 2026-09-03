@@ -50,10 +50,15 @@
   <span class="text-xs text-muted">
     The file is read in your browser and never uploaded. Size is not limited by us.
   </span>
+  <!-- Visually hidden but still in the accessibility tree, so it needs a name.
+       tabindex -1 keeps it out of the tab order: the wrapper above is already
+       a labelled, keyboard-operable button that opens the same picker. -->
   <input
     bind:this={inputEl}
     type="file"
     class="sr-only"
+    tabindex="-1"
+    aria-label="Choose a file"
     {disabled}
     onchange={(e) => {
       take(e.currentTarget.files);

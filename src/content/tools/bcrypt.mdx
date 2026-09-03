@@ -1,0 +1,87 @@
+---
+description: >-
+    Generate a bcrypt hash in your browser — pick the cost, get the full $2a$ string ready to store.
+faq:
+  - q: >-
+        What cost should I use?
+    a: >-
+        10 to 12 for a web login on server hardware. The number is a base-2 logarithm, so 12 is four times the work of 10; pick the highest value whose verification time you can live with. This page runs in JavaScript and is slower than a native implementation, so a cost that feels heavy here will be lighter on a server.
+  - q: >-
+        Why does bcrypt ignore my password past 72 characters?
+    a: >-
+        Because its key schedule reads at most 72 bytes, and every compatible implementation truncates there. Two passwords sharing their first 72 bytes hash identically. It is rarely a practical problem, but it means a long passphrase buys nothing past that point — and that pre-hashing a password with SHA-256 before bcrypt, a common trick, needs care so the digest's null bytes do not truncate it further.
+  - q: >-
+        What do $2a$, $2b$ and $2y$ mean?
+    a: >-
+        Version tags recording which implementation wrote the hash, after a 1999 bug and a 2011 one in handling high-bit characters and long passwords. All three key the same way in current implementations and verify interchangeably. This tool writes $2a$, which everything reads.
+  - q: >-
+        Is bcrypt still a good choice in 2026?
+    a: >-
+        It is a defensible one. It has held up for over twenty-five years, it is in every language, and its 4 KiB working set gives some GPU resistance — far more than PBKDF2, far less than Argon2id. For a new system, Argon2id; for an existing one, bcrypt is not an emergency.
+references:
+  - label: >-
+        Provos and Mazières, "A Future-Adaptable Password Scheme" (USENIX 1999)
+    url: https://www.usenix.org/legacy/events/usenix99/provos.html
+  - label: >-
+        OWASP Password Storage Cheat Sheet
+    url: https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
+---
+
+## What bcrypt does
+
+It runs Blowfish's key schedule an absurd number of times. That is the whole idea, and it was a
+genuinely new one in 1999.
+
+Blowfish is unusual among block ciphers in that setting up a key is expensive: it derives 4 KiB
+of subkeys — the P-array and four S-boxes — by encrypting with the state it is in the middle of
+building. bcrypt takes that expensive setup and repeats it 2^cost times, alternating the
+password and the salt. The result encrypts a fixed string 64 times, and 23 of the resulting
+bytes are the hash.
+
+## The cost parameter, and why it was the point
+
+The paper's title says "future-adaptable", and that is what bcrypt introduced. Every earlier
+password scheme had a fixed cost baked in; when hardware got faster, the scheme got weaker and
+there was nothing to do about it.
+
+bcrypt put the cost in the hash. A stored `$2a$10$…` says how much work made it, so raising the
+cost to 12 tomorrow leaves yesterday's hashes verifying correctly at 10, and each user's hash
+can be upgraded silently the next time they log in. Every modern password format copied this.
+
+## The 72-byte limit, concretely
+
+The key schedule cycles through the password bytes, and reads at most 72 of them plus a
+terminating null. Try it above: a 72-character password and the same password with anything
+appended produce the same hash.
+
+This matters when pre-hashing. A common pattern is `bcrypt(base64(sha256(password)))` to get
+around the limit — the Base64 is not decoration, it is there because raw SHA-256 output
+contains null bytes, and a null inside the password terminates the key early in some
+implementations. Get it wrong and you have silently reduced the password to whatever preceded
+the first zero byte.
+
+## Reading the output
+
+```
+$2a$10$N9qo8uLOickgx2ZMRZoMye  IjZAgcfl7p92ldGxad68LJZdL17lhWy
+└┬┘ └┬┘ └──────── 22 ────────┘ └──────────── 31 ────────────┘
+ │   │            salt                      digest
+ │   └── cost: 2^10 = 1024 rounds
+ └────── version
+```
+
+Salt and digest are encoded with bcrypt's own base64 alphabet, which starts `./ABC` rather than
+`ABCD` — a small incompatibility that has confused a great many people trying to decode these
+by hand.
+
+The whole string goes in the database. It is self-describing, so verification needs nothing
+else.
+
+## How this page was verified
+
+bcrypt is not in `@noble/hashes` and there is no Blowfish in any browser, so this is
+hand-written from the specification — the only such implementation on the site so far. Three
+things check it: the published OpenBSD test vectors, including the ones designed to catch
+truncation bugs; parity with Bouncy Castle and with the Rust-backed Python `bcrypt` module; and
+a test that recomputes the hexadecimal digits of pi and compares them against every one of the
+1042 constants Blowfish's initial state is made of.

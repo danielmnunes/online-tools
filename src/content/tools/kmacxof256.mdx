@@ -1,0 +1,64 @@
+---
+description: >-
+    Compute a KMACXOF256 tag — keyed extendable output at the 256-bit level, for key streams rather than fixed tags.
+faq:
+  - q: >-
+        Why does KMACXOF256 exist alongside KMAC256?
+    a: >-
+        For the cases where the output is key material rather than a tag. A MAC wants a fixed, length-committed value; a key schedule wants a stream you can take as much of as you need. SP 800-185 defines both so neither has to be faked with the other.
+  - q: >-
+        Is KMACXOF256 the same as cSHAKE256 with the key prepended?
+    a: >-
+        Nearly, and the difference matters. KMAC pads the length-encoded key out to a whole block before the message starts, and sets the function name to "KMAC". Prepending a key by hand gets neither, and the missing length encoding is what makes hand-rolled versions vulnerable to inputs that shift bytes between the key and the message.
+  - q: >-
+        Can I use it as a stream cipher?
+    a: >-
+        Mechanically it works — key, nonce as the customization string, squeeze a keystream, XOR. Several designs do exactly that. But a stream cipher lives or dies on never reusing a nonce with a key, and that discipline is not something a web page can enforce.
+  - q: >-
+        How much output can I ask for?
+    a: >-
+        The specification sets no limit. This page caps it well below anything practical simply so that a mistyped length cannot lock up the tab.
+references:
+  - label: >-
+        NIST SP 800-185 — SHA-3 Derived Functions, section 4.3
+    url: https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-185.pdf
+  - label: >-
+        NIST SP 800-56C — key derivation, which approves KMAC
+    url: https://csrc.nist.gov/pubs/sp/800/56/c/r2/final
+---
+
+## What KMACXOF256 does
+
+Keyed, customizable, extendable output at the 256-bit security level. The key is absorbed with
+its length encoded and padded to a block; the message follows; and then bytes come out for as
+long as you keep asking.
+
+Because the output length is not encoded into the input, the stream is stable: 32 bytes now and
+128 bytes later start with the same 32.
+
+## One call, several keys
+
+This is what the XOF form is for. A protocol that needs an encryption key, a MAC key and a
+nonce from one shared secret can take them from a single squeeze:
+
+```
+stream = KMACXOF256(shared_secret, transcript, 80, "session keys v3")
+enc = stream[0..32]
+mac = stream[32..64]
+iv  = stream[64..80]
+```
+
+The alternative — three KMAC256 calls with three customization strings — is equally sound and
+harder to get wrong in one specific way: with the stream version, changing one key's length
+silently shifts every key after it. Version your label and re-derive everything when the layout
+changes, or use separate calls.
+
+## What it is not
+
+It is not a password hash. KMACXOF256 is fast by design, and running a password through it
+gives an attacker a fast oracle to grind against. Argon2id or scrypt, in the Key derivation
+category, are the functions that are slow on purpose.
+
+It is also not an authenticated encryption scheme. Squeezing a keystream and XORing gives
+confidentiality and nothing else; a modified ciphertext decrypts to modified plaintext without
+complaint unless you also authenticate it.

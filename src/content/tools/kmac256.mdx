@@ -1,0 +1,64 @@
+---
+description: >-
+    Compute a KMAC256 tag — 256-bit Keccak message authentication with a key and optional customization string.
+faq:
+  - q: >-
+        Is KMAC256 twice as strong as KMAC128?
+    a: >-
+        In security strength, yes: 256 bits against 128. In practice both are far past any feasible forgery, and the choice usually comes down to what a specification names or what key size you already have. KMAC256 absorbs 136 bytes per permutation against KMAC128's 168, so it is about 20% slower.
+  - q: >-
+        Should the key be 32 bytes for KMAC256?
+    a: >-
+        At least. SP 800-185 recommends a key no shorter than the security strength, so 32 bytes here. Longer keys are accepted and are absorbed in full — unlike HMAC, KMAC does not hash a long key down first.
+  - q: >-
+        Why is my tag different from another tool's?
+    a: >-
+        Check three things in order: the output length, the customization string, and whether the other tool computed KMAC or KMACXOF. All three change the value, and only the first is usually visible in an interface.
+  - q: >-
+        Can I use KMAC256 to derive keys?
+    a: >-
+        SP 800-56C names KMAC as an approved key-derivation function, so yes, within that framework. Use the customization string to name what each derived key is for, and take the length you need in one call rather than making several.
+references:
+  - label: >-
+        NIST SP 800-185 — SHA-3 Derived Functions, section 4
+    url: https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-185.pdf
+  - label: >-
+        NIST SP 800-56C — key derivation, which approves KMAC
+    url: https://csrc.nist.gov/pubs/sp/800/56/c/r2/final
+---
+
+## What KMAC256 does
+
+A keyed hash at the 256-bit security level. Give it a key, a message and a length; get a tag
+that cannot be produced or predicted without the key. The default output is 64 bytes.
+
+Like KMAC128 it is cSHAKE underneath, with the function name fixed to `"KMAC"` and the
+requested length written into the input. Unlike HMAC there is no inner and outer pass — the
+sponge's capacity is never exposed, so the key can simply go in first.
+
+## KMAC as a key-derivation function
+
+SP 800-56C approves KMAC for deriving keys from a shared secret, and it is a good fit: one call
+takes a secret, a context label and a length, and produces exactly that many bytes.
+
+The natural pattern is one call per key, with the customization string naming the key:
+
+```
+k_enc = KMAC256(shared_secret, transcript, 32, "encryption key v1")
+k_mac = KMAC256(shared_secret, transcript, 32, "authentication key v1")
+```
+
+Two unrelated keys, from one secret, with the difference between them written in the source
+where a reader can see it. Note the version number — changing what a key is used for later
+means changing the label, not silently reusing one.
+
+The caveat is the same as for any single-pass derivation: this assumes the shared secret is
+already uniformly random. For a Diffie–Hellman output or anything with structure, HKDF's
+extract step exists for exactly that reason.
+
+## Verifying tags in your own code
+
+Compare in constant time. A tag check written as `computed == received` leaks, through timing,
+how many leading bytes matched, and that is enough to forge a tag one byte at a time against a
+service that will keep answering. Every language has a constant-time comparison in its standard
+library; use it.

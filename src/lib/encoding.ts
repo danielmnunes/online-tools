@@ -91,6 +91,20 @@ export function base64ToBytes(b64: string): Uint8Array {
   return out;
 }
 
+/**
+ * Read a digest someone pasted, without asking them which encoding it is in.
+ *
+ * Published checksums and derived keys arrive as hex about as often as base64,
+ * and asking the user to say which is asking them to look. Hex wins ties --
+ * "abcd" parses as both, and a digest written in hex is the commoner case.
+ */
+export function bytesFromAnyEncoding(text: string): Uint8Array {
+  const cleaned = text.trim().replace(/\s/g, '');
+  if (cleaned === '') throw new DecodeError('Nothing to decode.');
+  if (cleaned.length % 2 === 0 && /^[0-9a-f]+$/i.test(cleaned)) return hexToBytes(cleaned);
+  return base64ToBytes(cleaned);
+}
+
 function utf16ToBytes(text: string, littleEndian: boolean): Uint8Array {
   // Iterate code units, not code points: surrogate pairs must survive as the
   // two units they are, which is what UTF-16 on the wire means.

@@ -1,0 +1,64 @@
+---
+description: >-
+    Check a password against an scrypt hash — reads the PHC string, or compares a bare key with your parameters.
+faq:
+  - q: >-
+        What can I paste in?
+    a: >-
+        A PHC string of the form $scrypt$ln=14,r=8,p=1$salt$hash, which carries its own parameters, or a bare derived key in hex or Base64, which is checked against the N, r, p and salt you set above.
+  - q: >-
+        Why did my check fail when I am sure the password is right?
+    a: >-
+        Almost always a parameter mismatch. With a bare key, all of N, r, p, the salt and the output length must match what produced it. The result line reports which parameters the check actually used — compare those with what you expect before doubting the password.
+  - q: >-
+        Is there one standard string format for scrypt?
+    a: >-
+        Less standard than for Argon2. The PHC form above is the closest thing and is what libsodium-adjacent tooling emits, but plenty of systems store the raw bytes with the parameters in a separate column, and a few invent their own layout. The bare-digest path is here for those.
+  - q: >-
+        How long should verification take?
+    a: >-
+        The same as derivation — that is the point. If checking one password is instant, the parameters are too low, because an attacker checking billions finds it equally instant.
+references:
+  - label: >-
+        RFC 7914 — The scrypt Password-Based Key Derivation Function
+    url: https://www.rfc-editor.org/rfc/rfc7914
+  - label: >-
+        The PHC string format specification
+    url: https://github.com/P-H-C/phc-string-format/blob/master/phc-sf-spec.md
+---
+
+## Checking a password against an scrypt hash
+
+Paste the stored value and the password, then press the button. A PHC string supplies its own
+salt and cost parameters and those win; a bare digest is checked against the fields above. The
+result says which was used, so a failure can be diagnosed rather than guessed at.
+
+The work runs in a background thread, so a hash with a large N does not freeze the page.
+
+## Why the parameters travel with the hash
+
+scrypt's output depends on the password, the salt, N, r, p and the length. Five things, four of
+them not secret, all of them needed again at verification time.
+
+Keeping them in a constant in the code works until you raise N — at which point every stored
+hash was made with the old value and nothing wrote that down. The PHC string exists so each
+hash carries its own settings, so old rows keep verifying while new rows get stronger
+parameters, and a login can quietly re-hash at the new setting.
+
+## Reading a mismatch
+
+The result line names the parameters the check ran with. A few common cases:
+
+- **Bare digest, wrong length.** If the pasted value is 32 bytes and the field says 64, they
+  cannot match. This page uses the pasted value's length, which removes one source of error.
+- **Salt encoding.** A salt shown as hex in one system and Base64 in another decodes to
+  different bytes if you paste it with the wrong dropdown set.
+- **Different function entirely.** An `$argon2id$` string pasted here is rejected with a message
+  saying so, rather than failing as a wrong password.
+
+## What a match tells you, and what it does not
+
+A match means the password produces that hash under those parameters. It does not mean the
+parameters are adequate. `ln=8` is 256 blocks and about 256 KiB — a value that verifies
+instantly and offers roughly nothing against an offline attack. When auditing, read the
+parameters as carefully as the result.

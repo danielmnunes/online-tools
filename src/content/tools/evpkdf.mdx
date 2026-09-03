@@ -1,0 +1,74 @@
+---
+description: >-
+    Reproduce OpenSSL's EVP_BytesToKey — the legacy key and IV derivation behind "openssl enc" and CryptoJS.
+faq:
+  - q: >-
+        What is EvpKDF for?
+    a: >-
+        Turning a passphrase into the key and IV that "openssl enc" uses. It is not a password hash and was never meant to be one; it is the derivation OpenSSL happened to define in the 1990s, and it survives because files encrypted with it still exist.
+  - q: >-
+        Should I use it for anything new?
+    a: >-
+        No. One MD5 per 16 bytes of output is no defence at all against guessing a passphrase. If you are encrypting something new with a password, derive the key with Argon2id or PBKDF2 and pass it to the cipher explicitly — "openssl enc -pbkdf2" does the modern equivalent.
+  - q: >-
+        Why does CryptoJS produce these values?
+    a: >-
+        Because CryptoJS copied OpenSSL's format, including the "Salted__" header and this derivation. A great deal of JavaScript in the wild encrypts with CryptoJS.AES.encrypt(text, "a password") and gets exactly this, usually without the author realising how weak the key derivation is.
+  - q: >-
+        How do I split the output into a key and an IV?
+    a: >-
+        Sequentially. OpenSSL takes the first keyLen bytes as the key and the next ivLen as the IV, from one continuous stream. For AES-256-CBC that is 32 bytes of key followed by 16 of IV, so set the output length to 48 and cut it there.
+references:
+  - label: >-
+        OpenSSL EVP_BytesToKey manual page
+    url: https://docs.openssl.org/master/man3/EVP_BytesToKey/
+  - label: >-
+        OpenSSL enc manual page
+    url: https://docs.openssl.org/master/man1/openssl-enc/
+---
+
+## What EvpKDF does
+
+```
+D_1 = H(password || salt)
+D_2 = H(D_1 || password || salt)
+D_3 = H(D_2 || password || salt)
+key || iv = D_1 || D_2 || D_3 || …
+```
+
+That is the whole algorithm. Hash the password and salt, then keep hashing the previous result
+together with them again, until you have enough bytes. With the default hash of MD5 and the
+default count of 1, deriving a 32-byte AES key costs two MD5 calls.
+
+## Reading an OpenSSL-encrypted file
+
+A file from `openssl enc` starts with the eight bytes `Salted__` followed by an eight-byte
+salt. That salt, plus the passphrase, is what goes into this derivation. To reproduce a key:
+
+```
+openssl enc -aes-256-cbc -md md5 -pass pass:secret -S 0102030405060708 -P
+```
+
+`-P` prints the key and IV instead of encrypting, which is how the test vectors for this page
+were produced. Set the same hash, the same salt and an output length of key + IV bytes here and
+the values match.
+
+Modern OpenSSL defaults to SHA-256 rather than MD5 for `-md`, and files written by older
+versions need `-md md5` to decrypt. That mismatch is the usual reason an old encrypted file
+suddenly refuses to open.
+
+## The iteration count, and what it does not fix
+
+Raising the count re-hashes each block that many times before moving on. It multiplies the
+attacker's cost linearly, exactly like PBKDF2 with a much worse constant, and it is not part of
+the OpenSSL format — nothing records it, so both sides must agree out of band.
+
+If you find yourself raising it, you want PBKDF2 or Argon2id instead. `openssl enc -pbkdf2
+-iter 600000` does the right thing and writes a file the current OpenSSL can read.
+
+## Why this page exists
+
+Not to recommend the algorithm. To let you open the file. Legacy backups, old CryptoJS
+payloads, configuration blobs from systems nobody maintains — these are real, and reproducing
+their key derivation is often the only way in. The tool computes it faithfully and says plainly
+that you should not build anything new on it.
