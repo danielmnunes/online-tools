@@ -1,0 +1,59 @@
+---
+description: >-
+    Encode a file as Base64 in your browser — chunked with progress, download as text or copy as a data URL.
+faq:
+  - q: >-
+        Is the file uploaded anywhere?
+    a: >-
+        No. It is read with slice() a few megabytes at a time and encoded as it is read, in your browser. There is no server in the loop: open the network tab and watch. Base64 works on groups of three bytes, so the encoder carries the leftover bytes between chunks.
+  - q: >-
+        How much bigger will it be?
+    a: >-
+        A third, plus padding: three bytes become four characters. That growth is the reason a large file is better carried as a file than as Base64, and the reason this page shows the beginning and hands you the rest as a download.
+  - q: >-
+        What is the data URL option for?
+    a: >-
+        It prefixes the result with data:<type>;base64, so the string can be pasted straight into an img src or a CSS url() and the browser will treat it as the file. It saves a request and puts the bytes in the page — which for a large image is usually the wrong trade.
+  - q: >-
+        Why can't I copy the whole thing?
+    a: >-
+        You can, up to what is shown; the clipboard is not a good way to move tens of megabytes. The download button has the entire result as a text file, built in the browser from the same string.
+references:
+  - label: >-
+        RFC 4648 §4 — The Base64 Alphabet
+    url: https://www.rfc-editor.org/rfc/rfc4648#section-4
+  - label: >-
+        RFC 2397 — The "data" URL scheme
+    url: https://www.rfc-editor.org/rfc/rfc2397
+---
+
+## What this page is for
+
+Carrying a file as text: an image inlined into CSS or HTML as a data URL, a small
+binary inside a JSON document, a fixture pasted into a test, a key embedded in a
+configuration file.
+
+The file is read a chunk at a time and encoded as it arrives, so a large file
+shows progress, can be cancelled, and is never held in memory all at once on the
+input side. The output is text and does end up in memory, because that is what
+was asked for.
+
+## Standard or URL-safe
+
+The URL-safe alphabet swaps `+` and `/` for `-` and `_`, and is the one to pick
+if the result goes into a URL, a filename or a cookie, where the standard
+characters would have to be escaped. With the data URL option on, standard Base64
+is correct: a data URL is not usually itself inside a query string.
+
+Padding with `=` is dropped by many URL-safe uses, because `=` separates a key
+from a value in a query string. Decoding here accepts it either way, on both
+alphabets.
+
+## The size question
+
+Base64 grows a file by a third and is not compression. If the point is to make a
+file smaller, the Compression category is the right place; if the point is to
+carry bytes where only characters fit, this is it. As a rough guide: inlining
+images under a kilobyte or two as data URLs is a good trade, because it saves a
+round trip; inlining a megabyte of image into a page that must be parsed before
+anything renders is not.

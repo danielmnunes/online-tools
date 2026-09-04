@@ -12,8 +12,14 @@ visitor's browser. No backend, no uploads, no accounts.
   Adding a tool means adding one typed entry plus one MDX file — never a new page file.
 - **Svelte islands.** A handful of generic widgets serve the whole catalogue: one
   `TextHash` component backs every text hashing tool, one `XofHash` backs all sixteen
-  SP 800-185 functions, one `KdfTool` backs every key-derivation page in both directions.
-  Pages with no widget — the home page, category pages — ship no JavaScript at all.
+  SP 800-185 functions, one `KdfTool` backs every key-derivation page in both directions,
+  and one `Codec` backs all twelve encoding pages — the controls each page shows come from
+  a table, so there is no per-algorithm branch in the component. Pages with no widget — the
+  home page, category pages — ship no JavaScript at all.
+- **Files are read a chunk at a time.** Checksums, encodings and hex dumps go through
+  `src/lib/file.ts`, which slices a file and hands over a few megabytes at a time: a
+  multi-gigabyte file is processed with one chunk resident, and a hex dump is read one
+  page at a time with the offsets it has in the file rather than in the chunk.
 - **Workers for the slow-on-purpose functions.** Argon2 and bcrypt run for seconds by
   design, so `src/lib/worker/` puts them on another thread, with progress, cancellation by
   termination, and an inline fallback where `Worker` does not exist.
@@ -29,27 +35,38 @@ Cryptographic correctness is not something to eyeball, so it is checked several 
 
 - **Published vectors** — RFCs 1321, 3174, 2202, 4231, 5869, 6070, 7693, 7914, 8018 and
   9106; FIPS 180-4 and FIPS 202; the NIST SP 800-185 samples; the BLAKE3 team's own
-  vectors; and the bcrypt suite that ships with OpenBSD.
+  vectors; the bcrypt suite that ships with OpenBSD; §10 of RFC 4648 for the base codecs;
+  Appendix A of RFC 8949, in full, for CBOR; and §A.1 of RFC 7515 for JWS.
 - **Parity with independent implementations** — every algorithm OpenSSL implements is
   compared against it through `node:crypto` or the command line, across lengths chosen to
   sit on the block boundaries where padding bugs live. Where OpenSSL falls short, Bouncy
-  Castle and the Rust-backed Python `bcrypt` module take over. Algorithms with no
-  cross-check are listed explicitly in `test/parity.test.ts`, so adding one silently fails
-  the suite.
+  Castle and the Rust-backed Python `bcrypt` module take over; for encoding, the platform
+  itself is the oracle — `Buffer`, `encodeURIComponent`, `encodeURI`, `URLSearchParams`,
+  `hexdump -C` where it is installed, and `node:crypto` signing the tokens the JWT page has
+  to verify and reject. Algorithms with no cross-check are listed explicitly in
+  `test/parity.test.ts`, so adding one silently fails the suite.
 - **Re-derivation from the specification** — TupleHash and ParallelHash are rebuilt inside
   the tests from the text of SP 800-185, on top of OpenSSL's SHAKE, across parameter
   combinations no vector table covers. This is the layer that settled a disagreement
   between two implementations: Bouncy Castle's `ParallelHash.doFinal(out, off, outLen)`
   does not fold a non-default `outLen` into the `right_encode(L)` that §6.2 requires. The
-  divergence is recorded in `test/vectors/sp800-185.ts`.
+  divergence is recorded in `test/vectors/sp800-185.ts`. The same idea, smaller, checks the
+  Base32 alphabets — transcribed from RFC 4648 and Crockford's page, with each five-bit
+  group computed in the test — and the Base58Check checksum, recomputed with SHA-256.
 - **Constants derived, not transcribed** — bcrypt is the one algorithm here written from
   the specification, because no browser has Blowfish. Its 1042-word initial state is the
   hexadecimal fraction of pi, and the test suite recomputes pi with Machin's formula and
   checks every word rather than trusting a careful copy.
 - **Widget behaviour** — the components are mounted in jsdom and driven the way a person
   drives them, which covers the wiring the algorithm tests cannot see: recomputation on
-  option changes, decode errors surfacing instead of stale digests, and the guard that
-  stops a slow earlier hash overwriting a newer result.
+  option changes, decode errors surfacing instead of stale results, and the guard that
+  stops a slow earlier computation overwriting a newer one.
+- **A real browser, at the end** — jsdom has no Web Crypto and no `URL.createObjectURL`,
+  and that is where signature verification and file downloads live. Headless Chrome is
+  pointed at the production build over the DevTools Protocol and asked the same questions
+  there: that the RFC 7515 key verifies the RFC 7515 token, that dropping a file on a
+  Base64 page yields a `blob:` download with no request leaving the page, and that reading
+  a page of a file reports the offsets the bytes have in the file.
 
 ## Commands
 
@@ -57,7 +74,7 @@ Cryptographic correctness is not something to eyeball, so it is checked several 
 | --- | --- |
 | `npm run dev` | Dev server on localhost:4321 |
 | `npm run check` | Astro + TypeScript diagnostics |
-| `npm test` | Vitest: published vectors, OpenSSL parity, encoding round-trips, widget behaviour in jsdom |
+| `npm test` | Vitest: published vectors, platform parity, encoding round-trips, widget behaviour in jsdom |
 | `npm run build` | Static build into `dist/` |
 | `npm run deploy` | Build, then `wrangler deploy` |
 
@@ -68,9 +85,9 @@ Cryptographic correctness is not something to eyeball, so it is checked several 
 3. If it needs a new widget kind, add an arm to the `Tool` union in `src/tools/types.ts`
    and a branch in `src/components/ToolWidget.astro`.
 
-For a family with a table behind it — hashes, or the SP 800-185 functions — add the entry
-to `src/lib/algo/hashes.ts` or `src/lib/algo/xofs.ts` instead and the registry generates
-the pages from it.
+For a family with a table behind it — hashes, the SP 800-185 functions, or the codecs — add
+the entry to `src/lib/algo/hashes.ts`, `src/lib/algo/xofs.ts` or `src/lib/algo/codecs.ts`
+instead and the registry generates the pages from it.
 
 The build fails if a registry entry has no content file, if a content file has no registry
 entry, or if a tool slug collides with a category page.

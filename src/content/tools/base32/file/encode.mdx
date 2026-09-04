@@ -1,0 +1,48 @@
+---
+description: >-
+    Encode a file as Base32 in your browser — chunked, with progress, and a download for the whole result.
+faq:
+  - q: >-
+        Why would I Base32 a file?
+    a: >-
+        Usually to carry it through something that only accepts text and might change case or mangle punctuation: a DNS record, a filename, a configuration value, a QR code in alphanumeric mode. If none of those apply, Base64 is a third smaller.
+  - q: >-
+        How much bigger does it get?
+    a: >-
+        Sixty per cent: five bytes in, eight characters out, plus padding on the final group. A 10 MB file becomes about 16 MB of text, which is also why the page shows only the beginning and gives you the rest as a download.
+  - q: >-
+        Does the file leave my machine?
+    a: >-
+        No. It is read with slice() a chunk at a time and encoded as it is read. Base32 works on groups of five bytes, so the encoder carries the leftover bytes between chunks, which is what makes the streaming correct rather than merely fast.
+  - q: >-
+        Which alphabet should I use?
+    a: >-
+        RFC 4648 unless the system you are feeding says otherwise. It is what TOTP secrets, DNSSEC and most protocols use. The extended-hex alphabet preserves sort order; Crockford's avoids the letters people confuse and has no padding.
+references:
+  - label: >-
+        RFC 4648 §6 — The Base32 Alphabet
+    url: https://www.rfc-editor.org/rfc/rfc4648#section-6
+---
+
+## What this page does
+
+It reads the file a chunk at a time, encodes each chunk, and joins the pieces.
+Base32 consumes five bytes at a time, so a chunk boundary can fall in the middle
+of a group: the encoder keeps the leftover bytes and completes the group with the
+start of the next chunk. The result is byte-for-byte what a single-pass encoder
+would have produced, which is checked in the tests against one.
+
+The file is never uploaded. The progress bar is the file being read, and the
+cancel button stops the read itself.
+
+## Working with the output
+
+Only the first twenty thousand characters are shown, because the useful range of
+this page is files small enough to carry as text and the download button exists
+for anything bigger. The wrapping option puts the output onto lines, which is
+what systems that inherited MIME's 76-character limit expect; decoding ignores
+line breaks either way.
+
+If you are carrying a whole file, Base64 is the smaller and more common answer.
+Base32 is the one to reach for when the destination cannot be trusted with case
+or punctuation.

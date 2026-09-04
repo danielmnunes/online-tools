@@ -1,0 +1,68 @@
+---
+description: >-
+    Decode Base64 back into text or bytes — standard or URL-safe, padded or not, with whitespace and line breaks ignored.
+faq:
+  - q: >-
+        Why does it say the input is not valid?
+    a: >-
+        Three reasons, and the message names which: a character outside the alphabet, a length that no input could have produced (characters come in groups of four, so one over a whole group is impossible), or trailing bits that the padding says should be zero — which usually means the string was cut at the wrong point.
+  - q: >-
+        Does it matter whether I pick standard or URL-safe?
+    a: >-
+        No. The two alphabets differ in two characters, and a person pasting a string does not know which produced it, so both are accepted whatever is selected. The switch only controls what this page would *emit*.
+  - q: >-
+        The output is unreadable. What is wrong?
+    a: >-
+        Nothing: the bytes are not text in the encoding you picked. Most Base64 is a key, an image, a compressed block or a token. Switch the output to Hex and you will see the bytes as they arrived, which is also how you check them.
+  - q: >-
+        What about a data: URL?
+    a: >-
+        Strip the prefix and decode the rest. Everything after the last comma is the Base64 of the file, so `data:image/png;base64,iVBORw0KGgo…` decodes to a PNG. Whitespace is ignored, so a data URL copied out of a wrapped CSS file works as it stands.
+references:
+  - label: >-
+        RFC 4648 §4 — The Base64 Alphabet
+    url: https://www.rfc-editor.org/rfc/rfc4648#section-4
+  - label: >-
+        RFC 7515 §2 — Terminology and Base64url encoding
+    url: https://www.rfc-editor.org/rfc/rfc7515#section-2
+---
+
+## What gets stripped before decoding
+
+A Base64 string in the wild is rarely bare. Email wraps it at 76 characters, a
+terminal wraps it at whatever the window is, and a JSON or YAML file indents it.
+So whitespace is removed first, on both alphabets, and the padding is
+reconstructed from the length rather than trusted:
+
+- All whitespace is removed.
+- `-` and `_` are read as `+` and `/`, so either alphabet decodes.
+- Padding is stripped and then restored to a multiple of four characters.
+
+What is *not* done is accepting input that could not have been produced. A
+remainder of one character over a group of four is impossible, and so is a final
+character whose unused bits are not zero: both are errors here, with a message
+that says which one it is, because in both cases the string is truncated or
+corrupted and decoding it anyway would hide that.
+
+## Reading the result
+
+Decoding produces bytes, and the question is what they are. This page is strict
+about UTF-8: if the bytes are not valid UTF-8 it says so rather than replacing
+them with U+FFFD, because a replace-with-U+FFFD decoder turns "you pasted the
+wrong thing" into a plausible-looking box of question marks.
+
+Most of the time the answer is Hex. A public key, a certificate, a signature, a
+protobuf message, an image: none of these are text, and all of them are
+meaningful as bytes. Showing them as Latin-1 is a middle option for data that is
+mostly ASCII with a few high bytes.
+
+## The shapes Base64 arrives in
+
+- **Data URLs**, with everything after the comma to decode.
+- **JWTs**, whose three segments are Base64URL *without* padding — one page over
+  on this site reads them and checks the signature.
+- **PEM blocks**, with the header and footer lines to be removed first: the body
+  is Base64 of DER, and the public key box on the JWT page accepts the whole
+  block.
+- **Basic authentication headers**, where the decoded bytes are `user:password`
+  and the encoding is worth exactly as much as a cleartext header.

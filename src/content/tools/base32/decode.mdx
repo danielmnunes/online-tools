@@ -1,0 +1,70 @@
+---
+description: >-
+    Decode Base32 back into text or bytes — the standard, extended-hex and Crockford alphabets, with or without padding.
+faq:
+  - q: >-
+        Which alphabet is my string in?
+    a: >-
+        If it contains digits it is probably the extended-hex alphabet (0–9, A–V) or Crockford, since the RFC 4648 alphabet has no 0, 1, 8 or 9. If it is all uppercase letters and the digits 2–7, it is RFC 4648. The three produce different output for the same bytes, so decoding under the wrong one gives nonsense rather than an error.
+  - q: >-
+        Does the case of the letters matter?
+    a: >-
+        No. Base32 is written in upper case and decodes either, on every alphabet here. Crockford also accepts I and L as 1 and O as 0, which is what makes it usable for values that were read aloud.
+  - q: >-
+        Why is my length rejected?
+    a: >-
+        Characters come in groups of eight, and only some remainders are possible: one byte leaves two characters, two leaves four, three leaves five, four leaves seven. A remainder of one, three or six characters cannot have been produced by any input, so the string is missing or has gained a character.
+  - q: >-
+        The decoded bytes are not readable text. What now?
+    a: >-
+        Switch the output to Hex. Most Base32 in the wild is a key or a secret rather than text, and showing it as UTF-8 is what produces a box of replacement characters. Decoding succeeded; the bytes simply are not characters.
+references:
+  - label: >-
+        RFC 4648 §6 — The Base32 Alphabet
+    url: https://www.rfc-editor.org/rfc/rfc4648#section-6
+  - label: >-
+        Crockford's Base32
+    url: https://www.crockford.com/base32.html
+---
+
+## What decoding checks
+
+A Base32 string is eight characters per five bytes, and the last group is padded
+to eight with `=`. Decoding reverses that, and the length is the first thing it
+can check: characters arrive in groups of eight, and of the seven possible
+partial groups only four can exist.
+
+| Bytes in the last group | Characters |
+|---|---|
+| 1 | 2 |
+| 2 | 4 |
+| 3 | 5 |
+| 4 | 7 |
+
+A string whose length leaves one, three or six characters over has therefore
+been cut, extended or mistyped. Reporting that is more useful than decoding the
+bytes that are there and handing back something short.
+
+Whitespace and padding are stripped before any of this, so a wrapped string out
+of an email or a configuration file decodes as it stands.
+
+## Choosing the alphabet
+
+The three alphabets are different *orders* over the same 32 values, so the same
+bytes encode to three different strings and only the right one decodes to what
+you expect. A mistake here does not error: it produces bytes that are simply
+wrong, which is why the switch is on the page rather than guessed.
+
+The tell is the digits. RFC 4648's alphabet has none below `2`, so a string
+containing `0` or `1` is either extended-hex or Crockford. Beyond that you have
+to know what produced it, and the most common answer is the RFC 4648 alphabet:
+TOTP secrets, DNSSEC records and most protocols use it.
+
+## What comes out
+
+Decoding gives bytes, and bytes are not necessarily characters. The output
+switch is what decides how they are shown, and it is strict about UTF-8 on
+purpose: a decoder that replaces malformed sequences with U+FFFD turns a wrong
+alphabet into a plausible-looking mess instead of an error you can act on. If
+the result is not readable, switch the output to Hex and compare it with what
+you expected — the bytes are there either way.

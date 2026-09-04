@@ -6,6 +6,12 @@ import XofHash from '~/components/widgets/XofHash.svelte';
 import XofFile from '~/components/widgets/XofFile.svelte';
 import HmacTool from '~/components/widgets/HmacTool.svelte';
 import KdfTool from '~/components/widgets/KdfTool.svelte';
+import Codec from '~/components/widgets/Codec.svelte';
+import FileCodec from '~/components/widgets/FileCodec.svelte';
+import HexDump from '~/components/widgets/HexDump.svelte';
+import CborTool from '~/components/widgets/CborTool.svelte';
+import JwtTool from '~/components/widgets/JwtTool.svelte';
+import UrlParser from '~/components/widgets/UrlParser.svelte';
 
 interface Props {
   tool: Tool;
@@ -33,3 +39,17 @@ const { tool } = Astro.props;
     <KdfTool algorithm={tool.config.algorithm} mode={tool.config.mode} client:load />
   )
 }
+{
+  tool.widget === 'codec' && (
+    <Codec codec={tool.config.codec} direction={tool.config.direction} client:load />
+  )
+}
+{
+  tool.widget === 'file-codec' && (
+    <FileCodec codec={tool.config.codec} direction={tool.config.direction} client:load />
+  )
+}
+{tool.widget === 'hex-dump' && <HexDump source={tool.config.source} client:load />}
+{tool.widget === 'cbor' && <CborTool client:load />}
+{tool.widget === 'jwt' && <JwtTool client:load />}
+{tool.widget === 'url-parser' && <UrlParser client:load />}

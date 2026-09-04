@@ -1,0 +1,74 @@
+---
+description: >-
+    Encode text or bytes as Base32 — five bytes to eight characters, case-insensitive and safe to read aloud.
+faq:
+  - q: >-
+        Why Base32 when Base64 is smaller?
+    a: >-
+        Base32 uses one alphabet: no lowercase, no punctuation, no characters that another system will change. That makes it safe in a DNS label, a filename on a case-insensitive filesystem, a QR code in alphanumeric mode, and a value somebody has to read out over the phone. Base64 is 33% overhead and Base32 is 60%, so you pay for the guarantees.
+  - q: >-
+        Which alphabet should I pick?
+    a: >-
+        RFC 4648 (A–Z, 2–7) unless something tells you otherwise: it is what TOTP secrets, DNSSEC and most protocols use. The extended-hex alphabet (0–9, A–V) sorts in the same order as the bytes it encodes, which matters where encoded values are compared or indexed. Crockford's alphabet drops I, L, O and U and reads 0 for O and 1 for I and L when decoding.
+  - q: >-
+        What is the padding for?
+    a: >-
+        Five bytes make exactly eight characters, so anything else is a partial group and the = characters fill it out to eight. The padding carries no data — it says how many bytes were in the last group — and some systems leave it off. Decoding here accepts both.
+  - q: >-
+        Is the output case-sensitive?
+    a: >-
+        No, and that is the point. Base32 is upper case by convention and reads lower case identically, which is why it survives systems that fold case. Crockford goes further and treats O as zero and I and L as one.
+references:
+  - label: >-
+        RFC 4648 §6 and §7 — The Base32 and Base32hex Alphabets
+    url: https://www.rfc-editor.org/rfc/rfc4648#section-6
+  - label: >-
+        Crockford's Base32
+    url: https://www.crockford.com/base32.html
+  - label: >-
+        RFC 6238 — TOTP: Time-Based One-Time Password Algorithm
+    url: https://www.rfc-editor.org/rfc/rfc6238
+---
+
+## Why Base32 exists
+
+Base64 has 64 characters, and four of the reasons it does not travel well are
+`+`, `/`, `=` and the distinction between `O` and `0`. Base32 gives up a third of
+the density to get an alphabet of uppercase letters and digits only, which means
+the same string survives:
+
+- **Case-insensitive systems.** DNS labels, Windows filenames, and anything
+  compared after `toLowerCase()`.
+- **Human transcription.** No `1`/`l`/`I` and no `0`/`O`, and Crockford's variant
+  removes the last of the ambiguity by decoding the confusable letters to the
+  digits they look like.
+- **Contexts where punctuation is special.** A URL path, a command line, a shell
+  variable, an alphanumeric QR code.
+
+The canonical use is a TOTP secret: the string you scan or type into an
+authenticator app is Base32, because it has to survive being read by a human,
+typed into a phone, and stored by a service that does not know what case it was
+in.
+
+## The three alphabets
+
+The RFC 4648 alphabet is `A`–`Z` then `2`–`7`. It is what "Base32" means unless
+something says otherwise.
+
+The extended-hex alphabet is `0`–`9` then `A`–`V`, and its one property is that
+the *order* is preserved: if byte string A sorts before byte string B, their
+encodings sort the same way. Under the standard alphabet they do not, because
+digits come after letters there. That matters in systems that store encoded
+values as sortable keys.
+
+Crockford's alphabet removes `I`, `L`, `O` and `U` — the last to avoid accidental
+obscenities in generated values — and normalises on the way in: decoding is
+case-insensitive, `O` and `o` are read as `0`, and `I`, `i`, `L` and `l` are read
+as `1`. It has no padding.
+
+## Size and padding
+
+Five bytes in, eight characters out, so Base32 is 60% overhead. The padding at
+the end is not data: it records how many bytes were in the final partial group,
+and every decoder can work it out from the length. Systems that put Base32 in a
+URL usually drop it, and this page decodes either form.

@@ -1,0 +1,48 @@
+---
+description: >-
+    Decode a Base32 file back into the bytes it came from — read in your browser and downloaded, never uploaded.
+faq:
+  - q: >-
+        What can go wrong?
+    a: >-
+        Two things: a length that no input could have produced, and a character outside the alphabet. Characters arrive in groups of eight and only four partial lengths are possible — two, four, five or seven characters — so anything else means the file gained or lost characters.
+  - q: >-
+        Do I need to remove the line breaks and padding?
+    a: >-
+        No. Whitespace and = are stripped before decoding, so a wrapped file from an email or a configuration block decodes as it stands. The padding is reconstructed from the length rather than trusted.
+  - q: >-
+        Which alphabet is it?
+    a: >-
+        Whichever the system that wrote it used, and the wrong choice decodes to wrong bytes without complaint. If the string has no 0, 1, 8 or 9 it is the RFC 4648 alphabet; digits mean extended-hex or Crockford. Compare the result against what you expect rather than trusting the first attempt.
+  - q: >-
+        What is the downloaded file called?
+    a: >-
+        The name you dropped with its extension replaced by .bin. The bytes are what was decoded; the name is a guess, so rename it to whatever the format expects.
+references:
+  - label: >-
+        RFC 4648 §6 — The Base32 Alphabet
+    url: https://www.rfc-editor.org/rfc/rfc4648#section-6
+---
+
+## What this page does
+
+It reads a text file of Base32, strips the whitespace and padding that wrapping
+and transport add, validates the length, and decodes it to bytes. The result is
+offered as a download built in the browser, with the first part of it shown as
+text when it is text and as hex when it is not.
+
+The reading is chunked so that a large encoded file shows progress and can be
+cancelled. Decoding itself is a single pass at the end, because the length
+validation needs the whole string: a group of eight characters spans whatever
+chunk boundary the reader happened to stop at.
+
+## Checking what came out
+
+The preview after decoding shows the first 256 bytes, as text if they are
+printable and as hex otherwise. It is there to answer "did that work" without
+downloading anything: a PNG begins `89 50 4e 47`, a ZIP begins `50 4b 03 04`, and
+a file that begins with neither is probably not what you think it is.
+
+For a real check, hash the downloaded file on the matching page in the Hash
+category and compare it with the published value. Decoding tells you the bytes
+match the characters; a checksum tells you the bytes match the original.

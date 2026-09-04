@@ -9,6 +9,14 @@
  * regularity -- only some have a verify page, and three Argon2 variants share
  * one.
  */
+import {
+  CODECS,
+  CODEC_IDS,
+  codecFileSlug,
+  codecSlug,
+  type CodecDirection,
+  type CodecId,
+} from '~/lib/algo/codecs';
 import { HASHES, HASH_IDS, familySiblings, type HashId } from '~/lib/algo/hashes';
 import { KDFS, type KdfId } from '~/lib/algo/kdfs';
 import {
@@ -234,11 +242,135 @@ function kdfTools(): Tool[] {
   ];
 }
 
+/**
+ * The encoding pages, generated from the codec table the same way the hashes
+ * are generated from theirs.
+ *
+ * Each codec gets a page per direction, because "base64 encode" and "base64
+ * decode" are two different searches and two different shapes of page. Only the
+ * codecs whose table entry says so get file pages: see CodecMeta.file for the
+ * three different reasons a codec might not.
+ */
+function codecTools(): Tool[] {
+  /** Two other codecs, so a page offers a way sideways as well as a way back. */
+  const sideways = (id: CodecId, direction: CodecDirection): string[] =>
+    CODEC_IDS.filter((other) => other !== id)
+      .slice(0, 2)
+      .map((other) => codecSlug(other, direction));
+
+  return CODEC_IDS.flatMap((id): Tool[] => {
+    const meta = CODECS[id];
+    const lower = meta.label.toLowerCase();
+
+    const text = (['encode', 'decode'] as const).map((direction): Tool => {
+      const page = direction === 'encode' ? meta.encode : meta.decode;
+      const other = direction === 'encode' ? 'decode' : 'encode';
+      return {
+        slug: codecSlug(id, direction),
+        name: page.name,
+        title: page.title,
+        category: 'encoding',
+        widget: 'codec',
+        config: { codec: id, direction },
+        keywords: [lower, id, direction, ...page.keywords],
+        related: [
+          codecSlug(id, other),
+          ...(meta.file ? [codecFileSlug(id, direction)] : []),
+          ...sideways(id, direction),
+        ],
+      };
+    });
+
+    if (!meta.file) return text;
+
+    return [
+      ...text,
+      ...(['encode', 'decode'] as const).map((direction): Tool => ({
+        slug: codecFileSlug(id, direction),
+        name: `${meta.label} file ${direction}`,
+        title: `${meta.label} File ${direction === 'encode' ? 'Encoder' : 'Decoder'}`,
+        category: 'encoding',
+        widget: 'file-codec',
+        config: { codec: id, direction },
+        keywords: [`${lower} file`, `${id} file`, `file to ${lower}`, `${lower} download`],
+        related: [
+          codecSlug(id, direction),
+          codecFileSlug(id, direction === 'encode' ? 'decode' : 'encode'),
+        ],
+      })),
+    ];
+  });
+}
+
+/**
+ * The encoding tools that are not codecs, listed by hand.
+ *
+ * They have no regularity to generate from: a hex dump reads bytes rather than
+ * converting them, CBOR is a data format with two directions on one page, and
+ * the JWT and URL pages each do a job nothing else on the site does.
+ */
+function encodingTools(): Tool[] {
+  return [
+    {
+      slug: 'hex-dump',
+      name: 'Hex dump',
+      title: 'Hex Dump',
+      category: 'encoding',
+      widget: 'hex-dump',
+      config: { source: 'text' },
+      keywords: ['hex dump', 'hexdump', 'hex viewer', 'bytes of a string', 'binary view'],
+      related: ['hex-dump/file', 'base16/encode', 'base64/encode'],
+    },
+    {
+      slug: 'hex-dump/file',
+      name: 'Hex dump (file)',
+      title: 'Hex Dump of a File',
+      category: 'encoding',
+      widget: 'hex-dump',
+      config: { source: 'file' },
+      keywords: ['hex dump file', 'hexdump', 'view file bytes', 'inspect binary'],
+      related: ['hex-dump', 'base16/file/encode', 'sha256/file'],
+    },
+    {
+      slug: 'cbor',
+      name: 'CBOR',
+      title: 'CBOR Encoder and Decoder',
+      category: 'encoding',
+      widget: 'cbor',
+      config: {},
+      keywords: ['cbor', 'rfc 8949', 'concise binary object representation', 'decode cbor'],
+      related: ['base16/decode', 'jwt', 'base64/encode'],
+    },
+    {
+      slug: 'jwt',
+      name: 'JWT decoder',
+      title: 'JWT Decoder',
+      category: 'encoding',
+      widget: 'jwt',
+      config: {},
+      keywords: ['jwt', 'jwt decoder', 'json web token', 'decode jwt', 'jws', 'verify jwt'],
+      related: ['cbor', 'base64/decode', 'hmac'],
+    },
+    {
+      slug: 'url-parser',
+      name: 'URL parser',
+      title: 'URL Parser',
+      category: 'encoding',
+      widget: 'url-parser',
+      config: {},
+      keywords: ['url parser', 'parse url', 'query string parser', 'url components'],
+      related: ['url/encode', 'url/decode'],
+    },
+  ];
+}
+
 export const TOOLS: ReadonlyArray<Tool> = [
   ...hashTools(),
   ...xofTools(),
   hmacTool(),
   ...kdfTools(),
+  ...codecTools(),
+  ...encodingTools(),
 ];
 
 const BY_SLUG = new Map(TOOLS.map((tool) => [tool.slug, tool]));

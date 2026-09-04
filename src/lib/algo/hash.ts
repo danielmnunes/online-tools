@@ -15,6 +15,7 @@
  * buffering, so the practical ceiling is patience rather than memory.
  */
 import type { CHash } from '@noble/hashes/utils.js';
+import { readChunks } from '~/lib/file';
 import { HASHES, describeRange, type HashId } from './hashes';
 
 export interface StreamingHasher {
@@ -193,47 +194,31 @@ export interface HashBlobOptions extends HashParams {
 }
 
 /**
- * Bytes read per iteration when hashing a file.
- *
- * Large enough that the per-chunk overhead is negligible, small enough that
- * the await between chunks hands control back to the browser often enough to
- * keep the page repainting and the progress bar moving.
- */
-const CHUNK_SIZE = 4 * 1024 * 1024;
-
-/**
  * Hash a File or Blob by reading it a chunk at a time.
  *
- * Reading through slice() rather than arrayBuffer() is the whole point: a 4 GB
- * file is hashed with one chunk resident at a time instead of the entire file.
- * Slicing explicitly rather than using blob.stream() keeps the chunk size ours,
- * which makes progress granularity and yielding predictable rather than
- * dependent on how a particular browser chooses to feed the stream.
+ * See src/lib/file.ts for why the reading is done through slice() rather than
+ * arrayBuffer(): a 4 GB file is hashed with one chunk resident at a time
+ * instead of the entire file.
  */
 export async function hashBlob(
   id: HashId,
   blob: Blob,
   { onProgress, signal, ...params }: HashBlobOptions = {},
 ): Promise<Uint8Array> {
-  function throwIfAborted(): void {
-    if (signal?.aborted) throw new DOMException('Hashing cancelled.', 'AbortError');
-  }
-
-  throwIfAborted();
+  if (signal?.aborted) throw new DOMException('Hashing cancelled.', 'AbortError');
   const hasher = await createStreamingHasher(id, params);
-  const total = blob.size;
 
-  for (let offset = 0; offset < total; ) {
-    throwIfAborted();
-    const end = Math.min(offset + CHUNK_SIZE, total);
-    const chunk = await blob.slice(offset, end).arrayBuffer();
-    hasher.update(new Uint8Array(chunk));
-    offset = end;
-    onProgress?.(offset / total);
-  }
-
-  // An empty file never enters the loop but is nonetheless finished.
-  if (total === 0) onProgress?.(1);
+  await readChunks(
+    blob,
+    (chunk) => {
+      hasher.update(chunk);
+    },
+    {
+      onProgress,
+      signal,
+      abortMessage: 'Hashing cancelled.',
+    },
+  );
 
   return hasher.digest();
 }

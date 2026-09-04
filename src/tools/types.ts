@@ -1,6 +1,7 @@
 import type { HashId } from '~/lib/algo/hashes';
 import type { KdfId } from '~/lib/algo/kdfs';
 import type { XofId } from '~/lib/algo/xofs';
+import type { CodecDirection, CodecId } from '~/lib/algo/codecs';
 
 export type ToolCategory =
   | 'hash'
@@ -90,6 +91,20 @@ export type Tool = ToolBase &
           readonly mode: 'derive' | 'verify';
         };
       }
+    | {
+        readonly widget: 'codec';
+        readonly config: { readonly codec: CodecId; readonly direction: CodecDirection };
+      }
+    /** The same codecs over a whole file, with a download instead of a copy. */
+    | {
+        readonly widget: 'file-codec';
+        readonly config: { readonly codec: CodecId; readonly direction: CodecDirection };
+      }
+    /** One widget, two pages: pasted text, or a file read a page at a time. */
+    | { readonly widget: 'hex-dump'; readonly config: { readonly source: 'text' | 'file' } }
+    | { readonly widget: 'cbor'; readonly config: Record<string, never> }
+    | { readonly widget: 'jwt'; readonly config: Record<string, never> }
+    | { readonly widget: 'url-parser'; readonly config: Record<string, never> }
   );
 
 export type WidgetKind = Tool['widget'];

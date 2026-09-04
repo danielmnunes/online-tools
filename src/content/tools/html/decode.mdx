@@ -1,0 +1,70 @@
+---
+description: >-
+    Decode HTML entities and character references — named, decimal and hexadecimal — back into the text they mean.
+faq:
+  - q: >-
+        Which entities are recognised?
+    a: >-
+        All of them: the browser's own table is used, which is the full HTML5 set of named character references plus numeric ones in decimal and hex. Transcribing two thousand names into this page would only produce a second, worse copy of a table the runtime already has — and one that would disagree with what the browser actually does with the result.
+  - q: >-
+        Why did &notit; become ¬it; rather than nothing?
+    a: >-
+        Because &not is a named reference and the parser matches the longest name it can. The reference ends at the first semicolon, or, if there is none, at the longest prefix that names a character. So &notit; is ¬ followed by the text "it;".
+  - q: >-
+        Is it safe to paste untrusted HTML here?
+    a: >-
+        Yes. Every literal < is escaped before parsing, which means the parser can only ever create text: no element, no script, no image request. A < that arrived as &lt; is untouched by that and still decodes to the character you asked for.
+  - q: >-
+        Why did &#151; give me an em dash and not a control character?
+    a: >-
+        Because the HTML standard remaps numeric references in the C1 range on purpose: real-world documents use the Windows-1252 values there, so the parser substitutes the matching Unicode characters. &#128; is €, not U+0080.
+references:
+  - label: >-
+        HTML Standard §13.1.4 — Character references
+    url: https://html.spec.whatwg.org/multipage/syntax.html#character-references
+  - label: >-
+        HTML Standard — Named character references
+    url: https://html.spec.whatwg.org/multipage/named-character-references.html
+---
+
+## What decoding does
+
+It takes character references — `&amp;`, `&#38;`, `&#x26;` — and gives you back
+the characters they stand for. That sounds trivial and is not quite, because the
+rules for matching a reference are not "find the semicolon":
+
+- A reference ends at the first `;` if there is one.
+- If there is none, the parser takes the longest prefix that names a character.
+  So `&notit;` decodes to `¬it;`, and `&amp` without its semicolon still decodes
+  to `&`.
+- Numeric references in the range 0x80–0x9F are remapped to the characters
+  Windows-1252 puts there, because that is what billions of existing documents
+  mean. `&#151;` is an em dash, not a control character.
+- Out-of-range and undefined numeric references become U+FFFD rather than being
+  rejected, per the standard.
+
+All of that is the browser's behaviour, because it is the browser doing the work.
+
+## How, and why that is the right answer
+
+The input is parsed as HTML by the browser, with every literal `<` escaped first
+so that no element can be created, and the resulting text is read back. The node
+is never inserted into the page.
+
+That gives correct behaviour on all ~2 231 named references, on the C1 remapping,
+and on malformed input, for zero bytes of downloaded table and with no
+transcription risk. It also means the answer is the same one the browser will
+give the string in a page, which is what matters if you are trying to work out
+what a document actually says.
+
+The escaping step is what makes it safe: with no `<` in the input, parsing can
+produce text nodes and nothing else, so nothing can be fetched and no script can
+run — even if what you paste is a fully-formed injection attempt.
+
+## When the result looks wrong
+
+If a reference decodes to U+FFFD, the number was outside the range that maps to a
+character: above U+10FFFF, or in the surrogate range. If a named reference comes
+back as itself, it is not one of the named references — a trailing semicolon and
+the exact spelling both matter, and `&nbsp` without the semicolon works while
+`&nbps;` does not.

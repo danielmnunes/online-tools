@@ -1,0 +1,47 @@
+---
+description: >-
+    Turn a file into hexadecimal without uploading it — read in chunks in your browser, then copy or download the text.
+faq:
+  - q: >-
+        Is the file uploaded?
+    a: >-
+        No. The file is read a chunk at a time by the page in your browser, encoded there, and never sent anywhere. Open the network tab and check: there is no request. That is the whole point of this site.
+  - q: >-
+        How large a file can it take?
+    a: >-
+        Whatever fits in your browser's memory as text, which for hex means roughly a quarter of it: a 100 MB file becomes 200 million characters of hex. The reading is chunked, so it is the output that sets the practical limit — hence the download button, which keeps the whole result out of the page.
+  - q: >-
+        Why is the result so much bigger than the file?
+    a: >-
+        Two characters of hex per byte, plus the separators. Hex doubles the size; Base64 grows it by a third. If you want to look at the bytes rather than carry them somewhere, the hex dump page shows the same information with offsets and an ASCII column.
+  - q: >-
+        Can I check the file against a checksum I was given?
+    a: >-
+        Not on this page. Copy the hex, or take the file to one of the checksum pages in the Hash category, which read it the same chunked way and compare against a published value.
+references:
+  - label: >-
+        RFC 4648 §8 — The Base16 Alphabet
+    url: https://www.rfc-editor.org/rfc/rfc4648#section-8
+---
+
+## What this page is for
+
+Mostly for the cases where a file has to become text: a blob going into a
+configuration file, a test fixture, a value to paste into a protocol trace, or
+the bytes of something small that you want to read.
+
+The file never leaves the machine. It is read with `slice()` a few megabytes at
+a time, each chunk is encoded as it arrives, and the pieces are joined at the
+end. That is why the progress bar moves on a large file and why a file much
+bigger than the browser's per-allocation limit still works.
+
+## What you get
+
+The result is shown only up to the first twenty thousand characters, because
+nobody reads two hundred million of them and no browser renders them. The
+**Download as text** button has the whole thing, produced as a file in your
+browser from the same string.
+
+If the point is to look at the bytes rather than to carry them somewhere, the
+hex dump page is the better tool: same bytes, with offsets and an ASCII column,
+read a page at a time so that a large file stays usable.

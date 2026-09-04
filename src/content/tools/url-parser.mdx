@@ -1,0 +1,69 @@
+---
+description: >-
+    Take a URL apart: every component, every query parameter decoded, and the things that are easy to miss.
+faq:
+  - q: >-
+        Why is there no port for an https URL?
+    a: >-
+        Because 443 is the default and leaving it out is what makes the URL shorter. The port is part of the origin either way: to a browser, example.com and example.com:8443 are different sites, with different cookies and different storage.
+  - q: >-
+        Why does my international domain name come back as xn--something?
+    a: >-
+        Because that is what it is on the wire. URL.hostname returns the ASCII form — punycode — which is what DNS is asked for and what a certificate has to cover. Converting between the two is why an IDN can be phishing: two names that look the same in a browser can be different strings.
+  - q: >-
+        There are two parameters with the same key. Which one wins?
+    a: >-
+        Depends on the parser, and that is the problem: most take the first, some take the last, and a few hand you a list. This page keeps them all, in order, so you can see what was sent rather than what one implementation decided.
+  - q: >-
+        Why can't it parse example.com without https://?
+    a: >-
+        Because without a scheme it is a relative reference, not a URL, and the standard parser is right to refuse it. The error message says to add the scheme, which is the fix in almost every case.
+references:
+  - label: >-
+        URL Standard — WHATWG
+    url: https://url.spec.whatwg.org/
+  - label: >-
+        RFC 3986 §3 — Syntax Components
+    url: https://www.rfc-editor.org/rfc/rfc3986#section-3
+  - label: >-
+        RFC 3492 — Punycode
+    url: https://www.rfc-editor.org/rfc/rfc3492
+---
+
+## What a URL is made of
+
+```
+https://user:pass@example.com:8443/a/b?q=1&flag#section
+└─┬─┘  └──┬──┘ └──┬──┘ └───┬───┘└┬┘└─┬─┘ └──┬──┘ └──┬──┘
+protocol  user  password  host  port  path  query  fragment
+```
+
+The parsing here is the browser's: `new URL()` implements the URL standard, which
+is what the platform will actually do with the string. What this page adds is the
+reading of it, and the observations that are easy to miss.
+
+## The parts that are not visible in the string
+
+- **Default ports.** `https://example.com/` has no port in it and connects to
+  443. Two URLs can differ as strings and be the same resource, or differ by a
+  port and be different origins.
+- **Punycode.** An international domain name arrives as `xn--`, because the ASCII
+  form is what DNS and certificates deal in. Two names that render identically
+  can be different strings — the basis of a whole class of phishing.
+- **IPv6 hosts** keep their colons inside brackets, or the last one would be read
+  as a port.
+- **Credentials.** `user:pass@` is still parsed, and still ends up in logs, in
+  proxy configurations and in `Referer` headers. Browsers no longer send it, but
+  "no longer sent" is not "never written down".
+- **Fragments** are never sent to a server at all, which is why a token handed to
+  JavaScript lives there.
+
+## Query parameters, decoded and as written
+
+Parameters are shown twice: decoded, which is what the application will read, and
+as written, which is what would have to be sent again to mean the same thing.
+Duplicates are kept in order rather than collapsed, because collapsing is a
+choice a parser makes on your behalf, and knowing it made one is the point.
+
+Decoding a value is not the same as trusting it. A query parameter is user input:
+it arrives in logs, in analytics, and often straight into a template.

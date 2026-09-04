@@ -1,0 +1,78 @@
+---
+description: >-
+    Read a JWT: header and payload as JSON, expiry and issue times as dates, and the signature checked against a key.
+faq:
+  - q: >-
+        Is it safe to paste a token here?
+    a: >-
+        Yes, and that is the reason this page exists rather than being a library you install: the token is parsed in your browser and nothing is sent anywhere. A JWT is a bearer credential — anyone who has it can use it — so treat this page like a text editor, not like a service.
+  - q: >-
+        Does "decoded" mean it is valid?
+    a: >-
+        No. Decoding is parsing three Base64URL segments, and anyone can write a token that parses. The signature is the only part that says who wrote it, and it is checked below — with a secret for HS256, HS384 and HS512, and with a public key for the RS, PS and ES algorithms.
+  - q: >-
+        What does alg: none mean?
+    a: >-
+        That there is no signature, and therefore no authentication. This page reports such a token as unverifiable rather than as valid, because accepting one is the oldest JWT vulnerability there is: a token whose header says none is a claim anybody could have written.
+  - q: >-
+        Why does my token fail verification with the right key?
+    a: >-
+        Three usual causes: a whitespace difference in the JSON, a secret that was Base64 or hex rather than the characters you typed, or a token that was re-encoded by something in between. The signature covers the exact bytes of the first two segments, so any reformatting breaks it.
+references:
+  - label: >-
+        RFC 7519 — JSON Web Token (JWT)
+    url: https://www.rfc-editor.org/rfc/rfc7519
+  - label: >-
+        RFC 7515 — JSON Web Signature (JWS)
+    url: https://www.rfc-editor.org/rfc/rfc7515
+  - label: >-
+        RFC 7518 — JSON Web Algorithms (JWA)
+    url: https://www.rfc-editor.org/rfc/rfc7518
+---
+
+## What a JWT is
+
+Three Base64URL segments separated by dots:
+
+```
+eyJhbGciOiJIUzI1NiJ9  .  eyJzdWIiOiIxMjM0In0  .  signature
+      header                   payload              signature
+```
+
+The first two are JSON. The third is a signature over the exact bytes of the
+first two — `header.payload`, with the dots and no reformatting — computed under
+the algorithm named in the header.
+
+Everything above the signature is therefore public. Base64URL is encoding, not
+encryption: the payload of any token can be read by anyone who has it. What the
+signature adds is that it could not have been *changed*.
+
+## What this page checks
+
+Decoding is separate from verifying, and the page keeps them that way round: the
+header and payload are shown whether or not the signature is, because reading a
+token is a legitimate thing to do with a token you do not trust yet.
+
+Verification uses the Web Crypto API:
+
+- **HS256, HS384, HS512** are MACs, so they need the shared secret that signed
+  it. The secret is not in the token and cannot be recovered from it.
+- **RS256/384/512, PS256/384/512** are RSA signatures, checked with a public key.
+- **ES256/384/512** are ECDSA, checked with a public key. JWS writes ECDSA
+  signatures as r and s concatenated, which is also what the Web Crypto API
+  takes — the conversion that trips people up goes the other way, from DER.
+
+A PEM block (`-----BEGIN PUBLIC KEY-----`) and a JWK are both accepted, because a
+JWK is what a JWKS endpoint publishes.
+
+## The things that go wrong
+
+- **`alg: none`**, and tokens with an empty signature: reported as unverifiable.
+- **Algorithm confusion**, where a token is checked under the algorithm in its own
+  header. The result here names the algorithm it used, so a mismatch is visible.
+- **Expiry.** `exp`, `iat` and `nbf` are seconds since the epoch, and the page
+  reads them as dates *and* as distances: "expired 3 days ago" is the form that
+  answers the actual question. A token can verify and still be expired; expiry is
+  a separate check and a relying party has to make it.
+- **Whitespace.** Reformatting the JSON changes the bytes the signature covers.
+  A token that was pretty-printed somewhere in transit will not verify.

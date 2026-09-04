@@ -1,0 +1,75 @@
+---
+description: >-
+    Encode text or bytes as Base64 — three bytes to four characters, the default way to carry bytes inside text.
+faq:
+  - q: >-
+        Why does the output end in = sometimes?
+    a: >-
+        Three bytes make exactly four characters, so a shorter input leaves a partial group and = fills it out. Padding carries no data — it says how many bytes were in the last group — and every decoder can work it out from the length, which is why URL-safe uses often drop it.
+  - q: >-
+        Should I use the standard or the URL-safe alphabet?
+    a: >-
+        URL-safe if the result goes in a URL, a filename or a cookie, because + and / both have to be escaped there and = is a query-string separator. The URL-safe alphabet swaps them for - and _, which need no escaping. Decoding here accepts either.
+  - q: >-
+        How much bigger does it get?
+    a: >-
+        Exactly a third, plus padding: three bytes become four characters. A 3 MB file becomes 4 MB of Base64. That is more compact than Base32 (60% overhead) and far more compact than hex (100%), which is why Base64 is the default for embedding bytes in text.
+  - q: >-
+        Why would I wrap the output onto lines?
+    a: >-
+        For email and for PEM-style blocks, where a line longer than 76 characters may be rewrapped or rejected in transit. Base64 ignores the line breaks when decoding, so wrapping is purely presentational.
+references:
+  - label: >-
+        RFC 4648 §4 and §5 — The Base64 and Base64url Alphabets
+    url: https://www.rfc-editor.org/rfc/rfc4648#section-4
+  - label: >-
+        RFC 2045 §6.8 — Base64 Content-Transfer-Encoding
+    url: https://www.rfc-editor.org/rfc/rfc2045#section-6.8
+---
+
+## What Base64 is
+
+Base64 takes three bytes — 24 bits — and writes them as four 6-bit values, each
+one a character from a 64-character alphabet. Because 24 is a multiple of both 8
+and 6, groups never overlap and the encoding can be produced a chunk at a time,
+which is how the file version of this page handles a large file without holding
+it all in memory.
+
+The alphabet is `A`–`Z`, `a`–`z`, `0`–`9`, then two more characters. Those last
+two are the only thing the two variants disagree on:
+
+- **Standard:** `+` and `/`, padded with `=`.
+- **URL-safe:** `-` and `_`, because `+` becomes a space when it travels through
+  a form or a query string, and `/` is a path separator.
+
+Decoding here accepts both, whichever is selected, because a person does not
+know which one produced the string they have.
+
+## Where the output goes
+
+Base64 is the encoding of last resort for "bytes that have to travel as
+characters":
+
+- **Data URLs** — `data:image/png;base64,` followed by the file, which is a way
+  to inline an image in HTML or CSS with no second request. The file version of
+  this page can add that prefix for you.
+- **Email attachments** (RFC 2045), wrapped at 76 characters.
+- **HTTP Basic authentication** — `Authorization: Basic ` and the Base64 of
+  `user:password`. It is encoding, not encryption: it hides nothing from anybody.
+- **JSON and XML**, which have no byte-string type, so a key or a signature goes
+  in as Base64.
+
+## What it does not do
+
+Base64 is not encryption, not compression, and not a checksum. It makes no
+attempt to be unreadable — it is reversible by definition and by design — and it
+makes the data a third larger rather than smaller. Anyone who finds a Base64
+string can decode it in a second, which is why a "hidden" password in Base64 is
+not hidden.
+
+## Encoding bytes rather than characters
+
+The input switch decides what the box means. Left on UTF-8, the text you typed
+is encoded as its UTF-8 bytes. Set to Hex or Base64, the box is read as bytes
+first, so a value copied from somewhere else can be re-encoded without being
+turned back into text in between.

@@ -1,0 +1,54 @@
+---
+description: >-
+    Decode a Base64 file back into the bytes it came from — in your browser, with a preview and a download.
+faq:
+  - q: >-
+        What does the preview show?
+    a: >-
+        The first 256 bytes of the result, as text if they are printable and as hex if they are not. It answers "did that work" before downloading: a PNG starts 89 50 4e 47, a ZIP starts 50 4b 03 04, a PDF starts 25 50 44 46.
+  - q: >-
+        My file has line breaks and indentation. Does that matter?
+    a: >-
+        No. All whitespace is stripped, the URL-safe characters are read as their standard equivalents, and the padding is rebuilt from the length. That covers the shapes Base64 arrives in: MIME at 76 characters, PEM blocks, indented YAML, and terminal wrapping.
+  - q: >-
+        Why is it rejected?
+    a: >-
+        Three causes, and the message names which: a character outside the alphabet, a length one over a group of four (which no input can produce), or trailing bits that the padding says should be zero — the signature of a truncated or corrupted string.
+  - q: >-
+        What is the downloaded file called?
+    a: >-
+        The name you dropped with its extension replaced by .bin. The decoder knows the bytes and not the format, so rename it to what the contents expect.
+references:
+  - label: >-
+        RFC 4648 §4 — The Base64 Alphabet
+    url: https://www.rfc-editor.org/rfc/rfc4648#section-4
+---
+
+## What this page does
+
+It reads a text file of Base64 — in chunks, so a large one shows progress — strips
+whitespace, normalises either alphabet, restores the padding, and decodes to
+bytes. The result becomes a file in your browser, offered as a download. Nothing
+is uploaded, because there is nowhere to upload it to.
+
+## Getting the input right
+
+Three shapes cause most of the trouble, and two of them are handled:
+
+- **Wrapped output** from an email client or a terminal. Whitespace is stripped.
+- **PEM blocks.** Remove the `-----BEGIN …-----` and `-----END …-----` lines: only
+  the body between them is Base64. (The JWT page on this site accepts a whole PEM
+  block for signature checking, because it parses it first.)
+- **Data URLs.** Everything after the last comma is the Base64; the prefix is
+  metadata.
+
+What is not tolerated is a character outside the alphabet, or a length that no
+encoding could have produced. Both mean the file was damaged in transit, and
+decoding it anyway would hand back a file that looks fine and is not.
+
+## Checking the result
+
+Decoding proves the bytes match the characters, not that they match the original
+file. For that, hash the downloaded file on the matching page in the Hash
+category and compare it with the checksum you were given. It is the check that
+matters for anything you are about to run, install or restore.

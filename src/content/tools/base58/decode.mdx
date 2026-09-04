@@ -1,0 +1,67 @@
+---
+description: >-
+    Decode Base58 back into text or bytes — Bitcoin, Monero, Ripple and Flickr alphabets, with optional checksum verification.
+faq:
+  - q: >-
+        How do I know which variant my string is in?
+    a: >-
+        Where it came from. Bitcoin addresses and most modern systems use the Bitcoin alphabet; Monero addresses are long and use the block-based variant; Ripple and Flickr use their own orders. The alphabets are permutations of each other, so decoding under the wrong one produces bytes without complaint — check the result rather than trusting it.
+  - q: >-
+        What happens if I change one character?
+    a: >-
+        Plain Base58 decodes it to different bytes with no complaint, because every string is valid. Base58Check — the variant with the checksum — refuses it, which is the entire reason that variant exists. If you are decoding an address, use it.
+  - q: >-
+        Why does it start with ones?
+    a: >-
+        A leading 1 in Base58 is a zero byte, not a digit. The encoding is of a big-endian number, which cannot record leading zeros, so each one is written explicitly as the first character of the alphabet. A string beginning with several 1s decodes to several zero bytes at the front.
+  - q: >-
+        Is there a size limit?
+    a: >-
+        Yes, and it is a property of the algorithm rather than a choice: base conversion is quadratic in the length of the input, so this page refuses very long strings instead of freezing. Monero's variant encodes in 8-byte blocks and is linear, so it is exempt.
+references:
+  - label: >-
+        Base58Check encoding — Bitcoin Wiki
+    url: https://en.bitcoin.it/wiki/Base58Check_encoding
+  - label: >-
+        draft-msporny-base58 — The Base58 Encoding Scheme
+    url: https://www.ietf.org/archive/id/draft-msporny-base58-03.txt
+---
+
+## What comes out
+
+Decoding Base58 gives bytes, and the bytes are very rarely text. A Bitcoin
+address is a version byte and a hash; an IPFS identifier is a multihash; a
+Monero address is a network byte, two public keys and a checksum. Shown as UTF-8
+they are noise.
+
+So the output switch matters more here than on most pages. Hex is usually what
+you want: it shows the bytes exactly, and it is the form you can compare against
+a specification. This page is strict about UTF-8 on purpose — it reports
+"not valid UTF-8" instead of replacing the bytes with U+FFFD, because a
+replacement character is indistinguishable from data that happens to be one.
+
+## The alphabets, and what they are for
+
+The four alphabets are the same 58 symbols in four orders:
+
+- **Bitcoin** — `123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz`.
+  Digits first, then uppercase, then lowercase. Everything else copied this one.
+- **Flickr** — the same shape with the cases swapped: lowercase before uppercase.
+  It exists because Flickr wanted short URLs and picked its own order in 2007.
+- **Monero (xmr)** — the Bitcoin alphabet, but encoding in fixed 8-byte blocks,
+  which keeps it linear rather than quadratic. The last block is partial, so the
+  same bytes do not encode to the same string as the Bitcoin variant.
+- **Ripple (xrp)** — an order chosen to start with `r`, so that addresses begin
+  with a recognisable letter.
+
+Because they are permutations, decoding under the wrong one always "works". If
+the result is not what you expected, the variant is the first thing to change.
+
+## Base58Check
+
+The `check` variant decodes, then verifies the last four bytes against a double
+SHA-256 of everything before them, and refuses the string if they do not match.
+It also strips them: what you get back is the payload, not the checksum.
+
+That is the correct behaviour for a checksum, and it is the difference between
+"this address is mistyped" and "these funds went nowhere".

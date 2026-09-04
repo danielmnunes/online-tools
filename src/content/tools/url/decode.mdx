@@ -1,0 +1,67 @@
+---
+description: >-
+    Decode percent-escapes back into text or bytes — %20 and +, UTF-8 sequences, and clear errors for broken escapes.
+faq:
+  - q: >-
+        Does + mean a space?
+    a: >-
+        Only in form mode. In a path or an ordinary query value, + is a literal plus and a space is %20. This is the single most common decoding bug, and it is why the mode is a switch rather than a guess: the same string means two different things depending on where it came from.
+  - q: >-
+        Why does it report an invalid escape instead of decoding around it?
+    a: >-
+        Because a % that is not followed by two hexadecimal digits means the string was damaged — often by something that decoded it once and re-encoded the result. Decoding around it produces text that looks right and is not. The error names the position so you can look.
+  - q: >-
+        The decoded text has mojibake in it. What happened?
+    a: >-
+        The bytes were percent-encoded from a charset other than UTF-8, which happens with old links and old software. Show the result as Hex to see the bytes, then decode them with the charset that produced them — Latin-1 and Windows-1252 are the usual culprits.
+  - q: >-
+        Some characters came back as themselves. Is that right?
+    a: >-
+        Yes. Decoding only touches % escapes and, in form mode, +. Everything else — letters, digits, and the unreserved punctuation — is passed through unchanged, which is why decoding something that was never encoded is a no-op.
+references:
+  - label: >-
+        RFC 3986 §2.1 — Percent-Encoding
+    url: https://www.rfc-editor.org/rfc/rfc3986#section-2.1
+  - label: >-
+        URL Standard — Percent-encoded bytes
+    url: https://url.spec.whatwg.org/#percent-encoded-bytes
+---
+
+## What decoding does
+
+It scans for `%`, reads the two characters after it as a hexadecimal byte, and
+replaces the three characters with that byte. Everything else survives untouched:
+letters and digits, and the punctuation that never needed escaping.
+
+Decoding produces *bytes*, not text. The result is then shown in the encoding you
+pick — UTF-8 by default, because that is what percent-encoding has meant since
+RFC 3986 and what every modern URL uses.
+
+That distinction is the one that matters when something looks wrong: if the bytes
+are not valid UTF-8, this page says so instead of replacing them with U+FFFD. A
+box of replacement characters is indistinguishable from text that happens to
+contain them; an error you can act on is not.
+
+## The + question
+
+In `application/x-www-form-urlencoded` — a form body, and the query part of a URL
+built by a form — a space is `+`, because it is shorter and because a `+` in a
+query would otherwise have to be escaped. Everywhere else, a space is `%20` and
+`+` is a plus.
+
+So `a+b` is:
+
+- `a b` in form mode;
+- `a+b` in every other mode.
+
+The same string, two meanings, and no way to tell from the string alone — which
+is why the mode is on the page and why the form mode here is tested against the
+browser's own urlencoded parser.
+
+## Double decoding
+
+A string containing `%2520` decodes once to `%20` and twice to a space. Double
+encoding happens when a value is encoded by one layer and then by another that
+did not know, and decoding twice is sometimes the right fix — but it is also how
+an injection gets through a filter that decodes once and checks once. If you find
+yourself decoding twice, find out which layer is encoding twice.
