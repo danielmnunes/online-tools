@@ -1,0 +1,71 @@
+---
+description: >-
+    Encode text or bytes as Base58 — the alphabet without 0, O, I or l, built for values a human has to copy.
+faq:
+  - q: >-
+        What is Base58 for?
+    a: >-
+        Values that a person has to read, type or double-click: Bitcoin addresses, IPFS content identifiers, Monero addresses, short codes. The alphabet leaves out 0, O, I and l so no two characters look alike, and it has no punctuation so a double-click selects the whole value instead of stopping at a + or a /.
+  - q: >-
+        Why are there four alphabets?
+    a: >-
+        They are the same 58 characters in different orders, chosen independently by Bitcoin, Flickr, Monero and Ripple. The same bytes encode differently under each, so decoding under the wrong one gives plausible-looking nonsense. Bitcoin's order is the one other systems copied.
+  - q: >-
+        What does Base58Check add?
+    a: >-
+        Four bytes of double SHA-256 appended before encoding, which turns a typo into an error instead of a payment to nobody. It is the variant that produces the 1... and 3... Bitcoin addresses, and decoding it verifies the checksum and refuses a mistyped string.
+  - q: >-
+        Why is there a size limit?
+    a: >-
+        Base58 is a conversion between number bases, not a power-of-two shuffle like Base64, so the work grows with the square of the length of the input. Past a couple of kilobytes it stops being instant, which is also why there is no file version of this page. Monero's variant encodes in fixed 8-byte blocks and has no such limit.
+references:
+  - label: >-
+        Base58Check encoding — Bitcoin Wiki
+    url: https://en.bitcoin.it/wiki/Base58Check_encoding
+  - label: >-
+        draft-msporny-base58 — The Base58 Encoding Scheme
+    url: https://www.ietf.org/archive/id/draft-msporny-base58-03.txt
+---
+
+## The alphabet, and why it is missing four characters
+
+Base58 is Base64 with the six characters that cause trouble in a value a human
+handles: `0`, `O`, `I`, `l`, and the two punctuation characters `+` and `/`. What
+is left is 58 characters that do not look like each other and do not break a
+double-click or a word-wrap.
+
+That is the whole design, and it is a design about *people*: a Bitcoin address is
+Base58 because somebody will read it off a screen, type it into a phone, or paste
+it into a chat client that wraps lines. Base64 is smaller and better for
+machines; Base58 is better for the two metres between a screen and a keyboard.
+
+## Leading zeros
+
+The first character of the alphabet is `1`, standing for zero, and a Base58
+value is a big-endian number. A number does not record leading zeros, so the
+encoding does it explicitly: each zero byte at the start becomes a leading `1`.
+That is why so many Bitcoin addresses begin with a `1`, and it is why the
+encoding is not simply "write the number in base 58".
+
+## Base58Check
+
+Plain Base58 has no error detection: change one character and you have a
+different, equally valid value. Base58Check appends four bytes of double
+SHA-256 — the first four bytes of `SHA-256(SHA-256(version ‖ payload))` — to the
+bytes before encoding them.
+
+Decoding verifies those four bytes and refuses the string if they do not match,
+which turns a mistyped address from a silent loss into an immediate error. This
+is the variant that produces the addresses people recognise, and it is available
+here as one of the variants rather than as a separate tool, because it is the
+same encoding with four bytes on the end.
+
+## The cost, stated plainly
+
+Converting between base 256 and base 58 is not a bit shuffle: the whole value is
+one big number, and dividing it by 58 repeatedly costs time proportional to the
+square of its length. Two kilobytes is instant; a megabyte is not. So this page
+refuses large inputs with an explanation rather than hanging, and there is no
+file version — a file page would be a page whose useful range is a couple of
+kilobytes. Monero's variant, which encodes in fixed 8-byte blocks, is linear and
+has no limit.

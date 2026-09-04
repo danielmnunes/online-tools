@@ -1,0 +1,69 @@
+---
+description: >-
+    Escape text for HTML — turn & < > " ' into entities so a browser shows them instead of parsing them.
+faq:
+  - q: >-
+        Which characters have to be escaped?
+    a: >-
+        & and < always: & starts an entity and < starts a tag. > is escaped by every implementation by convention, and " and ' have to be escaped inside an attribute value. This page escapes all five by default, because escaping quotes where they did not need it is harmless and missing one where it did is a hole.
+  - q: >-
+        Is escaping the same as sanitising?
+    a: >-
+        No. Escaping makes text safe to display as text. It does not make untrusted HTML safe to insert as HTML, and it does not help in a context where text becomes code: inside a <script>, inside a URL that starts with javascript:, or inside a CSS rule. Those need different handling, not more escaping.
+  - q: >-
+        Named or numeric entities?
+    a: >-
+        Named (&amp;) is readable and is what people expect to see. Numeric (&#38; or &#x26;) needs no table to decode and works even where the named set is not supported. The five characters this page escapes have named forms in every browser; for anything above ASCII it writes numeric references for that reason.
+  - q: >-
+        Why is the result longer than my input?
+    a: >-
+        Each escaped character becomes between five and seven characters. Text with a lot of < and & in it — markup you are displaying as an example, say — roughly doubles. That is the cost of making the boundary between text and markup explicit.
+references:
+  - label: >-
+        HTML Standard §13.1.4 — Character references
+    url: https://html.spec.whatwg.org/multipage/syntax.html#character-references
+  - label: >-
+        HTML Standard §13.3 — The input byte stream and character encodings
+    url: https://html.spec.whatwg.org/multipage/parsing.html#the-input-byte-stream
+---
+
+## What escaping is for
+
+A browser reads `<` as the start of a tag and `&` as the start of a character
+reference. If the text you are putting on a page contains either, and you put it
+there as-is, the browser will parse part of your text as markup. Escaping replaces
+those characters with references that mean the same characters, so the parser
+leaves them alone and the reader sees what you wrote.
+
+This is the single most common source of XSS, and it is entirely about *context*:
+the same string is safe in one part of a document and dangerous in another.
+
+| Escaped | Safe as | Not safe as |
+|---|---|---|
+| `& < > " '` | element text, quoted attribute | HTML, script, URL, CSS |
+
+## The five characters, and when each matters
+
+- **`&`** starts an entity. Escape it first, always.
+- **`<`** starts a tag. Escape it always.
+- **`>`** starts nothing on its own in modern HTML, but every escaper escapes it
+  and so should you.
+- **`"`** and **`'`** delimit attribute values. Inside a double-quoted attribute,
+  an unescaped `"` ends the value early and the rest becomes attributes —
+  including an `onerror`. Outside attributes they are harmless, which is why this
+  page offers a three-character mode.
+
+Escaping always is the safe default: the cost is a few characters and the benefit
+is that a string can be moved between contexts without being re-examined.
+
+## Above ASCII
+
+The non-ASCII option escapes everything above `~` as a numeric reference. It is
+the right choice when the page it will be pasted into is served in a different
+charset than the one your text is in, and unnecessary otherwise: a document
+declared as UTF-8 can contain the characters directly.
+
+Named references exist for some of them — `&euro;`, `&copy;` — but support for
+the exotic ones is patchier than for the five above, and the point of escaping
+them is usually to survive a charset the reader does not have. Numeric
+references always work, so that is what gets written.

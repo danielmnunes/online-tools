@@ -53,7 +53,15 @@ export function bytesToHex(bytes: Uint8Array, upper = false): string {
 export function hexToBytes(hex: string): Uint8Array {
   // Tolerate the shapes people actually paste: 0x prefixes, spaces, colons,
   // newlines from a hex dump.
-  const cleaned = hex.replace(/0x/gi, '').replace(/[\s:_-]/g, '');
+  //
+  // The input is split on separators first and the prefix is then taken off
+  // each token, rather than deleting every "0x" wherever it appears. Deleting
+  // them mid-string turned "de0xad" -- six digits, a well-formed three-byte
+  // value -- into "dead" and reported nothing; here it is the error it is.
+  const cleaned = hex
+    .split(/[\s:,_-]+/)
+    .map((token) => token.replace(/^0x/i, ''))
+    .join('');
   if (cleaned.length === 0) return new Uint8Array(0);
   if (cleaned.length % 2 !== 0) {
     throw new DecodeError('Hex input must have an even number of digits.');
@@ -151,6 +159,59 @@ export function textToBytes(text: string, encoding: InputEncoding): Uint8Array {
 /** Render a digest (or any byte string) for display. */
 export function bytesToText(bytes: Uint8Array, encoding: OutputEncoding): string {
   switch (encoding) {
+    case 'hex':
+      return bytesToHex(bytes, false);
+    case 'hex-upper':
+      return bytesToHex(bytes, true);
+    case 'base64':
+      return bytesToBase64(bytes);
+  }
+}
+
+/**
+ * How to show bytes that are meant to be read rather than hashed.
+ *
+ * Digests are always hex or Base64, which is what OutputEncoding is for. A
+ * decoded file is not: it is usually text, and the widget has to be able to
+ * say "this is not text" instead of showing a row of replacement characters.
+ */
+export type DisplayEncoding = 'utf-8' | 'latin1' | 'hex' | 'hex-upper' | 'base64';
+
+export const DISPLAY_ENCODINGS: ReadonlyArray<{ value: DisplayEncoding; label: string }> = [
+  { value: 'utf-8', label: 'UTF-8' },
+  { value: 'latin1', label: 'Latin-1 (ISO-8859-1)' },
+  { value: 'hex', label: 'Hex (lowercase)' },
+  { value: 'hex-upper', label: 'Hex (uppercase)' },
+  { value: 'base64', label: 'Base64' },
+];
+
+/**
+ * Decode bytes as UTF-8, refusing rather than guessing.
+ *
+ * A decoder without `fatal` invents U+FFFD for anything malformed, which
+ * turns "you pasted the wrong Base64" into a box of question marks that looks
+ * like a bug in the tool. Throwing lets the widget say what happened and
+ * point at Hex.
+ */
+export function bytesToUtf8(bytes: Uint8Array): string {
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch {
+    throw new DecodeError(
+      'The result is not valid UTF-8. Switch the output to Hex to see the bytes as they are.',
+    );
+  }
+}
+
+/** Render decoded bytes for a human, in whatever form they asked for. */
+export function bytesToDisplayText(bytes: Uint8Array, encoding: DisplayEncoding): string {
+  switch (encoding) {
+    case 'utf-8':
+      return bytesToUtf8(bytes);
+    case 'latin1':
+      // Every byte maps to a code point, so this cannot fail. It is here for
+      // the case where the bytes are not UTF-8 but are mostly readable.
+      return Array.from(bytes, (b) => String.fromCharCode(b)).join('');
     case 'hex':
       return bytesToHex(bytes, false);
     case 'hex-upper':

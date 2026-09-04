@@ -11,6 +11,7 @@
 import { describe, expect, it } from 'vitest';
 import { TOOLS, getTool, populatedCategories, relatedTools, toolsInCategory } from '~/tools/registry';
 import { CATEGORIES, type Tool } from '~/tools/types';
+import { CODECS, CODEC_IDS, codecFileSlug, codecSlug, isCodecId } from '~/lib/algo/codecs';
 import { HASHES, isHashId } from '~/lib/algo/hashes';
 import { XOFS, XOF_FILE_IDS, XOF_IDS, isXofId } from '~/lib/algo/xofs';
 import { KDFS, KDF_IDS, isKdfId } from '~/lib/algo/kdfs';
@@ -23,7 +24,11 @@ describe('slugs', () => {
 
   it('are URL-safe path segments', () => {
     for (const tool of TOOLS) {
-      expect(tool.slug, tool.slug).toMatch(/^[a-z0-9]+(?:[-.][a-z0-9]+)*(?:\/[a-z0-9-]+)?$/);
+      // Up to two extra segments: one tool can have a variant and a form, as
+      // in base16/file/encode.
+      expect(tool.slug, tool.slug).toMatch(
+        /^[a-z0-9]+(?:[-.][a-z0-9]+)*(?:\/[a-z0-9-]+){0,2}$/,
+      );
     }
   });
 
@@ -83,7 +88,14 @@ describe('widget configuration', () => {
         case 'kdf':
           expect(isKdfId(tool.config.algorithm), tool.slug).toBe(true);
           break;
+        case 'codec':
+        case 'file-codec':
+          expect(isCodecId(tool.config.codec), tool.slug).toBe(true);
+          break;
         case 'hmac':
+        case 'cbor':
+        case 'jwt':
+        case 'url-parser':
           expect(tool.config, tool.slug).toEqual({});
       }
     }
@@ -107,6 +119,27 @@ describe('widget configuration', () => {
     for (const tool of TOOLS) {
       if (tool.widget !== 'kdf' || tool.config.mode !== 'verify') continue;
       expect(KDFS[tool.config.algorithm].verify, tool.slug).toBe(true);
+    }
+  });
+
+  it('only gives a file page to a codec that can be produced a chunk at a time', () => {
+    for (const tool of TOOLS) {
+      if (tool.widget !== 'file-codec') continue;
+      // Base58 is quadratic, HTML entities and percent-encoding are text
+      // transformations, and a page for any of them would be a page whose
+      // button cannot do anything useful.
+      expect(CODECS[tool.config.codec].file, tool.slug).toBe(true);
+    }
+  });
+
+  it('gives every codec page the other direction as its first related link', () => {
+    for (const tool of TOOLS) {
+      if (tool.widget !== 'codec') continue;
+      const other = codecSlug(
+        tool.config.codec,
+        tool.config.direction === 'encode' ? 'decode' : 'encode',
+      );
+      expect(tool.related?.[0], tool.slug).toBe(other);
     }
   });
 });
@@ -133,10 +166,35 @@ describe('coverage of the algorithm tables', () => {
     for (const id of KDF_IDS) expect(kdfSlugs.has(id), id).toBe(true);
   });
 
-  it('has the catalogue size phase 2 set out to deliver', () => {
+  it('gives every codec a page in each direction', () => {
+    const encodingSlugs = new Set(toolsInCategory('encoding').map((tool) => tool.slug));
+    for (const id of CODEC_IDS) {
+      expect(encodingSlugs.has(codecSlug(id, 'encode')), `${id}/encode`).toBe(true);
+      expect(encodingSlugs.has(codecSlug(id, 'decode')), `${id}/decode`).toBe(true);
+    }
+  });
+
+  it('gives a codec file pages exactly where its table entry says', () => {
+    const encodingSlugs = new Set(toolsInCategory('encoding').map((tool) => tool.slug));
+    for (const id of CODEC_IDS) {
+      const wanted = CODECS[id].file;
+      expect(encodingSlugs.has(codecFileSlug(id, 'encode')), `${id}/file/encode`).toBe(wanted);
+      expect(encodingSlugs.has(codecFileSlug(id, 'decode')), `${id}/file/decode`).toBe(wanted);
+    }
+  });
+
+  it('gives every encoding tool that is not a codec its own page', () => {
+    const encodingSlugs = new Set(toolsInCategory('encoding').map((tool) => tool.slug));
+    for (const slug of ['hex-dump', 'hex-dump/file', 'cbor', 'jwt', 'url-parser']) {
+      expect(encodingSlugs.has(slug), slug).toBe(true);
+    }
+  });
+
+  it('has the catalogue size phase 3 set out to deliver', () => {
     expect(toolsInCategory('hash')).toHaveLength(42);
     expect(toolsInCategory('xof')).toHaveLength(23);
     expect(toolsInCategory('kdf')).toHaveLength(12);
-    expect(TOOLS).toHaveLength(77);
+    expect(toolsInCategory('encoding')).toHaveLength(23);
+    expect(TOOLS).toHaveLength(100);
   });
 });

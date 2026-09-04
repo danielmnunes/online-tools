@@ -1,0 +1,67 @@
+---
+description: >-
+    Percent-encode text for a URL, a query string or a form — four modes, because the four contexts escape different characters.
+faq:
+  - q: >-
+        What is the difference between the modes?
+    a: >-
+        Component mode escapes the characters that separate the parts of a URL, so the result is safe anywhere in one. Whole-URL mode leaves those separators alone and escapes only what cannot appear in a URL at all. Form mode turns a space into +, which is what application/x-www-form-urlencoded does and the other three do not. Strict mode escapes everything except the RFC 3986 unreserved characters.
+  - q: >-
+        Why did a space become %20 here and + there?
+    a: >-
+        %20 is correct in a URL path and in a component; + means a space only in a form-encoded body or query. They are not interchangeable: a + in a path is a literal plus. Pick the mode that matches where the string is going.
+  - q: >-
+        How are non-ASCII characters encoded?
+    a: >-
+        As their UTF-8 bytes, one escape per byte: é is %C3%A9, and an emoji is four escapes. That is what RFC 3986 and the URL standard both require, and it is why a non-ASCII character in a URL is several percent-escapes rather than one.
+  - q: >-
+        Should I encode the whole URL at once?
+    a: >-
+        Only in whole-URL mode. Encoding a complete URL in component mode escapes the : // ? and & that make it a URL, and the result is a value rather than a link. The URL parser page shows what the parts are if you are unsure which is which.
+references:
+  - label: >-
+        RFC 3986 §2 — Uniform Resource Identifier: Generic Syntax
+    url: https://www.rfc-editor.org/rfc/rfc3986#section-2
+  - label: >-
+        URL Standard — Percent-encoded bytes
+    url: https://url.spec.whatwg.org/#percent-encoded-bytes
+  - label: >-
+        URL Standard — application/x-www-form-urlencoded serializing
+    url: https://url.spec.whatwg.org/#concept-urlencoded-serializer
+---
+
+## What percent-encoding is
+
+A URL is a sequence of characters with structure: `:` separates a scheme, `//`
+starts an authority, `?` starts a query, `&` separates its parameters, `#`
+starts a fragment. Any of those appearing in the *data* has to be written in a
+form that does not carry the structure — hence `%3A`, `%3F`, `%26`.
+
+The encoding is per *byte*: a byte that is not allowed here becomes `%` and two
+hexadecimal digits. Which bytes are allowed depends on where in the URL the
+string is going, which is why there are modes.
+
+## The four modes
+
+| Mode | Leaves alone | Use for |
+|---|---|---|
+| Component | `A–Z a–z 0–9 - . _ ~ ! * ' ( )` | a path segment, a query value |
+| Whole URL | those, plus `; , / ? : @ & = + $ #` | a complete URL that is already assembled |
+| Form | `A–Z a–z 0–9 * - . _`, space as `+` | a form body or a urlencoded query |
+| Strict | `A–Z a–z 0–9 - . _ ~` only | when the destination is unknown or strict |
+
+The first two are what the platform's `encodeURIComponent` and `encodeURI` do,
+and this page's output is tested against both. Form mode is tested against the
+urlencoded serializer the browser itself uses for a form submission, which is the
+only definition that matters.
+
+## Common mistakes
+
+- **Encoding a whole URL in component mode.** You get a string with no structure
+  left, which is right for a value and wrong for a link.
+- **Double encoding.** Encoding a string that already contains `%3A` turns the
+  `%` into `%25`. Decode first, or encode each part once as you build the URL.
+- **Assuming `+` and `%20` are the same.** They are not: `+` is a literal plus
+  everywhere except a form-encoded context.
+- **Encoding the `#` of a fragment into a query value.** It has to be escaped
+  there, or the URL ends early.

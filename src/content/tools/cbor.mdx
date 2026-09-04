@@ -1,0 +1,76 @@
+---
+description: >-
+    Encode JSON as CBOR and decode CBOR to diagnostic notation — read the bytes, the structure and the annotated layout.
+faq:
+  - q: >-
+        What is CBOR?
+    a: >-
+        A binary data format with the JSON data model, defined in RFC 8949: objects, arrays, strings, numbers, booleans and null, plus byte strings, big integers and tagged values that JSON has no way to express. It is what WebAuthn, COSE signatures, DID documents and most constrained-device protocols use.
+  - q: >-
+        Why does the decoded output look like JSON but not quite?
+    a: >-
+        Because it is diagnostic notation, RFC 8949's own way of writing CBOR as text: {1: 2, 3: 4} for a map with integer keys, h'0102' for a byte string, 1(1363896240) for a tagged value, and (_ …) for an item encoded in indefinite-length chunks. Showing it as JSON would lose all four.
+  - q: >-
+        What does "sort map keys" do?
+    a: >-
+        It makes the encoding deterministic: the same data always produces the same bytes. Two encoders can agree on a value and disagree on its bytes, because object key order is not part of the data model, and a signature over CBOR is over bytes.
+  - q: >-
+        Why does encoding only take JSON?
+    a: >-
+        Because JSON cannot express a byte string, an integer above 2^53, or a tag, so there is no way to type one in. The decoder handles all of them and shows them in full; the encoder takes what a text box can hold.
+references:
+  - label: >-
+        RFC 8949 — Concise Binary Object Representation (CBOR)
+    url: https://www.rfc-editor.org/rfc/rfc8949
+  - label: >-
+        RFC 7049 §3.9 — Canonical CBOR
+    url: https://www.rfc-editor.org/rfc/rfc7049#section-3.9
+  - label: >-
+        IANA — CBOR Tags
+    url: https://www.iana.org/assignments/cbor-tags/cbor-tags.xhtml
+---
+
+## What CBOR is
+
+CBOR is JSON's data model in binary: same shapes, no text syntax, no
+whitespace, and a handful of types JSON does not have. The initial byte of every
+item says what it is and how long it is, which is why a decoder can read it
+without knowing the schema.
+
+It gets used where bytes matter: WebAuthn attestations, COSE signatures, IoT
+payloads, and anything that has to be canonical enough to sign. A small object
+that is 34 bytes of JSON is often 18 bytes of CBOR, and the page shows the
+comparison for whatever you paste.
+
+## Reading a decoded item
+
+Three views, because they answer three different questions:
+
+- **Diagnostic notation** — what the bytes mean, in RFC 8949's own textual form.
+  This is the one to read.
+- **JSON** — what most code wants, with the parts JSON cannot carry written as
+  strings: big integers as digits, byte strings as hex, tags as `{"tag": …,
+  "value": …}`. Those do not survive a round trip, which is the whole reason CBOR
+  exists.
+- **Byte by byte** — the annotated layout: one line per item with its major type
+  and length, which is how you find out why two encodings of the same value
+  differ.
+
+The decoder is checked against every vector in RFC 8949 Appendix A, including the
+indefinite-length ones: an item written as a stream of chunks ended by a break,
+which is the part of CBOR with no JSON equivalent and the part most likely to be
+handled wrongly.
+
+## Tags, and why they matter
+
+A tag says what a value *is*: `0` is a date string, `1` is an epoch-based time,
+`2` is a big integer, `23` is a byte string that is itself CBOR, `55799` marks a
+file as CBOR so that a magic-number sniff finds it. The decoder shows them rather
+than resolving them, because resolving is a decision the application makes.
+
+## Determinism
+
+Two encoders can produce different bytes for the same value, because map key order
+is not part of the data model. That is fine until something signs the bytes. The
+sorting option writes keys in the deterministic order, which makes an encoding
+reproducible across implementations — the property a signature needs.

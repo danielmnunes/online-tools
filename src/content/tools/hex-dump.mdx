@@ -1,0 +1,65 @@
+---
+description: >-
+    See the bytes of a string: a hex dump with offsets, one byte per two characters and the printable ones alongside.
+faq:
+  - q: >-
+        Why does one character take several bytes?
+    a: >-
+        Because characters are not bytes. UTF-8 uses one byte for ASCII, two for most European text, three for most Asian text and four for emoji. An é is c3 a9, and a 😀 is f0 9f 98 80. This is the fastest way to see it rather than be told it.
+  - q: >-
+        What is the column on the right?
+    a: >-
+        The same sixteen bytes rendered as characters, with a dot for anything that is not printable ASCII. It is what makes a dump readable: the structure is in the hex, and the text you can recognise is on the right.
+  - q: >-
+        What is the number at the start of each line?
+    a: >-
+        The offset of the first byte on that line, in hexadecimal — which is what every hex editor and every core dump uses. Switch it to decimal if you are matching against a byte count from somewhere else.
+  - q: >-
+        My file starts with strange bytes. What are they?
+    a: >-
+        Probably a byte-order mark: ef bb bf is UTF-8's, ff fe is UTF-16LE's, and fe ff is UTF-16BE's. They are invisible in a text editor and are the usual cause of a file that parses wrongly at the very start. The file version of this page shows them for any file you drop.
+references:
+  - label: >-
+        RFC 4648 §8 — The Base16 Alphabet
+    url: https://www.rfc-editor.org/rfc/rfc4648#section-8
+  - label: >-
+        The Unicode Standard — UTF-8
+    url: https://www.unicode.org/versions/latest/ch03.pdf
+---
+
+## What a hex dump shows
+
+A digest tells you whether two files are identical. It does not tell you what is
+at offset 0x40, that a file has a UTF-8 byte-order mark, or that the line endings
+are CR LF rather than LF. Those are questions about bytes, and a dump is the
+answer to all of them:
+
+```
+00000000  48 65 6c 6c 6f 2c 20 77  6f 72 6c 64 21 0a        |Hello, world!.|
+```
+
+Sixteen bytes per line, split into two groups of eight, with the printable ones
+at the end. This is the layout `hexdump -C` produces — the output here is tested
+line for line against it — because it is the one people already read.
+
+## Why the bytes are not the characters
+
+The surprise in most first dumps is the length. `é` is two bytes in UTF-8, `€` is
+three, and an emoji outside the basic plane is four. The input switch is what
+makes this concrete: leaving it on UTF-8 shows the bytes of the text; setting it
+to Latin-1 forces one byte per character and fails loudly on anything that does
+not fit.
+
+Two things people are looking for, and can now see:
+
+- **Byte-order marks.** `ef bb bf` at the start means the file is UTF-8 with a
+  BOM, which is why a JSON parser may reject it or a script may emit output
+  before its first line.
+- **Line endings.** `0a` is LF and `0d 0a` is CR LF. A file that behaves
+  differently on two machines usually differs here.
+
+## Working with a file
+
+For a real file, use the file version of this page: it reads a page at a time
+with `slice()`, so a gigabyte file opens instantly, and the offsets are the
+offsets in the file rather than in the page.

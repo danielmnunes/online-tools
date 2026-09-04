@@ -1,0 +1,57 @@
+---
+description: >-
+    Turn hexadecimal back into a file — paste or drop a hex text file and download the bytes it describes.
+faq:
+  - q: >-
+        Why does it reject my file?
+    a: >-
+        Either the length is odd — two hex characters are one byte, so an odd count is half a byte — or the file contains something that is not a hex digit. Separators, spaces, colons, newlines and 0x prefixes are all stripped; a letter outside a–f is not, because then the file is not hex.
+  - q: >-
+        What happens to an offset column from a dump?
+    a: >-
+        It is read as data, because there is no way to tell an offset column from bytes: both are hex digits. Copy the byte columns out of a dump, or use the hex dump page, which shows offsets without mixing them into the bytes.
+  - q: >-
+        What is the downloaded file called?
+    a: >-
+        The name of the file you dropped, with its extension replaced by .bin. The bytes are what the decoder read; the name is a guess, so rename it to what the format expects.
+  - q: >-
+        How do I know it came out right?
+    a: >-
+        Compare a checksum. Hash the downloaded file with the matching page in the Hash category and check it against the value you were given for the original — that is what a published checksum is for.
+references:
+  - label: >-
+        RFC 4648 §8 — The Base16 Alphabet
+    url: https://www.rfc-editor.org/rfc/rfc4648#section-8
+---
+
+## What this page is for
+
+Reversing the encode page: a file of hex characters back into the bytes they
+describe. It comes up with fixtures and test vectors, with keys and blobs carried
+inside configuration files, and with anything that was exported as hex by another
+tool.
+
+The input is text, so it is read as text — in chunks, so the progress bar means
+something on a large one — and decoded in one pass at the end. The result is a
+file built in the browser and handed to you as a download. Nothing is uploaded,
+and nothing has to be, because the work is a lookup table and a loop.
+
+## Getting the input right
+
+The decoder strips everything that is not a hex digit, which covers the shapes
+hex arrives in: spaces between bytes, colon-separated pairs, `0x` prefixes,
+newlines from wrapping, and the indentation of a C array. What it cannot strip is
+an *offset column*, because an offset is hex too and there is no rule that
+distinguishes it from data. If your source is a dump, take the byte columns.
+
+Two failures are reported rather than papered over: an odd number of digits,
+which means a character was lost or added, and a character outside `0`–`9` and
+`a`–`f`, which means the file is not hex at all.
+
+## Checking the result
+
+Decoding cannot tell you whether the bytes are what was intended — only that
+they are what was written. A checksum does: hash the downloaded file on the
+matching page in the Hash category and compare it with the value published for
+the original. That is the check that matters when the file is a firmware image,
+a key or anything else where "it decoded" and "it is right" are different claims.

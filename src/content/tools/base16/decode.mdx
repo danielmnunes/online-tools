@@ -1,0 +1,69 @@
+---
+description: >-
+    Turn hexadecimal back into text or bytes — paste hex from a dump, a key file or a digest and read what it says.
+faq:
+  - q: >-
+        Why does it refuse my input with an odd number of digits?
+    a: >-
+        Two hex characters are one byte, so an odd number of digits is half a byte. In practice it means a character was dropped or added when copying: hex travels in pairs, and a trailing or missing character is the usual cause.
+  - q: >-
+        Do the spaces, colons and 0x prefixes matter?
+    a: >-
+        No. Hex copied out of a dump, a Wireshark pane or a C array comes with separators, and they are all stripped before decoding: "de ad be ef", "de:ad:be:ef" and "0xde 0xad 0xbe 0xef" are the same four bytes.
+  - q: >-
+        The result is not readable text. Is that a bug?
+    a: >-
+        It means the bytes are not text in the encoding you picked, which is the normal case for a key, a compressed blob or a struct. Switch the output to Hex and you will see the bytes back, unchanged — decoding succeeded, they just are not characters.
+  - q: >-
+        Why did my leading zero disappear?
+    a: >-
+        It did not: decoding "00ff" gives two bytes, and the output shown as text has no way to render the first one. Show the result as Hex and both bytes are there. Text is a rendering of bytes, not the bytes.
+references:
+  - label: >-
+        RFC 4648 §8 — The Base16 Alphabet
+    url: https://www.rfc-editor.org/rfc/rfc4648#section-8
+  - label: >-
+        The Unicode Standard — UTF-8 encoding form
+    url: https://www.unicode.org/versions/latest/ch03.pdf
+---
+
+## What decoding does
+
+Decoding hex takes pairs of characters and turns each pair into a byte. There is
+no structure to interpret and no guesswork: `48 65 6c 6c 6f` is five bytes, and
+those five bytes are the UTF-8 form of `Hello`.
+
+The interesting question is what the bytes *mean*, and that is not something a
+decoder knows. The same twenty characters of hex might be a UTF-8 string, a
+Latin-1 string, a 160-bit key or the first ten bytes of a PNG. This page asks
+you which, with the output switch, because guessing is how mojibake happens: a
+decoder that always says UTF-8 turns every non-UTF-8 byte into
+U+FFFD and destroys what you pasted.
+
+## When the bytes are not text
+
+Most things people decode are not text. A key, a hash, a compressed block, a
+bitmap: all bytes that only mean something to the format that produced them.
+Shown as UTF-8 they are noise, and shown as UTF-8 *strictly* they are an error —
+which is what this page does, because "the result is not valid UTF-8" is a true
+and useful answer, whereas a box of replacement characters is neither.
+
+Switch the output to Hex to see the bytes exactly as they arrived. If they came
+out of a dump, that also gives you a way to check them: decoding and re-encoding
+should give you back the string you started with, character for character apart
+from case and separators.
+
+## The shapes hex arrives in
+
+Hex is rarely pasted as a bare string. It comes out of:
+
+- **Dumps and packet panes**, with spaces or colons between bytes and an offset
+  column at the start. The separators are stripped; an offset column is not, so
+  copy the bytes without it.
+- **Source code**, as `0x` prefixes or `\x` escapes. The prefixes are stripped
+  here; the escapes inside a string literal are not, because there is no way to
+  tell them from data.
+- **Configuration**, as a bare string of even length, often uppercase.
+
+What is never accepted is a character outside 0–9 and a–f: if the input contains
+one, it is not hex, and saying so beats decoding around it.

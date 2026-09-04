@@ -1,0 +1,66 @@
+---
+description: >-
+    Read any file as a hex dump in your browser — a page at a time, with real offsets, without uploading it.
+faq:
+  - q: >-
+        Does the file get uploaded?
+    a: >-
+        No. It is read with slice(), one page at a time, so only the page you are looking at is in memory. Nothing is sent anywhere: there is no request to watch in the network tab, which is the point of this site.
+  - q: >-
+        How do I get to a particular offset?
+    a: >-
+        Use First, Previous, Next and Last to walk pages of 4 KiB, and the offset column shows where each page starts in the file. Offsets are absolute: page three begins at 0x2000, not at 0, which is what makes an offset found here usable elsewhere.
+  - q: >-
+        Why only 4 KiB at a time?
+    a: >-
+        Because a hex dump is about four characters wide for every byte: a gigabyte of file would be four gigabytes of text. The file is not loaded all at once, so a multi-gigabyte file opens as fast as a small one.
+  - q: >-
+        What are the first bytes of my file?
+    a: >-
+        Its magic number, and it is usually the fastest way to identify what a file really is: 89 50 4e 47 is a PNG, 25 50 44 46 is a PDF, 50 4b 03 04 is a ZIP, 1f 8b is gzip. Extensions lie; magic numbers rarely do.
+references:
+  - label: >-
+        URL Standard — Blob and File
+    url: https://w3c.github.io/FileAPI/#file
+  - label: >-
+        The Unicode Standard — UTF-8
+    url: https://www.unicode.org/versions/latest/ch03.pdf
+---
+
+## What this page is for
+
+Finding out what a file actually contains. Whether a downloaded image is really a
+PNG, where a file stops being text and starts being binary, what encoding a text
+file is in, and what is at a given offset.
+
+The whole file is never loaded. Each page is a `slice()` of the file, so a
+multi-gigabyte file opens as quickly as a small one, and the offsets shown are
+the offsets in the file — which is the part that matters if you are trying to
+find something and then act on it somewhere else.
+
+## Reading a dump
+
+```
+00001000  89 50 4e 47 0d 0a 1a 0a  00 00 00 0d 49 48 44 52  |.PNG........IHDR|
+```
+
+The offset, then sixteen bytes in two groups of eight, then the printable ones.
+The layout is `hexdump -C`'s, and this page's output is tested against that
+command where it is installed.
+
+Things worth looking for:
+
+- **Magic numbers** in the first bytes, which tell you what a file is regardless
+  of its name.
+- **Byte-order marks** at offset 0: `ef bb bf` for UTF-8, `ff fe` for UTF-16LE.
+- **Text that should not be there** — a path, a key, a name — which is what makes
+  a dump worth reading before sharing a file.
+- **Where the text stops.** A file that is text and then is not has either a
+  binary section or a truncated write, and the boundary is visible.
+
+## What to do with what you find
+
+If the file needs to be carried as text, the encoding pages turn it into Base64
+or hex with a download. If it needs checking against a value you were given, the
+Hash category reads it the same chunked way and compares. Neither uploads
+anything, because neither needs to.

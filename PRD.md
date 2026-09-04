@@ -22,7 +22,7 @@ utilizador** — e onde essa afirmação é verificável abrindo o separador de 
 ### Objetivos
 
 1. Cobertura funcional próxima da do site de referência (~188 ferramentas). As categorias
-   Hash, XOF/MAC e KDF fecham com exclusões deliberadas listadas em §5.
+   Hash, XOF/MAC, KDF e Encoding fecham com exclusões deliberadas listadas em §5.
 2. Processamento 100% client-side, sem exceções.
 3. Cada ferramenta num URL próprio, com HTML estático real — o tráfego desta categoria vem
    de pesquisa orgânica ("md5 online", "base64 decode").
@@ -60,6 +60,7 @@ protegidos por direitos de autor. Todo o código, design e conteúdo é escrito 
 | Estilos | **Tailwind CSS 4** (`@tailwindcss/vite`) | Sem CSS runtime; dark mode por classe |
 | Conteúdo SEO | **MDX + Content Collections** (schema Zod) | Prosa e FAQ versionados e validados no build |
 | Criptografia | **@noble/hashes** e, onde faltar, implementação própria | Ver §5 |
+| Codificação | **@scure/base** (base16/32/58/64) e **cbor2** (RFC 8949) | Auditados, sem dependências, um módulo por função; ver §5.3 |
 | Trabalho pesado | **Web Workers** com um pool próprio (`src/lib/worker/`) | Argon2 e bcrypt bloqueiam a UI thread durante segundos |
 | Linguagem | TypeScript `strict` | O registry só funciona se for tipado |
 | Testes | **Vitest** + **jsdom** + `@testing-library/svelte` | Vetores, paridade, e comportamento dos widgets |
@@ -101,15 +102,19 @@ seu widget é erro de tipos, não uma página em branco em runtime.
 | `XofHash` | shake, cshake, kmac, tuplehash, parallelhash | 16 |
 | `XofFile` | as variantes de ficheiro das que se streamam | 6 |
 | `HmacTool` | HMAC autónomo, com escolha de hash | 1 |
-| `Codec` | base16/32/58/64, html, url, cbor | 16 |
-| `FileCodec` | as variantes de ficheiro dos codecs | 10 |
+| `Codec` | base16/32/58/64, html entities, percent-encoding | 12 |
+| `FileCodec` | as variantes de ficheiro dos três codecs que se streamam | 6 |
 | `SymmetricCipher` | aes, des, 3des, rc4, chacha20, poly1305, speck, xxtea | 16 |
 | `AsymmetricTool` | rsa e ecdsa: keygen / sign / verify / encrypt / decrypt | 8 |
 | `KdfTool` | pbkdf2, hkdf, evpkdf, scrypt, argon2, bcrypt (+ verify) | 12 |
 | `CompressionCodec` | gzip, deflate, brotli, zstd, xz, lzip, lzma | 14 |
 | `ArchiveTool` | create/extract, incluindo zip e tar | 18 |
 | `FormatTool` | json, xml, text compare, syntax highlight | 10 |
-| `ConvertTool` | case, time converter, url parser, jwt decoder | 10 |
+| `HexDump` | hex dump de texto e de ficheiro, este por páginas | 2 |
+| `CborTool` | cbor: encode/decode, notação diagnóstica, JSON | 1 |
+| `JwtTool` | jwt: decode, claims no tempo, verificação de assinatura | 1 |
+| `UrlParser` | componentes, parâmetros de query, notas | 1 |
+| `ConvertTool` | case, time converter | 8 |
 | `GeneratorTool` | uuid v1–v7, password, qr code | 9 |
 
 Comportamento partilhado implementado uma vez em `src/lib/`: conversão de encodings,
@@ -208,6 +213,44 @@ três variantes do Argon2, com página de *verify* para as quatro que têm um fo
 armazenamento legível. O Argon2 tem uma página de verificação para as três variantes, porque a
 string PHC diz qual delas a produziu.
 
+### 5.3 Âmbito da categoria Encoding
+
+A categoria fecha em **6 codecs e 23 páginas**: Base16, Base32, Base58 e Base64 (texto e
+ficheiro, menos o Base58), HTML entities, percent-encoding, hex dump, CBOR, JWT e URL parser.
+
+Três decisões merecem ser escritas, porque cada uma é uma exceção à regra de "usar uma
+biblioteca auditada":
+
+- **`@scure/base` para os quatro codecs de base.** É do mesmo autor do noble, auditado pela
+  cure53, e publica um módulo por codec. Não se usa a sua interpretação *sem* uma camada por
+  cima: o `@scure/base` rejeita de propósito tudo o que não seja canónico — e bem, que é
+  assim que nascem a maleabilidade de assinaturas e o cache poisoning — mas uma pessoa a colar
+  um Base64 de um email não pediu uma verificação de canonicidade. `src/lib/codec.ts`normaliza
+  primeiro (espaços, separadores, `0x`, as duas grafias do alfabeto URL-safe, o padding
+  reconstruído a partir do comprimento) e só depois descodifica em modo estrito. O que continua
+  a falhar é input genuinamente partido: um caráter fora do alfabeto, um comprimento que
+  nenhuma codificação podia ter produzido, ou bits no fim que o padding diz serem zero.
+- **HTML entities são descodificadas pelo browser.** A alternativa é transcrever as 2 231
+  referências nomeadas do HTML5, o que daria uma segunda cópia pior de uma tabela que o runtime
+  já tem — e que é a que vai ser aplicada ao resultado. O `<` literal é escapado antes de
+  interpretar, o que é o que torna isso seguro: sem `<` na entrada, o parser só pode produzir
+  nós de texto. Nenhum elemento, nenhum script, nenhum pedido de rede. Verificado no Chrome.
+- **Percent-encoding escrito à mão, com quatro modos.** Não porque fosse difícil usar
+  `encodeURIComponent`, mas porque este widget codifica *bytes* vindos de uma caixa de hex, o
+  que uma função de strings nunca vê, e porque os quatro contextos (componente, URL inteira,
+  form, estrito) têm quatro conjuntos de caracteres por escapar. Os quatro são comparados com
+  `encodeURIComponent`, `encodeURI` e o serializador urlencoded da plataforma.
+
+**Fora de âmbito:** o Base58 não tem página de ficheiro — a conversão entre bases 256 e 58 é
+quadrática no comprimento da entrada (2 KiB é instantâneo, 1 MB não é), e uma página cujo
+alcance útil fosse dois quilobytes não é uma ferramenta. HTML entities e percent-encoding
+também não: são transformações de texto. E as tabelas de encodings legados
+(ISO-8859-\*, Windows-125\*) ficaram de fora por uma razão que mudou desde que foram
+escritas nos planos: o browser **descodifica** todos esses charsets nativamente, sem
+descarregar nada, e a única direção que precisa mesmo de tabelas — codificar *para* um charset
+legado — não tem procura que justifique trinta tabelas transcritas, que é a maior fonte de erro
+de cópia que existe.
+
 ---
 
 ## 6. Verificação
@@ -215,29 +258,43 @@ string PHC diz qual delas a produziu.
 Correção criptográfica não se verifica a olho. Três camadas independentes:
 
 1. **Vetores publicados** — RFC 1321, 3174, 2202, 4231, 5869, 6070, 7693, 7914, 8018, 9106;
-   FIPS 180-4, FIPS 202; SP 800-185; os vetores oficiais da equipa BLAKE3; e os vetores do
-   bcrypt distribuídos com o OpenBSD.
+   FIPS 180-4, FIPS 202; SP 800-185; os vetores oficiais da equipa BLAKE3; os vetores do
+   bcrypt distribuídos com o OpenBSD; a §10 da RFC 4648 (Base16/32/64), o Apêndice A da
+   RFC 8949 (CBOR, na íntegra) e a §A.1 da RFC 7515 (JWS).
 2. **Paridade com implementações independentes.** O OpenSSL, através do `node:crypto` e da
    linha de comandos, é o oráculo principal — não partilha código com o noble. Onde não chega,
-   entram o Bouncy Castle 1.83 (SP 800-185, Argon2, bcrypt) e o módulo `bcrypt` do Python. Os
+   entram o Bouncy Castle 1.83 (SP 800-185, Argon2, bcrypt) e o módulo `bcrypt` do Python. Para
+   a codificação, as plataformas: `Buffer` no Base64 e no hex, `encodeURIComponent`, `encodeURI`
+   e `URLSearchParams` no percent-encoding, `hexdump -C` no hex dump (quando existe), e
+   `node:crypto` a assinar os tokens que o verificador da página tem de aceitar e rejeitar. Os
    comprimentos são escolhidos para cair nas fronteiras de bloco
    (0, 1, 55, 56, 63, 64, 65, 71, 72, 111, 112, 127, 128, 135, 136, 137, 1000, 4096), que é
    onde vivem os bugs de padding. Os algoritmos que o OpenSSL não tem estão listados
    explicitamente: **adicionar um algoritmo sem verificação cruzada faz a suite falhar**.
 3. **Re-derivação da especificação**, onde nenhuma das duas primeiras chega. O TupleHash e o
    ParallelHash são reconstruídos dentro dos testes a partir do texto da SP 800-185 — com o
+
    `left_encode`, o `right_encode` e o `encode_string` escritos à mão sobre o SHAKE do OpenSSL
    — e comparados em combinações de parâmetros que nenhuma tabela de vetores cobre. Foi esta
    camada que resolveu uma discordância entre duas implementações: o
    `ParallelHash.doFinal(out, off, outLen)` do Bouncy Castle não codifica um `outLen`
    não-predefinido no `right_encode(L)` que a §6.2 exige. O noble está certo, e a divergência
-   ficou registada em `test/vectors/sp800-185.ts` para quem vier a seguir.
+   ficou registada em `test/vectors/sp800-185.ts` para quem vier a seguir. A mesma ideia, mais
+   simples, valida os alfabetos de Base32: os três são transcritos da RFC 4648 e da página do
+   Crockford, e a codificação de cada grupo de cinco bits é calculada no teste, o que verifica
+   o alfabeto e a ordem dos bits contra algo escrito noutro sítio. O checksum do Base58Check é
+   recalculado com SHA-256 dentro do teste em vez de ser confiado à biblioteca.
 4. **Comportamento dos widgets** em jsdom — recálculo ao mudar opções, erros de
-   descodificação a aparecerem em vez de digests obsoletos, e o guard que impede um hash
-   lento antigo de sobrescrever um resultado mais recente.
+   descodificação a aparecerem em vez de resultados obsoletos, e o guard que impede um
+   cálculo lento antigo de sobrescrever um resultado mais recente.
 5. **Guardas estruturais do registry** — slugs únicos, links relacionados que resolvem,
-   configuração que bate com a tabela do algoritmo. Um erro aqui não parte o build: produz uma
-   página que renderiza e está errada, que é o pior tipo.
+   configuração que bate com a tabela do algoritmo, e uma página por codec e direção. Um erro
+   aqui não parte o build: produz uma página que renderiza e está errada, que é o pior tipo.
+6. **Um browser real**, no fim. jsdom não tem Web Crypto nem `URL.createObjectURL`, e é aí que
+   vivem duas das coisas mais fáceis de errar: a verificação de assinaturas e os downloads.
+   Chrome é apontado ao build de produção por CDP e verifica-se no browser — não só em Node —
+   que a chave da RFC 7515 valida o token da RFC 7515, e que largar um ficheiro numa página de
+   Base64 produz um download `blob:` sem um único pedido à rede.
 
 ---
 
@@ -246,7 +303,7 @@ Correção criptográfica não se verifica a olho. Três camadas independentes:
 | Métrica | Alvo | Estado atual |
 |---|---|---|
 | JS na home e páginas de categoria | 0 KB | **0 KB, 0 ilhas** |
-| Transferido numa página de ferramenta | < 100 KB gz | **23–29 KB gz** (a mais pesada é uma de KDF) |
+| Transferido numa página de ferramenta | < 100 KB gz | **35 KB gz** no máximo (a `/cbor/`, que carrega o cbor2 inteiro) |
 | Trabalho pesado fora da main thread | sempre | Argon2id a 19 MiB: 571 ms, **0 ms** de bloqueio |
 | Crescimento por algoritmo adicionado | ~0 nas outras páginas | confirmado |
 | Pedidos a hosts externos | 0 | **0** |
@@ -261,9 +318,10 @@ Correção criptográfica não se verifica a olho. Três camadas independentes:
 | **Hash** | MD5, SHA-1, SHA-2 (224/256/384/512/512-224/512-256), Double SHA-256, SHA-3 (×4), Keccak (×4), RIPEMD-160, BLAKE2b/2s, BLAKE3 — cada um com variante de ficheiro. **Entregue.** Exclusões em §5 |
 | **XOF e MAC** | SHAKE128/256, cSHAKE128/256, KMAC(XOF)128/256, TupleHash(XOF)128/256, ParallelHash(XOF)128/256, HMAC calculator — com variante de ficheiro nas seis que se streamam. **Entregue.** Exclusões em §5.2 |
 | **KDF** | PBKDF2, EvpKDF, HKDF, scrypt, Argon2d/i/id; PBKDF2/scrypt/bcrypt/Argon2 com variante *verify*. **Entregue.** Ver §5.2 |
-| **Encoding** | Hex/Base16, Base32, Base58, Base64 (texto e ficheiro), Hex dump, HTML entities, URL encode/decode, URL parser, CBOR, JWT decoder |
+| **Encoding** | Hex/Base16, Base32, Base58, Base64 (texto e ficheiro), Hex dump (texto e ficheiro), HTML entities, URL encode/decode, URL parser, CBOR, JWT decoder. **Entregue.** Exclusões em §5.3 |
 | **Format** | JSON validator/minifier/formatter/viewer/compare, XML validator/minifier/formatter, text compare, syntax highlight |
 | **Convert** | 7 conversores de case, time converter |
+
 | **Cryptography** | AES, DES, Triple DES, RC4, ChaCha20, ChaCha20-Poly1305, SPECK, XXTEA (encrypt/decrypt); ECDSA e RSA (keygen/sign/verify/encrypt/decrypt) |
 | **Compression** | GZIP, DEFLATE, Brotli, Zstandard, XZ, LZIP, LZMA (compress/decompress e create/extract), ZIP, TAR |
 | **Generator** | UUID v1/v3/v4/v5/v6/v7, gerador de passwords, QR code generator e scanner |

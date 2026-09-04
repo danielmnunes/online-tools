@@ -2,20 +2,20 @@
 
 Estado de execução do [PRD.md](PRD.md). `[x]` feito e verificado · `[ ]` por fazer.
 
-**Agora:** 77 ferramentas em produção, 890 testes, CI a fazer deploy automático.
-**Alvo:** ~188 ferramentas. A categoria Hash está **fechada** em 21 algoritmos.
+**Agora:** 100 ferramentas em produção, 1087 testes, CI a fazer deploy automático.
+**Alvo:** ~188 ferramentas. As categorias Hash, XOF/MAC, KDF e Encoding estão **fechadas**.
 
 ```
 Hash          ████████████████████  42 / 42  (âmbito fechado)
 XOF e MAC     ████████████████████  23 / 23  (âmbito fechado)
 KDF           ████████████████████  12 / 12  (âmbito fechado)
-Encoding      ░░░░░░░░░░░░░░░░░░░░   0 / 26
+Encoding      ████████████████████  23 / 23  (âmbito fechado)
 Format+Conv   ░░░░░░░░░░░░░░░░░░░░   0 / 20
 Cryptography  ░░░░░░░░░░░░░░░░░░░░   0 / 26
 Compression   ░░░░░░░░░░░░░░░░░░░░   0 / 30
 Generator     ░░░░░░░░░░░░░░░░░░░░   0 / 9
-                                    ─────────
-                                    77 / 188
+                                     ─────────
+                                    100 / 188
 ```
 
 ---
@@ -135,6 +135,86 @@ que em JavaScript não existe.
       progresso a subir, cancelamento a matar o worker e o seguinte a nascer limpo
 - [x] Contraste e nomes acessíveis verificados nos dois temas: 0 falhas
 
+### Fase 3 — Encoding (23 páginas) — âmbito fechado
+
+- [x] Tabela de codecs (`src/lib/algo/codecs.ts`) — **6 codecs**, cada entrada a declarar as
+      opções que aceita e a que direção pertencem; `Codec.svelte` renderiza exatamente esses
+      controlos, sem um único ramo por algoritmo no componente
+- [x] `Codec.svelte` e `FileCodec.svelte` — texto e ficheiro, nas duas direções
+- [x] Base16, Base32, Base58 e Base64, com as variantes que existem de facto: RFC 4648,
+      extended-hex e Crockford no Base32; Bitcoin, Base58Check, Flickr, Monero e Ripple no
+      Base58; standard e URL-safe no Base64; padding e quebras de linha
+- [x] **Ficheiro por chunks com encoder incremental** (`createStreamingEncoder`): grupos de 1, 5
+      e 3 bytes, com carry entre chunks — o resultado é o mesmo do encoder de uma só passagem,
+      verificado em teste para tamanhos de chunk de 1 a 1000 bytes
+- [x] HTML entities: escapar com formulário e âmbito escolhíveis; **descodificar com a tabela
+      do próprio browser**, escapando o `<` literal antes de interpretar
+- [x] URL encoding em quatro modos — componente, URL inteira, form e estrito — comparados com
+      `encodeURIComponent`, `encodeURI` e o serializador urlencoded da plataforma
+- [x] `HexDump.svelte` — texto e ficheiro. O ficheiro é lido **uma página de 4 KiB de cada vez**
+      com `slice()`, com os offsets absolutos no ficheiro
+- [x] `CborTool.svelte` — RFC 8949: notação diagnóstica, JSON e leitura byte a byte anotada
+- [x] `JwtTool.svelte` — descodificar, ler `exp`/`iat`/`nbf` como datas e distâncias, e
+      **verificar a assinatura** com a Web Crypto (HMAC, RSA, RSA-PSS, ECDSA, PEM ou JWK)
+- [x] `UrlParser.svelte` — componentes, parâmetros de query em bruto e descodificados, e as
+      notas que não se veem no URL (porta por omissão, punycode, credenciais, fragmento)
+- [x] 23 ficheiros MDX escritos de raiz, cada um com ângulo próprio, FAQ e referências
+
+Páginas entregues: `base16|base32|base58|base64/encode|decode`, as mesmas quatro (menos o
+Base58) em `…/file/encode|decode`, `html/encode|decode`, `url/encode|decode`, `url-parser`,
+`hex-dump`, `hex-dump/file`, `cbor`, `jwt`.
+
+**Fora de âmbito, por decisão:** o Base58 não tem página de ficheiro — a conversão de base é
+quadrática no comprimento da entrada, e uma página cujo alcance útil fosse dois quilobytes não
+é uma ferramenta. HTML entities e percent-encoding também não: são transformações de texto, e
+uma página para "descodificar este .html" não tem trabalho que a página de texto já não faça.
+As tabelas de encodings legados (ISO-8859-\*, Windows-125\*) ficaram de fora: o browser
+descodifica-os nativamente sem descarregar nada, e a direção que precisa mesmo de tabelas —
+codificar *para* um charset legado — não tem procura que justifique 30 tabelas transcritas.
+Ver [PRD §5.3](PRD.md).
+
+### Verificação da Fase 3
+
+- [x] Vetores RFC 4648 §10 para Base16, Base32 e Base64; exemplo §7 para o extended-hex
+- [x] Paridade com a plataforma: `Buffer` para Base64/hex, `encodeURIComponent`, `encodeURI` e
+      `URLSearchParams` para percent-encoding, em todos os comprimentos de 0 a 300 bytes
+- [x] **Alfabetos re-derivados da especificação**: os três alfabetos de Base32 transcritos da
+      RFC e da página do Crockford, com a codificação de cada grupo de cinco bits calculada no
+      teste — alfabeto e ordem dos bits verificados contra algo escrito noutro sítio
+- [x] Base58: os vetores publicados (`Hello World!`, o endereço da Bitcoin Wiki) e o checksum
+      do Base58Check **recalculado com SHA-256 dentro do teste**
+- [x] CBOR: **todos os vetores do Apêndice A da RFC 8949** — 78 itens, incluindo os de
+      comprimento indefinido — e o caminho inverso com as exclusões documentadas (o que JSON
+      não consegue transportar)
+- [x] Hex dump: linha transcrita do `hexdump -C`, e **paridade com o comando real** quando a
+      máquina que corre os testes o tem instalado (senão, salta)
+- [x] JWT: o vetor da RFC 7515 §A.1, com o HMAC recalculado a partir da chave da RFC; RS256,
+      PS256 e ES256 assinados com `node:crypto` e verificados pelo código em teste, sempre
+      acompanhados do mesmo token adulterado a falhar
+- [x] HTML entities: `&notit;` → `¬it;`, a regra do nome mais longo sem ponto e vírgula, a
+      remapagem C1 (`&#128;` → €), e a prova de que interpretar
+      `<img src=x onerror=…><script>…</script>` não cria um único elemento
+- [x] URL parser: peças, parâmetros duplicados mantidos por ordem, e cada uma das notas
+- [x] Testes de componente para os seis widgets novos, incluindo o leitor de ficheiros por
+      páginas e o download por blob URL
+- [x] Guardas do registry: páginas por codec e direção, páginas de ficheiro exatamente onde a
+      tabela diz, e o catálogo com o tamanho que a fase 3 prometeu (100 ferramentas)
+- [x] **Revisão do PR**: 15 defeitos encontrados em review e corrigidos, cada um com o teste
+      que teria dado por ele — opções que não re-encodavam no widget de ficheiro (o `$state`
+      do Svelte subscreve por propriedade, não pela referência), ES512 que usava `P-512` em
+      vez de `P-521`, veredicto de assinatura que sobrevivia ao token, `data:` URL que não
+      era Base64 standard, blob do decode que nunca era libertado, `0x` apagado a meio de
+      uma string, CR/CRLF normalizados ao descodificar HTML, e a comparação de tamanhos do
+      CBOR que escrevia "-8 bytes smaller"
+- [x] **1087 testes**, `astro check` com 0 erros / 0 avisos / 0 hints
+- [x] Peso medido no build real: a página mais pesada passa de 29 KB gz para **35 KB gz**
+      (`/cbor/`, que carrega o cbor2 inteiro), contra o orçamento de 100 KB
+- [x] **Verificação em Chrome real (152) contra o build de produção**, por CDP (23/23): o vetor da
+      RFC 4648 descodificado no browser, a chave da RFC 7515 a verificar o token da RFC 7515
+      pela Web Crypto do Chrome, o Base64 de um ficheiro largado na página a sair como
+      download `blob:` sem um pedido à rede, e as páginas do hex dump a mostrarem os offsets
+      que os bytes têm no ficheiro (0x0000 e 0x1000)
+
 ### Deploy
 
 - [x] Cloudflare Workers static assets — **https://online-tools.dnhub.workers.dev**
@@ -146,14 +226,6 @@ que em JavaScript não existe.
 ---
 
 ## Por fazer
-
-### Fase 3 — Encoding (~26 páginas)
-
-- [ ] `Codec.svelte` e `FileCodec.svelte`
-- [ ] Hex/Base16, Base32, Base58, Base64 — texto e ficheiro
-- [ ] Hex dump, HTML entities, URL encode/decode, URL parser
-- [ ] CBOR encode/decode, JWT decoder
-- [ ] Carregamento lazy das tabelas de encodings legados (ISO-8859-*, Windows-125*) — só quando escolhidos
 
 ### Fase 4 — Format e Convert (~20 páginas)
 

@@ -1,0 +1,74 @@
+---
+description: >-
+    Turn text or bytes into hexadecimal — two characters per byte, the encoding whose output you can read.
+faq:
+  - q: >-
+        Why does the output get twice as long?
+    a: >-
+        One byte has 256 possible values and one hexadecimal character has 16, so it takes two characters per byte. That is the price of the one thing hex buys: you can look at it and see the bytes. Base64 is 33% overhead and unreadable; hex is 100% overhead and every pair of characters is a byte you can count on.
+  - q: >-
+        Should the letters be upper or lower case?
+    a: >-
+        Either, and it is only a convention: 0xDEADBEEF and 0xdeadbeef are the same bytes. Uppercase is traditional in dumps and in Intel syntax; lowercase is what most hash output and most Unix tools use. This page defaults to lowercase and decodes both either way.
+  - q: >-
+        How do I encode bytes rather than the characters I typed?
+    a: >-
+        Set the input encoding to Hex or Base64. The box then stops being text and becomes bytes: typing deadbeef with Hex selected produces four bytes, and encodes them to the same eight characters back.
+  - q: >-
+        A character became six characters. Which is it?
+    a: >-
+        An é in UTF-8 is two bytes, so four characters of hex: c3a9. An emoji outside the basic plane is four bytes, so eight characters. If you expected one byte per character you were thinking of Latin-1, which is the other input encoding and cannot represent either.
+references:
+  - label: >-
+        RFC 4648 §8 — The Base16 Alphabet
+    url: https://www.rfc-editor.org/rfc/rfc4648#section-8
+  - label: >-
+        WHATWG Encoding — UTF-8
+    url: https://encoding.spec.whatwg.org/#utf-8
+---
+
+## What hexadecimal is for
+
+Hex is the encoding you pick when somebody has to look at the bytes. Every other
+encoding on this site is more compact and less readable: Base64 is a third
+smaller and tells a person nothing. Two characters per byte means you can count
+along a string, find the byte at an offset, and recognise the values you see
+often — `00`, `ff`, the `0a` at the end of a line of text, the `efbbbf` that
+starts a file with a UTF-8 byte-order mark.
+
+It is the shape almost every digest arrives in, the shape of a key in a
+configuration file, and the shape of the bytes in a protocol trace. If the
+output of a step is going to be read by a person rather than by a program, hex
+is usually the right answer.
+
+## Characters are not bytes
+
+The thing that surprises people is that typing `é` and asking for its bytes does
+not give one byte. It gives two: `c3 a9`. UTF-8 uses one byte for ASCII and up
+to four for everything else, and a character outside the basic multilingual
+plane — an emoji, most of the newer scripts — is four bytes and eight
+characters of hex.
+
+The input encoding switch is what makes this visible rather than mysterious.
+Leave it on UTF-8 and the box means the characters you typed. Set it to Latin-1
+and it means one byte per character, which fails loudly on anything above U+00FF
+rather than quietly changing the meaning. Set it to Hex and the box is already
+bytes, which is how you encode a value you copied out of somewhere else without
+first turning it back into text.
+
+## Where the output is used
+
+- **Digests and keys.** Any hash on this site can be shown in hex, and pasting a
+  hex string into a comparison box works however it is capitalised.
+- **Protocol and file formats.** A magic number at the start of a file, a length
+  prefix, a colour in CSS: all conventions for writing bytes down that people
+  read.
+- **Escaping.** `\x41` in C, `%41` in a URL, `0x41` in a thousand languages: hex
+  is the shared notation for "this byte, by number".
+
+## Working with a file
+
+Encoding a whole file to hex is a different job with a different output — the
+file version of this page streams it and gives you a download rather than
+pasting megabytes into a textarea. What you get is the same bytes, four times
+wider, which is why the hex dump page exists: the same information with offsets.

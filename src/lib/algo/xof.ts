@@ -12,6 +12,7 @@
  * changes the answer. Passing a customization string to SHAKE, which has
  * nowhere to put it, has to be an error rather than a silently plain digest.
  */
+import { readChunks } from '~/lib/file';
 import { XOFS, describeRange, type XofId } from './xofs';
 import type { StreamingXof, XofImpl, XofRuntimeParams } from './xof-adapt';
 
@@ -154,33 +155,26 @@ export interface XofBlobOptions extends XofParams {
   signal?: AbortSignal;
 }
 
-/** Matches hash.ts: large enough to amortise, small enough to keep the page painting. */
-const CHUNK_SIZE = 4 * 1024 * 1024;
-
 /** Run a function over a File or Blob, a chunk at a time. */
 export async function xofBlob(
   id: XofId,
   blob: Blob,
   { onProgress, signal, ...params }: XofBlobOptions = {},
 ): Promise<Uint8Array> {
-  function throwIfAborted(): void {
-    if (signal?.aborted) throw new DOMException('Hashing cancelled.', 'AbortError');
-  }
-
-  throwIfAborted();
+  if (signal?.aborted) throw new DOMException('Hashing cancelled.', 'AbortError');
   const hasher = await createStreamingXof(id, params);
-  const total = blob.size;
 
-  for (let offset = 0; offset < total; ) {
-    throwIfAborted();
-    const end = Math.min(offset + CHUNK_SIZE, total);
-    const chunk = await blob.slice(offset, end).arrayBuffer();
-    hasher.update(new Uint8Array(chunk));
-    offset = end;
-    onProgress?.(offset / total);
-  }
-
-  if (total === 0) onProgress?.(1);
+  await readChunks(
+    blob,
+    (chunk) => {
+      hasher.update(chunk);
+    },
+    {
+      onProgress,
+      signal,
+      abortMessage: 'Hashing cancelled.',
+    },
+  );
 
   return hasher.digest();
 }
