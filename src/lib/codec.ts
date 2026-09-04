@@ -376,14 +376,29 @@ function escapableText(bytes: Uint8Array): string {
  * ever produce text. Nothing can be fetched, no script can run, and the node
  * is never inserted into the page. A `<` that arrived as `&lt;` is untouched
  * by that substitution and still decodes to the character the user wanted.
+ *
+ * Line endings are carried over rather than parsed, because the parser
+ * normalises CR and CRLF to LF as part of tokenisation: a decoder that quietly
+ * rewrites bytes it was not asked to touch would break the round trip the
+ * encode page invites, and this site is byte-exact everywhere else. Splitting
+ * on the terminators and rejoining with the originals costs nothing -- a
+ * character reference cannot span a line break.
  */
 function decodeHtml(text: string, label: string): string {
   if (typeof document === 'undefined') {
     throw new DecodeError(`Decoding ${label} needs a browser DOM; there is none here.`);
   }
   const holder = document.createElement('div');
-  holder.innerHTML = text.replace(/</g, '&lt;');
-  return holder.textContent ?? '';
+  let out = '';
+  for (const part of text.split(/(\r\n|\r|\n)/)) {
+    if (part === '' || part === '\r\n' || part === '\r' || part === '\n') {
+      out += part;
+      continue;
+    }
+    holder.innerHTML = part.replace(/</g, '&lt;');
+    out += holder.textContent ?? '';
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -539,6 +554,22 @@ export interface StreamingEncoder {
 }
 
 /**
+ * The most encoded text a file page will produce.
+ *
+ * Encoding streams, but the result is text and has to exist as one string to
+ * be shown, copied and downloaded. Sixteen mebibytes is a few copies of a few
+ * tens of megabytes, which a browser survives; a gigabyte of file is 1.3 GB of
+ * characters and it does not. Refusing with a reason is better than freezing
+ * the tab, which is the same call the Base58 guard makes.
+ */
+export const MAX_ENCODED_CHARS = 16 * 1024 * 1024;
+
+export interface StreamingEncoderOptions {
+  /** Refuse to produce more than this many characters. */
+  readonly maxChars?: number;
+}
+
+/**
  * Bytes per group, and the coders to use with and without a partial group.
  *
  * Only the three power-of-two radixes are here: Base16 takes one byte at a
@@ -578,7 +609,11 @@ function streamCoder(codec: CodecId, options: Record<string, string>): {
  * padded, so every complete group is encoded with the unpadded variant and the
  * carry, if there is one, with the padded one.
  */
-export function createStreamingEncoder(codec: CodecId, options: CodecOptions = {}): StreamingEncoder {
+export function createStreamingEncoder(
+  codec: CodecId,
+  options: CodecOptions = {},
+  { maxChars = Number.POSITIVE_INFINITY }: StreamingEncoderOptions = {},
+): StreamingEncoder {
   const resolved = resolve(codec, 'encode', options);
   const { group, plain, padded } = streamCoder(codec, resolved);
   // The carry is the only group that can be partial, so it is the only one
@@ -587,6 +622,20 @@ export function createStreamingEncoder(codec: CodecId, options: CodecOptions = {
   const width = wrapWidth(resolved['wrap']);
   const parts: string[] = [];
   let carry: Uint8Array = new Uint8Array(0);
+  let produced = 0;
+
+  /** Stop as soon as the answer is too big, rather than at the end of it. */
+  function account(part: string): void {
+    produced += part.length;
+    if (produced > maxChars) {
+      throw new DecodeError(
+        `That would be more than ${Math.round(maxChars / 1024 / 1024)} MiB of encoded text, ` +
+          `which is past what a browser can hold as a string. Use the hex dump page to look at ` +
+          `part of the file, or convert the whole thing outside the browser.`,
+      );
+    }
+    parts.push(part);
+  }
 
   return {
     update(chunk: Uint8Array): void {
@@ -596,7 +645,7 @@ export function createStreamingEncoder(codec: CodecId, options: CodecOptions = {
           const combined = new Uint8Array(group);
           combined.set(carry, 0);
           combined.set(chunk.subarray(0, need), carry.length);
-          parts.push(plain.encode(combined));
+          account(plain.encode(combined));
           chunk = chunk.subarray(need);
           carry = new Uint8Array(0);
         } else {
@@ -609,14 +658,14 @@ export function createStreamingEncoder(codec: CodecId, options: CodecOptions = {
       }
 
       const usable = Math.floor(chunk.length / group) * group;
-      if (usable > 0) parts.push(plain.encode(chunk.subarray(0, usable)));
+      if (usable > 0) account(plain.encode(chunk.subarray(0, usable)));
       // Copied rather than subarrayed: a view would keep the whole chunk's
       // buffer alive until the next update.
       carry = chunk.slice(usable);
     },
 
     finish(): string {
-      if (carry.length > 0) parts.push(tail.encode(carry));
+      if (carry.length > 0) account(tail.encode(carry));
       carry = new Uint8Array(0);
       return wrapLines(parts.join(''), width);
     },

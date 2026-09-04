@@ -245,6 +245,14 @@ describe('Base16', () => {
   it('rejects an odd number of digits', async () => {
     await expect(decodeText('base16', 'abc')).rejects.toThrow(/even number of digits/);
   });
+
+  it('takes 0x as a prefix and not as something to delete anywhere', async () => {
+    // Deleting every "0x" wherever it appeared turned this -- six digits, a
+    // well-formed three-byte value -- into two bytes and said nothing.
+    await expect(decodeText('base16', 'de0xad')).rejects.toThrow(/outside 0-9 and a-f|even number/);
+    // A prefix per token, which is what people paste, still works.
+    expect(await decodeText('base16', '0xde 0xad')).toEqual(new Uint8Array([0xde, 0xad]));
+  });
 });
 
 describe('Base58', () => {
@@ -508,6 +516,15 @@ describe('the streaming encoder', () => {
 
   it('has nothing to offer for a codec that is not produced a chunk at a time', () => {
     expect(() => createStreamingEncoder('base58', options('base58'))).toThrow(/chunk at a time/);
+  });
+
+  it('refuses to produce more text than a browser can hold, and says why', () => {
+    // The file pages are the ones that meet large inputs, and a gigabyte of
+    // file is 1.3 GB of characters: the answer is to stop, not to freeze.
+    const encoder = createStreamingEncoder('base64', options('base64'), { maxChars: 1000 });
+    expect(() => {
+      for (let i = 0; i < 100; i++) encoder.update(new Uint8Array(300).fill(7));
+    }).toThrow(/more than 0 MiB of encoded text|past what a browser can hold/);
   });
 });
 

@@ -55,12 +55,38 @@ describe('encoding a file', () => {
     const user = userEvent.setup();
     render(FileCodec, { codec: 'base64', direction: 'encode' });
 
-    await drop(user, file('hello.txt', 'foobar'));
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Zm9vYmFy'));
+    // Five bytes, not six: "foobar" is an exact multiple of three and its
+    // Base64 carries no padding, so a test built on it could not tell whether
+    // the re-encode had happened at all.
+    await drop(user, file('hello.txt', 'fooba'));
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Zm9vYmE='));
 
     await user.selectOptions(screen.getByLabelText('Padding'), 'off');
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Zm9vYmFy'));
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Zm9vYmE'));
     expect(screen.getByRole('status')).not.toHaveTextContent('=');
+  });
+
+  it('re-encodes when the alphabet changes, which is the option that was stale', async () => {
+    const user = userEvent.setup();
+    render(FileCodec, { codec: 'base32', direction: 'encode' });
+
+    await drop(user, file('bytes.bin', new Uint8Array([1, 2, 3, 4, 5])));
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('AEBAGBAF'));
+
+    await user.selectOptions(screen.getByLabelText('Alphabet'), 'crockford');
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('04106105'));
+  });
+
+  it('re-decodes when the alphabet changes, so an error does not outlive it', async () => {
+    const user = userEvent.setup();
+    render(FileCodec, { codec: 'base32', direction: 'decode' });
+
+    // "0" is not in the RFC 4648 alphabet and is in the extended-hex one.
+    await drop(user, file('payload.txt', '04106105'));
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(/Not valid Base32/));
+
+    await user.selectOptions(screen.getByLabelText('Alphabet'), 'crockford');
+    await waitFor(() => expect(screen.getByRole('status')).not.toHaveTextContent(/Not valid Base32/));
   });
 
   it('wraps Base64 as a data URL on request, which is what most uses want', async () => {
@@ -74,6 +100,27 @@ describe('encoding a file', () => {
     await waitFor(() =>
       expect(screen.getByRole('status')).toHaveTextContent(
         'data:application/octet-stream;base64,Zm9vYmFy',
+      ),
+    );
+  });
+
+  it('wraps as a data URL that is valid even when the options say otherwise', async () => {
+    const user = userEvent.setup();
+    render(FileCodec, { codec: 'base64', direction: 'encode' });
+
+    // Two bytes: standard Base64 "AQI=", URL-safe "AQI" unpadded. A data URL
+    // promises the standard, padded, unwrapped spelling.
+    await drop(user, file('two.bin', new Uint8Array([1, 2])));
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('AQI='));
+
+    await user.selectOptions(screen.getByLabelText('Padding'), 'off');
+    await user.selectOptions(screen.getByLabelText('Alphabet'), 'url');
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('AQI'));
+
+    await user.click(screen.getByLabelText('Wrap as a data URL'));
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'data:application/octet-stream;base64,AQI=',
       ),
     );
   });

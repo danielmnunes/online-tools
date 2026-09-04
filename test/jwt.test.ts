@@ -24,6 +24,10 @@ const A1_TOKEN =
   '.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk';
 const A1_KEY = 'AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow';
 
+/** The digest an algorithm name implies, which is what JWA §3 ties together. */
+const digestFor = (alg: string): string =>
+  alg.endsWith('384') ? 'sha384' : alg.endsWith('512') ? 'sha512' : 'sha256';
+
 const b64url = (value: string | Buffer): string =>
   Buffer.isBuffer(value) ? value.toString('base64url') : Buffer.from(value).toString('base64url');
 
@@ -155,11 +159,8 @@ describe('verifying an HMAC signature', () => {
   });
 
   it('handles HS384 and HS512', async () => {
-    for (const [alg, digest] of [
-      ['HS384', 'sha384'],
-      ['HS512', 'sha512'],
-    ] as const) {
-      const jwt = hmacToken({ alg }, { sub: 'a' }, Buffer.from(secret), digest);
+    for (const alg of ['HS384', 'HS512'] as const) {
+      const jwt = hmacToken({ alg }, { sub: 'a' }, Buffer.from(secret), digestFor(alg));
       expect((await verifyJwt(decodeJwt(jwt), { secret })).verified, alg).toBe(true);
     }
   });
@@ -178,13 +179,15 @@ describe('verifying an asymmetric signature', () => {
   function signed(
     alg: string,
     keypair: { privateKey: KeyObject; publicKey: KeyObject },
-    signer: (input: string) => Buffer = (input) => nodeSign('sha256', Buffer.from(input), keypair.privateKey),
+    signer: (input: string) => Buffer = (input) =>
+      nodeSign(digestFor(alg), Buffer.from(input), keypair.privateKey),
   ): { jwt: string; pem: string; jwk: JsonWebKey } {
     const jwt = token({ alg }, data, (input) => {
       const signature = signer(input);
-      return alg.startsWith('ES')
-        ? derToRaw(new Uint8Array(signature), alg === 'ES256' ? 32 : 48)
-        : signature;
+      // r and s, each padded to the curve size: 32 bytes for P-256, 48 for
+      // P-384 and 66 for P-521.
+      const half = alg === 'ES256' ? 32 : alg === 'ES384' ? 48 : 66;
+      return alg.startsWith('ES') ? derToRaw(new Uint8Array(signature), half) : signature;
     });
     return {
       jwt,
@@ -223,20 +226,34 @@ describe('verifying an asymmetric signature', () => {
     expect(result.algorithm).toBe('PS256');
   });
 
-  it('verifies ES256, whose signature JWS writes in the form Web Crypto wants', async () => {
-    const keypair = generateKeyPairSync('ec', { namedCurve: 'P-256' });
-    const { jwt, pem } = signed('ES256', keypair);
-    const decoded = decodeJwt(jwt);
+  // RFC 7518 §3.4: ES256 is P-256, ES384 is P-384, and ES512 is P-521. The
+  // last one is the easiest thing in the file to get wrong, because there is
+  // no P-512 curve and the name invites one.
+  const CURVES = [
+    ['ES256', 'P-256', 64],
+    ['ES384', 'P-384', 96],
+    ['ES512', 'P-521', 132],
+  ] as const;
 
-    // RFC 7515 §3.4 writes r and s concatenated at a fixed width; node:crypto
-    // signs into a DER SEQUENCE, so the signing side converts here. The
-    // verifying side must not convert again -- ECDSA in the Web Crypto API
-    // takes the raw form, and wrapping it would be the usual interop bug.
-    expect(decoded.signature).toHaveLength(64);
-    expect((await verifyJwt(decoded, { publicKey: pem })).verified).toBe(true);
+  it('verifies every ECDSA algorithm, whose signatures JWS writes in the form Web Crypto wants', async () => {
+    for (const [alg, curve, length] of CURVES) {
+      const keypair = generateKeyPairSync('ec', { namedCurve: curve });
+      const { jwt, pem } = signed(alg, keypair);
+      const decoded = decodeJwt(jwt);
+
+      // RFC 7515 §3.4 writes r and s concatenated at a fixed width;
+      // node:crypto signs into a DER SEQUENCE, so the signing side converts
+      // here. The verifying side must not convert again -- ECDSA in the Web
+      // Crypto API takes the raw form, and wrapping it is the usual interop
+      // bug.
+      expect(decoded.signature, alg).toHaveLength(length);
+      const result = await verifyJwt(decoded, { publicKey: pem });
+      expect(result.verified, `${alg}: ${result.detail}`).toBe(true);
+      expect(result.algorithm, alg).toBe(alg);
+    }
   });
 
-  it('rejects an ES256 signature with one bit changed', async () => {
+  it('rejects an ECDSA signature with one bit changed', async () => {
     const keypair = generateKeyPairSync('ec', { namedCurve: 'P-256' });
     const { jwt, pem } = signed('ES256', keypair);
     const segments = jwt.split('.');

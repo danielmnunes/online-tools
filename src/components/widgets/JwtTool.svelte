@@ -42,8 +42,13 @@
   const notYet = $derived(claims.some((claim) => claim.claim === 'nbf' && claim.state === 'future'));
 
   async function check() {
-    if (jwt === undefined) return;
     const id = ++runId;
+    // Cleared before anything is awaited: a page whose job is to say whether
+    // a signature holds must never show the previous token's answer while it
+    // is working the new one out. Same when there is nothing to check.
+    verification = undefined;
+    if (jwt === undefined) return;
+
     checking = true;
     try {
       const result = await verifyJwt(jwt, {
@@ -52,6 +57,15 @@
       });
       if (id !== runId) return;
       verification = result;
+    } catch (e) {
+      // A secret that is not valid under the encoding it was typed as throws
+      // here, before any key exists. Saying so is the difference between a
+      // wrong answer and no answer.
+      if (id !== runId) return;
+      verification = {
+        verified: false,
+        detail: e instanceof Error ? e.message : 'The key could not be read.',
+      };
     } finally {
       if (id === runId) checking = false;
     }

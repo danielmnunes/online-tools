@@ -62,6 +62,23 @@ describe('the text page', () => {
     await waitFor(() => expect(dump()).toHaveTextContent('C3 A9'));
   });
 
+  it('windows a large paste instead of rendering all of it', async () => {
+    render(HexDump, { source: 'text' });
+
+    // Set rather than typed: user-event types character by character, and the
+    // point is what the page does with forty thousand characters, not how they
+    // arrived.
+    const input = screen.getByLabelText<HTMLTextAreaElement>('Input');
+    input.value = 'x'.repeat(40_000);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+
+    await waitFor(() => expect(dump()).toHaveTextContent('00000000 78 78 78 78'));
+    // 32 KiB is 2 048 lines of sixteen bytes; 40 000 bytes would be 2 500.
+    expect(dump().textContent!.split('\n')).toHaveLength(2048);
+    expect(screen.getByText(/Showing the first/)).toBeInTheDocument();
+    // Rendering two thousand lines a few times over is not a five-second job.
+  }, 20000);
+
   it('reports input that is not the encoding it was told it was', async () => {
     const user = userEvent.setup();
     render(HexDump, { source: 'text' });

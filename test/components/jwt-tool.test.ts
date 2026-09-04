@@ -27,6 +27,19 @@ async function paste(user: ReturnType<typeof userEvent.setup>, token: string) {
   await user.paste(token);
 }
 
+/**
+ * Set a long value the way the browser would.
+ *
+ * user-event types character by character, and these tests paste a 64-byte key
+ * or a whole token: the point is what the widget does with the value, not how
+ * it arrived.
+ */
+function set(label: string, value: string) {
+  const field = screen.getByLabelText<HTMLTextAreaElement | HTMLInputElement>(label);
+  field.value = value;
+  field.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
 describe('reading a token', () => {
   it('shows the header and the payload as JSON', async () => {
     const user = userEvent.setup();
@@ -88,6 +101,53 @@ describe('reading a token', () => {
     await waitFor(() => expect(screen.getByLabelText('Shared secret')).toBeInTheDocument());
     expect(screen.queryByLabelText(/Public key/)).toBeNull();
   });
+
+  it('reports a secret that is not the encoding it was typed as', async () => {
+    const user = userEvent.setup();
+    render(JwtTool);
+
+    await paste(user, TOKEN);
+    await waitFor(() => expect(screen.getByLabelText('Shared secret')).toBeInTheDocument());
+
+    await user.selectOptions(screen.getByLabelText('Secret encoding'), 'hex');
+    await user.type(screen.getByLabelText('Shared secret'), 'abc');
+
+    // Odd-length hex throws inside the check; the page has to say so rather
+    // than leave the previous answer on screen and reject the promise.
+    await waitFor(() =>
+      expect(screen.getByText(/even number of digits/)).toBeInTheDocument(),
+    );
+    expect(screen.queryByText('Signature verified.')).toBeNull();
+  });
+
+  it('re-checks when the key changes, and drops the verdict when there is nothing to check', async () => {
+    const user = userEvent.setup();
+    render(JwtTool);
+
+    await paste(user, TOKEN);
+    await waitFor(() => expect(screen.getByLabelText('Shared secret')).toBeInTheDocument());
+    await user.type(screen.getByLabelText('Shared secret'), 'wrong');
+    await waitFor(() => expect(screen.getByText(/Not verified/)).toBeInTheDocument());
+
+    // The 64-byte key from RFC 7515 §A.1, pasted as Base64: the same token
+    // under the right key, which is the proof that the page re-checked rather
+    // than keeping the answer it already had.
+    await user.clear(screen.getByLabelText('Shared secret'));
+    await user.selectOptions(screen.getByLabelText('Secret encoding'), 'base64');
+    set(
+      'Shared secret',
+      'AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow',
+    );
+    await waitFor(() => expect(screen.getByText('Signature verified.')).toBeInTheDocument());
+
+    // And when the token stops parsing, the verdict goes with it: a stale
+    // "verified" is the one wrong answer this page must not be able to give.
+    set('Token', 'only.two');
+    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
+    expect(screen.queryByText('Signature verified.')).toBeNull();
+    expect(screen.queryByText(/Not verified/)).toBeNull();
+    // Three verifications, each behind an await, do not fit in five seconds.
+  }, 20000);
 
   it('reports a token that is not three segments, without decoding anything', async () => {
     const user = userEvent.setup();

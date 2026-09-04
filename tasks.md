@@ -2,7 +2,7 @@
 
 Estado de execução do [PRD.md](PRD.md). `[x]` feito e verificado · `[ ]` por fazer.
 
-**Agora:** 100 ferramentas em produção, 1077 testes, CI a fazer deploy automático.
+**Agora:** 100 ferramentas em produção, 1087 testes, CI a fazer deploy automático.
 **Alvo:** ~188 ferramentas. As categorias Hash, XOF/MAC, KDF e Encoding estão **fechadas**.
 
 ```
@@ -199,10 +199,17 @@ Ver [PRD §5.3](PRD.md).
       páginas e o download por blob URL
 - [x] Guardas do registry: páginas por codec e direção, páginas de ficheiro exatamente onde a
       tabela diz, e o catálogo com o tamanho que a fase 3 prometeu (100 ferramentas)
-- [x] **1077 testes**, `astro check` com 0 erros / 0 avisos / 0 hints
+- [x] **Revisão do PR**: 15 defeitos encontrados em review e corrigidos, cada um com o teste
+      que teria dado por ele — opções que não re-encodavam no widget de ficheiro (o `$state`
+      do Svelte subscreve por propriedade, não pela referência), ES512 que usava `P-512` em
+      vez de `P-521`, veredicto de assinatura que sobrevivia ao token, `data:` URL que não
+      era Base64 standard, blob do decode que nunca era libertado, `0x` apagado a meio de
+      uma string, CR/CRLF normalizados ao descodificar HTML, e a comparação de tamanhos do
+      CBOR que escrevia "-8 bytes smaller"
+- [x] **1087 testes**, `astro check` com 0 erros / 0 avisos / 0 hints
 - [x] Peso medido no build real: a página mais pesada passa de 29 KB gz para **35 KB gz**
       (`/cbor/`, que carrega o cbor2 inteiro), contra o orçamento de 100 KB
-- [x] **Verificação em Chrome real (152) contra o build de produção**, por CDP: o vetor da
+- [x] **Verificação em Chrome real (152) contra o build de produção**, por CDP (23/23): o vetor da
       RFC 4648 descodificado no browser, a chave da RFC 7515 a verificar o token da RFC 7515
       pela Web Crypto do Chrome, o Base64 de um ficheiro largado na página a sair como
       download `blob:` sem um pedido à rede, e as páginas do hex dump a mostrarem os offsets

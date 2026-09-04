@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { untrack } from 'svelte';
   import { DEFAULT_HEXDUMP_OPTIONS, hexDumpLines, type HexDumpOptions } from '~/lib/hexdump';
   import { INPUT_ENCODINGS, textToBytes, type InputEncoding } from '~/lib/encoding';
   import { formatBytes } from '~/lib/format';
@@ -56,12 +55,32 @@
     showAscii,
   });
 
+  /**
+   * How much of a pasted input is dumped.
+   *
+   * The file page has a window for the same reason this one needs one: a dump
+   * is about four characters wide per byte, so pasting 200 KB would build
+   * twelve thousand lines on the main thread on every keystroke, and the file
+   * page would have shown two hundred and fifty-six.
+   */
+  const MAX_TEXT_BYTES = 32 * 1024;
+
   const textLines = $derived.by(() => {
     try {
       const bytes = textToBytes(input, inputEncoding);
-      return { lines: hexDumpLines(bytes, options), bytes: bytes.length, error: undefined };
+      return {
+        lines: hexDumpLines(bytes.subarray(0, MAX_TEXT_BYTES), options),
+        bytes: bytes.length,
+        shown: Math.min(bytes.length, MAX_TEXT_BYTES),
+        error: undefined as string | undefined,
+      };
     } catch (e) {
-      return { lines: [], bytes: 0, error: e instanceof Error ? e.message : String(e) };
+      return {
+        lines: [],
+        bytes: 0,
+        shown: 0,
+        error: e instanceof Error ? e.message : String(e),
+      };
     }
   });
 
@@ -95,17 +114,10 @@
     await loadPage(0);
   }
 
-  // Changing how the bytes are laid out has to redraw the page, and reading it
-  // again is cheaper than reformatting a buffer we did not keep. The offset is
-  // read untracked: it moves when a page loads, and this effect is not what
-  // should be following it.
-  $effect(() => {
-    void options;
-    const current = file;
-    const at = untrack(() => pageOffset);
-    if (current !== undefined) void loadPage(at);
-  });
-
+  // Nothing re-reads on an option change: pageLines is derived over both
+  // pageBytes and the options, so toggling the layout re-renders from the
+  // buffer already held. Re-reading would cost a slice() round trip per
+  // toggle, and the two async calls could land out of order.
   function reset() {
     file = undefined;
     pageBytes = undefined;
@@ -136,7 +148,7 @@
       ></textarea>
       <p class="text-xs text-muted">
         {textLines.bytes} byte{textLines.bytes === 1 ? '' : 's'}. A character is not a byte: an é is
-        two in UTF-8, and an emoji is four.
+        two in UTF-8, and an emoji is four.{#if textLines.shown < textLines.bytes}{` Showing the first ${textLines.shown.toLocaleString()}.`}{/if}
       </p>
     </div>
 

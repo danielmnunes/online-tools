@@ -244,7 +244,10 @@ function algorithmSpec(alg: string): {
       // RFC 7518 §3.5: the salt length is the length of the hash, always.
       return { family: 'rsa-pss', hash, saltLength: size / 8 };
     default:
-      return { family: 'ecdsa', hash, curve: `P-${bits}` };
+      // RFC 7518 §3.4: ES256 is P-256, ES384 is P-384, and ES512 is P-521 --
+      // there is no P-512 curve, and the hash length and the curve simply do
+      // not match for that one.
+      return { family: 'ecdsa', hash, curve: bits === '512' ? 'P-521' : `P-${bits}` };
   }
 }
 

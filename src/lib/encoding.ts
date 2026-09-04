@@ -53,7 +53,15 @@ export function bytesToHex(bytes: Uint8Array, upper = false): string {
 export function hexToBytes(hex: string): Uint8Array {
   // Tolerate the shapes people actually paste: 0x prefixes, spaces, colons,
   // newlines from a hex dump.
-  const cleaned = hex.replace(/0x/gi, '').replace(/[\s:_-]/g, '');
+  //
+  // The input is split on separators first and the prefix is then taken off
+  // each token, rather than deleting every "0x" wherever it appears. Deleting
+  // them mid-string turned "de0xad" -- six digits, a well-formed three-byte
+  // value -- into "dead" and reported nothing; here it is the error it is.
+  const cleaned = hex
+    .split(/[\s:,_-]+/)
+    .map((token) => token.replace(/^0x/i, ''))
+    .join('');
   if (cleaned.length === 0) return new Uint8Array(0);
   if (cleaned.length % 2 !== 0) {
     throw new DecodeError('Hex input must have an even number of digits.');

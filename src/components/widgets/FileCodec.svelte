@@ -1,7 +1,12 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { CODECS, type CodecDirection, type CodecId } from '~/lib/algo/codecs';
-  import { createStreamingEncoder, decodeText, defaultOptions } from '~/lib/codec';
+  import {
+    MAX_ENCODED_CHARS,
+    createStreamingEncoder,
+    decodeText,
+    defaultOptions,
+  } from '~/lib/codec';
   import { readChunks, readText } from '~/lib/file';
   import { formatBytes, formatDuration } from '~/lib/format';
   import { bytesToHex } from '~/lib/encoding';
@@ -44,9 +49,26 @@
   let controller: AbortController | undefined;
 
   function revoke() {
-    if (decodedUrl !== undefined) URL.revokeObjectURL(decodedUrl);
     decodedUrl = undefined;
   }
+
+  /**
+   * The download for a decoded file, as a blob URL created and released here.
+   *
+   * Created in an effect rather than in decodeFile so that the revoke cannot
+   * be missed: leaving the page after decoding a large file would otherwise
+   * pin the whole thing for as long as the document lives.
+   */
+  $effect(() => {
+    const bytes = decoded;
+    if (bytes === undefined) {
+      decodedUrl = undefined;
+      return;
+    }
+    const url = URL.createObjectURL(new Blob([bytes.slice()]));
+    decodedUrl = url;
+    return () => URL.revokeObjectURL(url);
+  });
 
   async function encodeFile(selected: File) {
     controller?.abort();
@@ -65,7 +87,9 @@
 
     const startedAt = performance.now();
     try {
-      const encoder = createStreamingEncoder(codec, options);
+      // The ceiling is enforced by the encoder as it goes, so a file that is
+      // far too large stops being read within a chunk or two.
+      const encoder = createStreamingEncoder(codec, options, { maxChars: MAX_ENCODED_CHARS });
       await readChunks(selected, (chunk) => encoder.update(chunk), {
         signal,
         onProgress: (fraction) => {
@@ -115,7 +139,6 @@
       const bytes = await decodeText(codec, text, options);
       if (signal.aborted) return;
       decoded = bytes;
-      decodedUrl = URL.createObjectURL(new Blob([bytes.slice()]));
       elapsed = performance.now() - startedAt;
     } catch (e) {
       if (signal.aborted) return;
@@ -130,11 +153,17 @@
   }
 
   // Any option change makes what is on screen wrong, so redo it rather than
-  // leaving a stale result beside the new settings. `file` is read untracked:
-  // choosing a file already calls run() through the drop target.
+  // leaving a stale result beside the new settings.
+  //
+  // Each value is read, not the object: `options` is a $state proxy, which
+  // subscribes per property. Reading the reference alone would never fire
+  // again -- and on the first run `file` is still undefined, so nothing below
+  // the guard would have read a property either.
   $effect(() => {
-    void options;
+    for (const control of meta.controls) void options[control.id];
     void asDataUrl;
+    // Untracked: choosing a file already calls run() through the drop target,
+    // and this effect is not what should follow the file.
     const current = untrack(() => file);
     if (current !== undefined) run(current);
   });
@@ -161,9 +190,27 @@
   /** The type the browser reports for the file, which a data URL needs. */
   const mimeType = $derived(file?.type || 'application/octet-stream');
 
+  /**
+   * The same encoding, written the way a `data:` URL requires.
+   *
+   * `data:<type>;base64,` promises RFC 4648: the standard alphabet, padded and
+   * unwrapped. All three selects on this page can produce something else --
+   * the URL-safe alphabet swaps two characters, padding can be off, and
+   * wrapping puts newlines inside the URL -- so the wrapper normalises rather
+   * than handing out a URL that will not open.
+   */
+  function asStandardBase64(text: string): string {
+    const flat = text
+      .replace(/\s/g, '')
+      .replace(/-/g, '+')
+      .replace(/_/g, '/')
+      .replace(/=+$/, '');
+    return flat + '='.repeat((4 - (flat.length % 4)) % 4);
+  }
+
   const shown = $derived(
     asDataUrl
-      ? `data:${mimeType};base64,${encoded.slice(0, SHOWN_CHARS)}`
+      ? `data:${mimeType};base64,${asStandardBase64(encoded.slice(0, SHOWN_CHARS - (SHOWN_CHARS % 4)))}`
       : encoded.slice(0, SHOWN_CHARS),
   );
 
@@ -183,7 +230,7 @@
       encodeUrl = undefined;
       return;
     }
-    const body = asDataUrl ? `data:${mimeType};base64,${encoded}` : encoded;
+    const body = asDataUrl ? `data:${mimeType};base64,${asStandardBase64(encoded)}` : encoded;
     const url = URL.createObjectURL(new Blob([body], { type: 'text/plain' }));
     encodeUrl = url;
     return () => URL.revokeObjectURL(url);

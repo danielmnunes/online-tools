@@ -42,6 +42,18 @@ describe('decoding', () => {
     );
   });
 
+  it('says "larger" when the binary form is the bigger one', async () => {
+    const user = userEvent.setup();
+    render(CborTool);
+
+    // A float64 for 1.0: nine bytes of CBOR against one byte of JSON.
+    await user.type(screen.getByLabelText('CBOR'), 'fb3ff0000000000000');
+    await waitFor(() =>
+      expect(screen.getByText(/bytes larger than the same data as JSON/)).toBeInTheDocument(),
+    );
+    expect(screen.queryByText(/bytes smaller than/)).toBeNull();
+  });
+
   it('reports input that is not CBOR instead of showing nothing', async () => {
     const user = userEvent.setup();
     render(CborTool);

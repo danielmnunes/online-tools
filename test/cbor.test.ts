@@ -180,6 +180,9 @@ describe('decoding', () => {
   it('reports input that is not the encoding it was told it was', () => {
     expect(() => decodeCbor('zz')).toThrow(DecodeError);
     expect(() => decodeCbor('')).toThrow(/Paste some CBOR/);
+    // The Base64 path has to fail the same way the hex one does, rather than
+    // letting the DOM's atob exception out.
+    expect(() => decodeCbor('not base64!', 'base64')).toThrow(DecodeError);
   });
 });
 

@@ -16,7 +16,7 @@
 import { decode, encode } from 'cbor2';
 import { comment } from 'cbor2/comment';
 import { diagnose } from 'cbor2/diagnostic';
-import { bytesToHex, hexToBytes, DecodeError } from './encoding';
+import { base64ToBytes, bytesToHex, hexToBytes, DecodeError } from './encoding';
 
 export type CborEncoding = 'hex' | 'base64';
 
@@ -113,13 +113,6 @@ function bytesFrom(text: string, encoding: CborEncoding): Uint8Array {
   const cleaned = text.replace(/\s/g, '');
   if (cleaned === '') throw new DecodeError('Paste some CBOR to decode: hex or Base64.');
   return encoding === 'hex' ? hexToBytes(cleaned) : base64ToBytes(cleaned);
-}
-
-function base64ToBytes(text: string): Uint8Array {
-  const binary = atob(text.replace(/-/g, '+').replace(/_/g, '/'));
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes;
 }
 
 /** Decode CBOR, given hex or Base64. */

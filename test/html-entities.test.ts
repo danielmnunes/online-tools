@@ -64,6 +64,19 @@ describe('numeric references', () => {
   });
 });
 
+describe('line endings', () => {
+  it('are carried through rather than normalised', async () => {
+    // The HTML parser turns CR and CRLF into LF as part of tokenisation, so a
+    // decoder built straight on innerHTML would rewrite bytes it was never
+    // asked to touch -- and break the round trip the encode page invites.
+    expect(await decodeText('html', 'a\r\nb')).toEqual(bytes('a\r\nb'));
+    expect(await decodeText('html', 'a\rb')).toEqual(bytes('a\rb'));
+    expect(await decodeText('html', 'a\nb')).toEqual(bytes('a\nb'));
+    // Mixed with a reference, which is the case that matters in practice.
+    expect(await decodeText('html', 'a&amp;b\r\nc')).toEqual(bytes('a&b\r\nc'));
+  });
+});
+
 describe('encoding', () => {
   it('round-trips text through escaping and back', async () => {
     const text = `Tom & Jerry < "quoted" and 'apostrophed' > 5`;

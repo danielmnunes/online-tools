@@ -55,9 +55,12 @@
         ? view.jsonSize
         : new TextEncoder().encode(JSON.stringify(JSON.parse(view.json))).length;
     const difference = jsonBytes - view.bytes.length;
-    return difference === 0
-      ? 'the same size as the JSON'
-      : `${difference} byte${difference === 1 ? '' : 's'} smaller than the same data as JSON`;
+    if (difference === 0) return 'the same size as the JSON';
+    const size = Math.abs(difference);
+    // CBOR is not always the smaller one: a float64 for a small value, an
+    // indefinite-length item, or a tag that the JSON view flattens can all
+    // make the binary form the larger of the two.
+    return `${size} byte${size === 1 ? '' : 's'} ${difference > 0 ? 'smaller' : 'larger'} than the same data as JSON`;
   });
 </script>
 

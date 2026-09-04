@@ -12,7 +12,6 @@
   } from '~/lib/encoding';
   import Field from '~/components/ui/Field.svelte';
   import Select from '~/components/ui/Select.svelte';
-  import CopyButton from '~/components/ui/CopyButton.svelte';
   import OutputArea from '~/components/ui/OutputArea.svelte';
 
   interface Props {
@@ -43,6 +42,8 @@
   async function compute() {
     const id = ++runId;
     error = undefined;
+    // Base58Check loads SHA-256 on demand, so there is a real await to cover.
+    pending = true;
 
     // Both directions announce what they consumed, which is the number a
     // person comparing against another tool actually wants.
@@ -64,6 +65,8 @@
       output = '';
       resultBytes = 0;
       error = e instanceof Error ? e.message : 'That could not be converted.';
+    } finally {
+      if (id === runId) pending = false;
     }
   }
 
