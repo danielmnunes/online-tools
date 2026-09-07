@@ -3,7 +3,7 @@
 Estado de execução do [PRD.md](PRD.md). `[x]` feito e verificado · `[ ]` por fazer.
 
 **Agora:** 119 ferramentas em produção, 1157 testes, CI a fazer deploy automático.
-**Alvo:** ~188 ferramentas. As categorias Hash, XOF/MAC, KDF, Encoding, Format e Convert estão **fechadas**.
+**Alvo:** 128 ferramentas. As categorias Hash, XOF/MAC, KDF, Encoding, Format e Convert estão **fechadas**. Criptografia e compressão saem do âmbito.
 
 ```
 Hash          ████████████████████  42 / 42  (âmbito fechado)
@@ -12,12 +12,14 @@ KDF           ████████████████████  12 /
 Encoding      ████████████████████  23 / 23  (âmbito fechado)
 Format        ████████████████████  11 / 11  (âmbito fechado)
 Convert       ████████████████████   8 / 8   (âmbito fechado)
-Cryptography  ░░░░░░░░░░░░░░░░░░░░   0 / 26
-Compression   ░░░░░░░░░░░░░░░░░░░░   0 / 30
 Generator     ░░░░░░░░░░░░░░░░░░░░   0 / 9
                                      ─────────
-                                    119 / 188
+                                    119 / 128
 ```
+
+**Fora de âmbito, por decisão:** as antigas fases de Criptografia (~26 páginas) e Compressão
+(~30 páginas) — AES/DES/RSA, GZIP/Brotli/Zstd/XZ, ZIP e TAR. Sem cifras, arquivos nem
+codecs WASM de compressão. O catálogo fecha em 128 (119 entregues + 9 geradores).
 
 ---
 
@@ -277,29 +279,13 @@ uma base de timezones; a página mostra UTC e o fuso da máquina. Schema XML (DT
 
 ## Por fazer
 
-### Fase 5 — Criptografia (~26 páginas)
-
-- [ ] `SymmetricCipher.svelte` — modo, padding, IV, encoding de chave
-- [ ] AES, ChaCha20, ChaCha20-Poly1305 (Web Crypto + `@noble/ciphers`)
-- [ ] DES, Triple DES, RC4, SPECK, XXTEA — implementação própria, com vetores NIST
-- [ ] `AsymmetricTool.svelte` — RSA keygen/sign/verify/encrypt/decrypt, ECDSA keygen/sign/verify
-- [ ] Aviso claro de que gerar chaves privadas num browser tem implicações
-
-### Fase 6 — Compressão e arquivos (~30 páginas)
-
-- [ ] `CompressionCodec.svelte` e `ArchiveTool.svelte`
-- [ ] GZIP e DEFLATE via `CompressionStream` nativo
-- [ ] Brotli, Zstandard, XZ, LZIP, LZMA via WASM
-- [ ] ZIP e TAR create/extract com múltiplos ficheiros e download (`fflate`)
-- [ ] Tudo em worker, com progresso
-
-### Fase 7 — Geradores (~9 páginas)
+### Fase 5 — Geradores (~9 páginas)
 
 - [ ] UUID v1/v3/v4/v5/v6/v7
 - [ ] Gerador de passwords (`crypto.getRandomValues`, nunca `Math.random`)
 - [ ] QR code generator e scanner (`getUserMedia` + `zxing-wasm`)
 
-### Fase 8 — Polimento
+### Fase 6 — Polimento
 
 - [ ] Pesquisa com Pagefind
 - [ ] Suite E2E em Playwright (existe um driver validado; falta integrá-lo no CI)

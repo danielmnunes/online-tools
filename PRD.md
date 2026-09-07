@@ -1,7 +1,7 @@
 # PRD — online/tools
 
-Ferramentas de programador que correm inteiramente no browser: hashing, encoding, cifras,
-compressão, formatação e geradores. Sem backend, sem uploads, sem contas.
+Ferramentas de programador que correm inteiramente no browser: hashing, encoding,
+formatação, conversão e geradores. Sem backend, sem uploads, sem contas.
 
 **Produção:** https://online-tools.dnhub.workers.dev
 **Referência de catálogo:** [emn178/online-tools](https://github.com/emn178/online-tools) ·
@@ -16,13 +16,14 @@ JSON — que toda a gente usa e quase ninguém pensa duas vezes antes de colar l
 password, uma chave privada ou um ficheiro de cliente. A maioria dos sites que as oferecem
 envia esse conteúdo para um servidor.
 
-O objetivo é um site com o mesmo catálogo de funcionalidades, onde **nada sai da máquina do
+O objetivo é um site com essas ferramentas, onde **nada sai da máquina do
 utilizador** — e onde essa afirmação é verificável abrindo o separador de rede.
 
 ### Objetivos
 
-1. Cobertura funcional próxima da do site de referência (~188 ferramentas). As categorias
-   Hash, XOF/MAC, KDF e Encoding fecham com exclusões deliberadas listadas em §5.
+1. Cobertura funcional das categorias fechadas (Hash, XOF/MAC, KDF, Encoding, Format,
+   Convert) mais geradores — **128 ferramentas**. Exclusões deliberadas em §5; cifras e
+   compressão saem do catálogo.
 2. Processamento 100% client-side, sem exceções.
 3. Cada ferramenta num URL próprio, com HTML estático real — o tráfego desta categoria vem
    de pesquisa orgânica ("md5 online", "base64 decode").
@@ -35,6 +36,7 @@ utilizador** — e onde essa afirmação é verificável abrindo o separador de 
 - API pública ou uso programático.
 - Processamento server-side de qualquer espécie.
 - Ferramentas que exijam segredos do lado do servidor.
+- Cifras (AES, DES, RSA, …) e compressão/arquivos (GZIP, ZIP, TAR, …) como categorias.
 
 ---
 
@@ -67,8 +69,8 @@ protegidos por direitos de autor. Todo o código, design e conteúdo é escrito 
 | Deploy | **Cloudflare Workers static assets** + Wrangler | Via recomendada pela Cloudflare e pelo Astro para projetos novos |
 | CI | GitHub Actions | Verifica em PR, deploy automático em `main` |
 
-**Astro em vez de um SPA:** o problema real deste site é *200 páginas, cada uma a precisar de
-uma biblioteca criptográfica diferente*. Astro envia zero JS por defeito e hidrata apenas a
+**Astro em vez de um SPA:** o problema real deste site é *mais de cem páginas, cada uma a
+precisar de uma biblioteca diferente*. Astro envia zero JS por defeito e hidrata apenas a
 ilha daquela página. Num SPA (Next, SvelteKit) paga-se o runtime do router em todas as
 páginas, para um site que é essencialmente HTML estático com um widget cada.
 
@@ -93,7 +95,7 @@ seu widget é erro de tipos, não uma página em branco em runtime.
 
 ### 4.2 Poucos widgets, muitas ferramentas
 
-~15 componentes Svelte servem as ~188 ferramentas:
+Quinze componentes Svelte servem as 128 ferramentas:
 
 | Widget | Cobre | ≈ páginas |
 |---|---|---|
@@ -104,12 +106,8 @@ seu widget é erro de tipos, não uma página em branco em runtime.
 | `HmacTool` | HMAC autónomo, com escolha de hash | 1 |
 | `Codec` | base16/32/58/64, html entities, percent-encoding | 12 |
 | `FileCodec` | as variantes de ficheiro dos três codecs que se streamam | 6 |
-| `SymmetricCipher` | aes, des, 3des, rc4, chacha20, poly1305, speck, xxtea | 16 |
-| `AsymmetricTool` | rsa e ecdsa: keygen / sign / verify / encrypt / decrypt | 8 |
 | `KdfTool` | pbkdf2, hkdf, evpkdf, scrypt, argon2, bcrypt (+ verify) | 12 |
-| `CompressionCodec` | gzip, deflate, brotli, zstd, xz, lzip, lzma | 14 |
-| `ArchiveTool` | create/extract, incluindo zip e tar | 18 |
-| `FormatTool` | json, xml, text compare, syntax highlight | 10 |
+| `FormatTool` | json, xml, text compare, syntax highlight | 11 |
 | `HexDump` | hex dump de texto e de ficheiro, este por páginas | 2 |
 | `CborTool` | cbor: encode/decode, notação diagnóstica, JSON | 1 |
 | `JwtTool` | jwt: decode, claims no tempo, verificação de assinatura | 1 |
@@ -159,9 +157,9 @@ que WebAssembly. É um custo real e está documentado no topo de `src/lib/algo/h
 hashing de ficheiros se provar demasiado lento, o caminho de ficheiro — e só esse — pode
 carregar o build WASM, decidido com números e não por antecipação.
 
-Onde nem o noble nem a Web Crypto cobrem um algoritmo (DES, RC4, SPECK, XXTEA — todos da
-secção de cifras, e o **bcrypt**, já entregue), a implementação é própria, em
-`src/lib/algo/legacy/`, com vetores de teste da especificação.
+Onde nem o noble nem a Web Crypto cobrem um algoritmo que o catálogo inclui (o **bcrypt**,
+já entregue), a implementação é própria, em `src/lib/algo/legacy/`, com vetores de teste da
+especificação. Cifras simétricas e assimétricas não entram no catálogo.
 
 O bcrypt é o primeiro caso e vale como precedente. Não há Blowfish em nenhum browser, portanto
 não havia atalho. Duas coisas tornaram a implementação própria aceitável em vez de temerária:
@@ -311,7 +309,7 @@ Correção criptográfica não se verifica a olho. Três camadas independentes:
 
 ---
 
-## 8. Catálogo-alvo (~188 ferramentas)
+## 8. Catálogo-alvo (128 ferramentas)
 
 | Categoria | Ferramentas |
 |---|---|
@@ -321,10 +319,11 @@ Correção criptográfica não se verifica a olho. Três camadas independentes:
 | **Encoding** | Hex/Base16, Base32, Base58, Base64 (texto e ficheiro), Hex dump (texto e ficheiro), HTML entities, URL encode/decode, URL parser, CBOR, JWT decoder. **Entregue.** Exclusões em §5.3 |
 | **Format** | JSON validator/minifier/formatter/viewer/compare/repair, XML validator/minifier/formatter, text compare, syntax highlight. **Entregue.** |
 | **Convert** | 7 conversores de case (lower, UPPER, camelCase, PascalCase, snake_case, kebab-case, CONSTANT_CASE), time converter. **Entregue.** |
-
-| **Cryptography** | AES, DES, Triple DES, RC4, ChaCha20, ChaCha20-Poly1305, SPECK, XXTEA (encrypt/decrypt); ECDSA e RSA (keygen/sign/verify/encrypt/decrypt) |
-| **Compression** | GZIP, DEFLATE, Brotli, Zstandard, XZ, LZIP, LZMA (compress/decompress e create/extract), ZIP, TAR |
 | **Generator** | UUID v1/v3/v4/v5/v6/v7, gerador de passwords, QR code generator e scanner |
+
+**Fora de âmbito:** Cryptography (AES, DES, Triple DES, RC4, ChaCha20, ChaCha20-Poly1305,
+SPECK, XXTEA, ECDSA, RSA) e Compression (GZIP, DEFLATE, Brotli, Zstandard, XZ, LZIP, LZMA,
+ZIP, TAR). Não há páginas, widgets nem dependências para cifras ou arquivos.
 
 O estado de execução por fase está em [tasks.md](tasks.md).
 

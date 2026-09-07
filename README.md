@@ -1,6 +1,6 @@
 # online/tools
 
-Developer tools — hashing, encoding, ciphers, compression — that run entirely in the
+Developer tools — hashing, encoding, formatting, conversion — that run entirely in the
 visitor's browser. No backend, no uploads, no accounts.
 
 ## How it is put together
