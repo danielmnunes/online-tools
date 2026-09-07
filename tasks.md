@@ -2,20 +2,21 @@
 
 Estado de execução do [PRD.md](PRD.md). `[x]` feito e verificado · `[ ]` por fazer.
 
-**Agora:** 100 ferramentas em produção, 1087 testes, CI a fazer deploy automático.
-**Alvo:** ~188 ferramentas. As categorias Hash, XOF/MAC, KDF e Encoding estão **fechadas**.
+**Agora:** 119 ferramentas em produção, 1157 testes, CI a fazer deploy automático.
+**Alvo:** ~188 ferramentas. As categorias Hash, XOF/MAC, KDF, Encoding, Format e Convert estão **fechadas**.
 
 ```
 Hash          ████████████████████  42 / 42  (âmbito fechado)
 XOF e MAC     ████████████████████  23 / 23  (âmbito fechado)
 KDF           ████████████████████  12 / 12  (âmbito fechado)
 Encoding      ████████████████████  23 / 23  (âmbito fechado)
-Format+Conv   ░░░░░░░░░░░░░░░░░░░░   0 / 20
+Format        ████████████████████  11 / 11  (âmbito fechado)
+Convert       ████████████████████   8 / 8   (âmbito fechado)
 Cryptography  ░░░░░░░░░░░░░░░░░░░░   0 / 26
 Compression   ░░░░░░░░░░░░░░░░░░░░   0 / 30
 Generator     ░░░░░░░░░░░░░░░░░░░░   0 / 9
                                      ─────────
-                                    100 / 188
+                                    119 / 188
 ```
 
 ---
@@ -215,6 +216,55 @@ Ver [PRD §5.3](PRD.md).
       download `blob:` sem um pedido à rede, e as páginas do hex dump a mostrarem os offsets
       que os bytes têm no ficheiro (0x0000 e 0x1000)
 
+### Fase 4 — Format e Convert (19 páginas) — âmbito fechado
+
+- [x] Tabela de formatos (`src/lib/algo/formats.ts`) — **11 páginas**, cada entrada a declarar
+      o *kind* da UI (validate / transform / view / compare / highlight) e o chunk extra,
+      se houver; `FormatTool.svelte` renderiza a partir da tabela, sem ramos por id
+- [x] `FormatTool.svelte` — JSON validator/minifier/formatter/viewer/compare, com repair
+- [x] XML validator/minifier/formatter via `DOMParser` nativo; mixed content não é
+      reindentado, porque isso mudaria o texto
+- [x] Text compare (Myers, linha a linha) e syntax highlight (`highlight.js` só nesta
+      página, doze linguagens)
+- [x] Tabela de conversores (`src/lib/algo/converts.ts`) — **7 cases + time**
+- [x] `ConvertTool.svelte` — os sete cases (lower, UPPER, camelCase, PascalCase,
+      snake_case, kebab-case, CONSTANT_CASE) e o conversor de tempo
+- [x] JSON.parse / JSON.stringify como oráculo; repair com `jsonrepair`, isolado num
+      chunk, e o resultado volta a passar por JSON.parse antes de aparecer
+- [x] 19 ficheiros MDX escritos de raiz, cada um com ângulo próprio, FAQ e referências
+
+Páginas entregues: `json/validator|minifier|formatter|viewer|compare|repair`,
+`xml/validator|minifier|formatter`, `text-compare`, `syntax-highlight`,
+`case/lower|upper|camel|pascal|snake|kebab|constant`, `time`.
+
+**Fora de âmbito, por decisão:** Title Case e Sentence case — não estão nos sete do
+catálogo de referência. Conversão para um fuso IANA ("America/New_York") — exigiria
+uma base de timezones; a página mostra UTC e o fuso da máquina. Schema XML (DTD/XSD)
+— isto é well-formedness, não validade.
+
+### Verificação da Fase 4
+
+- [x] JSON: round-trip contra `JSON.stringify(JSON.parse(…))`; falhas com linha, coluna
+      e caret; diff estrutural que ignora a ordem das chaves e não ignora a dos arrays
+- [x] Repair: object literals, trailing commas, comentários, `True`/`None` do Python;
+      o resultado é JSON.parse-able
+- [x] XML: well-formedness via DOMParser (jsdom); pretty-print de árvores só de
+      elementos; mixed content intacto; minify a tirar whitespace ignorável
+- [x] Diff de linhas: o par clássico ABCABBA/CBABAC, newline final, replay dos dois lados
+- [x] Case: `XMLHttpRequest` em três palavras; round-trip snake → camel → snake
+- [x] Tempo: Unix 1000000000 → `2001-09-09T01:46:40.000Z`; 13 dígitos são milissegundos
+- [x] Testes de componente para os dois widgets, incluindo o indent a recomputar e o
+      repair assíncrono
+- [x] Guardas do registry: 11 format + 8 convert, slugs a bater com as tabelas, catálogo
+      a 119 ferramentas
+- [x] **1157 testes**, `astro check` com 0 erros / 0 avisos / 0 hints
+- [x] Peso medido no build: FormatTool 8 KB gz; `jsonrepair` 3 KB gz só em `/json/repair/`;
+      highlight.js 23 KB gz só em `/syntax-highlight/`; todas bem abaixo de 100 KB
+- [x] **Verificação em Chrome real contra o build de preview**, por CDP: o formatter
+      pretty-printa `{"ok":true,"items":[1,2,3]}`; o repair transforma `{name: 'Ada'}`
+      em JSON.parse-able; o XML indenta; Unix 1000000000 sai `2001-09-09T01:46:40.000Z`
+      no browser, não só no Node; camelCase de `hello_world` é `helloWorld`
+
 ### Deploy
 
 - [x] Cloudflare Workers static assets — **https://online-tools.dnhub.workers.dev**
@@ -226,13 +276,6 @@ Ver [PRD §5.3](PRD.md).
 ---
 
 ## Por fazer
-
-### Fase 4 — Format e Convert (~20 páginas)
-
-- [ ] `FormatTool.svelte` — JSON validator/minifier/formatter/viewer/compare (com repair)
-- [ ] XML validator/minifier/formatter (via `DOMParser` nativo)
-- [ ] Text compare, syntax highlight
-- [ ] `ConvertTool.svelte` — 7 conversores de case, time converter
 
 ### Fase 5 — Criptografia (~26 páginas)
 

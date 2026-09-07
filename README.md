@@ -14,7 +14,9 @@ visitor's browser. No backend, no uploads, no accounts.
   `TextHash` component backs every text hashing tool, one `XofHash` backs all sixteen
   SP 800-185 functions, one `KdfTool` backs every key-derivation page in both directions,
   and one `Codec` backs all twelve encoding pages — the controls each page shows come from
-  a table, so there is no per-algorithm branch in the component. Pages with no widget — the
+  a table, so there is no per-algorithm branch in the component. The same idea covers
+  format (`FormatTool`: JSON, XML, text compare, syntax highlight) and convert
+  (`ConvertTool`: seven cases and a time converter). Pages with no widget — the
   home page, category pages — ship no JavaScript at all.
 - **Files are read a chunk at a time.** Checksums, encodings and hex dumps go through
   `src/lib/file.ts`, which slices a file and hands over a few megabytes at a time: a
@@ -85,9 +87,9 @@ Cryptographic correctness is not something to eyeball, so it is checked several 
 3. If it needs a new widget kind, add an arm to the `Tool` union in `src/tools/types.ts`
    and a branch in `src/components/ToolWidget.astro`.
 
-For a family with a table behind it — hashes, the SP 800-185 functions, or the codecs — add
-the entry to `src/lib/algo/hashes.ts`, `src/lib/algo/xofs.ts` or `src/lib/algo/codecs.ts`
-instead and the registry generates the pages from it.
+For a family with a table behind it — hashes, the SP 800-185 functions, the codecs,
+the format pages or the case converters — add the entry to the matching table in
+`src/lib/algo/` instead and the registry generates the pages from it.
 
 The build fails if a registry entry has no content file, if a content file has no registry
 entry, or if a tool slug collides with a category page.

@@ -119,3 +119,43 @@ body {
   text-align: left;
 }
 .prose-tool th { background-color: var(--color-surface); font-weight: 600; }
+
+/* Token colours for the syntax-highlighter page. Mapped to semantic tokens
+   so both themes stay readable without pulling in a highlight.js stylesheet. */
+.hljs-comment,
+.hljs-quote {
+  color: var(--color-muted);
+}
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-addition {
+  color: var(--color-accent);
+}
+.hljs-number,
+.hljs-string,
+.hljs-literal,
+.hljs-regexp,
+.hljs-link {
+  color: var(--color-ok);
+}
+.hljs-title,
+.hljs-section,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class {
+  color: var(--color-fg);
+  font-weight: 650;
+}
+.hljs-attribute,
+.hljs-attr,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-type,
+.hljs-symbol {
+  color: var(--color-accent);
+}
+.hljs-built_in,
+.hljs-deletion,
+.hljs-meta {
+  color: var(--color-danger);
+}

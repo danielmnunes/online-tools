@@ -1,0 +1,34 @@
+---
+description: >-
+    Strip the whitespace from JSON. Values stay the same; only the spaces, tabs and newlines between them go.
+faq:
+  - q: >-
+        Does minifying change the data?
+    a: >-
+        No. JSON.parse of the input and of the output are deep-equal. Whitespace inside a string is data and is left alone; whitespace between tokens is not.
+  - q: >-
+        Why would I sort the keys?
+    a: >-
+        So that two dumps of the same object compare equal as text. JSON objects are unordered in the spec, and two programs that agree on the values can still disagree on the key order. Sorting is how a textual diff stops lying about that.
+  - q: >-
+        Is this compression?
+    a: >-
+        It is smaller, which is not the same thing. gzip of pretty-printed JSON is usually close to gzip of the minified form, because whitespace compresses. Minify when the receiver parses JSON and you want fewer bytes on the wire un-compressed — an HTTP body, a bookmark, a QR payload.
+  - q: >-
+        What about comments?
+    a: >-
+        JSON has none. A comment makes the input invalid, and this page will not minify it. The repair page can strip comments first.
+references:
+  - label: RFC 8259 §2 — JSON Grammar
+    url: https://www.rfc-editor.org/rfc/rfc8259#section-2
+---
+
+## What goes
+
+Every space, tab and newline that is not inside a string. `JSON.stringify` of the parsed value, with no indent, is the whole implementation — the same function that would produce the body of a `fetch`.
+
+That is also why numbers above 2^53 are not preserved digit-for-digit: they were already floats the moment the input parsed. Minifying cannot put back digits the parser dropped.
+
+## Sorting
+
+Off by default, because the original key order is often the order a human wrote and a round-trip should not invent a canonical form they did not ask for. On, when the output is going to be diffed or hashed as text.

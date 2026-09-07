@@ -15,6 +15,8 @@ import { CODECS, CODEC_IDS, codecFileSlug, codecSlug, isCodecId } from '~/lib/al
 import { HASHES, isHashId } from '~/lib/algo/hashes';
 import { XOFS, XOF_FILE_IDS, XOF_IDS, isXofId } from '~/lib/algo/xofs';
 import { KDFS, KDF_IDS, isKdfId } from '~/lib/algo/kdfs';
+import { FORMATS, FORMAT_IDS, isFormatId } from '~/lib/algo/formats';
+import { CONVERTS, CONVERT_IDS, isConvertId } from '~/lib/algo/converts';
 
 describe('slugs', () => {
   it('are unique', () => {
@@ -91,6 +93,14 @@ describe('widget configuration', () => {
         case 'codec':
         case 'file-codec':
           expect(isCodecId(tool.config.codec), tool.slug).toBe(true);
+          break;
+        case 'format':
+          expect(isFormatId(tool.config.id), tool.slug).toBe(true);
+          expect(FORMATS[tool.config.id].slug, tool.slug).toBe(tool.slug);
+          break;
+        case 'convert':
+          expect(isConvertId(tool.config.id), tool.slug).toBe(true);
+          expect(CONVERTS[tool.config.id].slug, tool.slug).toBe(tool.slug);
           break;
         case 'hmac':
         case 'cbor':
@@ -190,11 +200,25 @@ describe('coverage of the algorithm tables', () => {
     }
   });
 
-  it('has the catalogue size phase 3 set out to deliver', () => {
+  it('gives every format tool a page whose slug matches the table', () => {
+    const slugs = new Set(toolsInCategory('format').map((tool) => tool.slug));
+    for (const id of FORMAT_IDS) expect(slugs.has(FORMATS[id].slug), FORMATS[id].slug).toBe(true);
+    expect(toolsInCategory('format')).toHaveLength(FORMAT_IDS.length);
+  });
+
+  it('gives every convert tool a page whose slug matches the table', () => {
+    const slugs = new Set(toolsInCategory('convert').map((tool) => tool.slug));
+    for (const id of CONVERT_IDS) expect(slugs.has(CONVERTS[id].slug), CONVERTS[id].slug).toBe(true);
+    expect(toolsInCategory('convert')).toHaveLength(CONVERT_IDS.length);
+  });
+
+  it('has the catalogue size phase 4 set out to deliver', () => {
     expect(toolsInCategory('hash')).toHaveLength(42);
     expect(toolsInCategory('xof')).toHaveLength(23);
     expect(toolsInCategory('kdf')).toHaveLength(12);
     expect(toolsInCategory('encoding')).toHaveLength(23);
-    expect(TOOLS).toHaveLength(100);
+    expect(toolsInCategory('format')).toHaveLength(11);
+    expect(toolsInCategory('convert')).toHaveLength(8);
+    expect(TOOLS).toHaveLength(119);
   });
 });

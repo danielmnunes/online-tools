@@ -1,0 +1,36 @@
+---
+description: >-
+    Fix common JSON mistakes — trailing commas, comments, single quotes, unquoted keys, Python True/None — then verify the result with JSON.parse.
+faq:
+  - q: >-
+        Is the repaired document what the author meant?
+    a: >-
+        Not always. Repair is a convenience: it makes a parse succeed. A missing comma that gets inserted in the wrong place, or a truncated file that gets closed with extra `]`, can be valid JSON and the wrong data. Read the output before you ship it.
+  - q: >-
+        What can it fix?
+    a: >-
+        Trailing commas, `//` and `/* */` comments, single quotes, unquoted keys, Python `True` / `False` / `None`, concatenated strings, and a truncated document's missing brackets. It cannot turn arbitrary text into JSON, and it will say so.
+  - q: >-
+        Why not just use JavaScript's eval?
+    a: >-
+        Because `eval` runs code. This page parses; it does not execute. A paste that contains `fetch(...)` or an assignment is not "almost JSON", and it is not evaluated here.
+  - q: >-
+        Will valid JSON be rewritten?
+    a: >-
+        It is parsed and pretty-printed. The values do not change. If you wanted the bytes left alone, they were already valid and you did not need this page.
+references:
+  - label: RFC 8259 — JSON
+    url: https://www.rfc-editor.org/rfc/rfc8259
+  - label: jsonrepair — josdejong
+    url: https://github.com/josdejong/jsonrepair
+---
+
+## The mistakes a person makes
+
+A trailing comma after the last property. A comment left in from an editor that accepts them. Keys copied out of a JavaScript object literal, without quotes. `True` and `None` from a Python `print`. None of those are JSON, and all of them are what this page is for.
+
+The result is run through JSON.parse before it is shown. A repair that is still not JSON cannot leave the page looking like a success.
+
+## What repair is not
+
+A linter, a schema, or a promise that the output matches intent. Closing an unclosed `[` makes a parse succeed; it does not recover the elements that were never typed. Treat the output as a draft.

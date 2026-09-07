@@ -303,7 +303,7 @@ Correção criptográfica não se verifica a olho. Três camadas independentes:
 | Métrica | Alvo | Estado atual |
 |---|---|---|
 | JS na home e páginas de categoria | 0 KB | **0 KB, 0 ilhas** |
-| Transferido numa página de ferramenta | < 100 KB gz | **35 KB gz** no máximo (a `/cbor/`, que carrega o cbor2 inteiro) |
+| Transferido numa página de ferramenta | < 100 KB gz | **35 KB gz** no máximo (`/cbor/`); FormatTool 8 KB gz, highlight.js 23 KB gz só em `/syntax-highlight/` |
 | Trabalho pesado fora da main thread | sempre | Argon2id a 19 MiB: 571 ms, **0 ms** de bloqueio |
 | Crescimento por algoritmo adicionado | ~0 nas outras páginas | confirmado |
 | Pedidos a hosts externos | 0 | **0** |
@@ -319,8 +319,8 @@ Correção criptográfica não se verifica a olho. Três camadas independentes:
 | **XOF e MAC** | SHAKE128/256, cSHAKE128/256, KMAC(XOF)128/256, TupleHash(XOF)128/256, ParallelHash(XOF)128/256, HMAC calculator — com variante de ficheiro nas seis que se streamam. **Entregue.** Exclusões em §5.2 |
 | **KDF** | PBKDF2, EvpKDF, HKDF, scrypt, Argon2d/i/id; PBKDF2/scrypt/bcrypt/Argon2 com variante *verify*. **Entregue.** Ver §5.2 |
 | **Encoding** | Hex/Base16, Base32, Base58, Base64 (texto e ficheiro), Hex dump (texto e ficheiro), HTML entities, URL encode/decode, URL parser, CBOR, JWT decoder. **Entregue.** Exclusões em §5.3 |
-| **Format** | JSON validator/minifier/formatter/viewer/compare, XML validator/minifier/formatter, text compare, syntax highlight |
-| **Convert** | 7 conversores de case, time converter |
+| **Format** | JSON validator/minifier/formatter/viewer/compare/repair, XML validator/minifier/formatter, text compare, syntax highlight. **Entregue.** |
+| **Convert** | 7 conversores de case (lower, UPPER, camelCase, PascalCase, snake_case, kebab-case, CONSTANT_CASE), time converter. **Entregue.** |
 
 | **Cryptography** | AES, DES, Triple DES, RC4, ChaCha20, ChaCha20-Poly1305, SPECK, XXTEA (encrypt/decrypt); ECDSA e RSA (keygen/sign/verify/encrypt/decrypt) |
 | **Compression** | GZIP, DEFLATE, Brotli, Zstandard, XZ, LZIP, LZMA (compress/decompress e create/extract), ZIP, TAR |

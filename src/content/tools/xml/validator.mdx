@@ -1,0 +1,32 @@
+---
+description: >-
+    Check that a document is well-formed XML, using the browser’s own DOMParser — not a schema, not a DTD, just well-formedness.
+faq:
+  - q: >-
+        Well-formed versus valid?
+    a: >-
+        Well-formed means the tags nest, attributes are quoted, and there is one root. Valid means the document also matches a DTD or schema. This page checks the first. A document can be well-formed and still be the wrong vocabulary.
+  - q: >-
+        Is HTML accepted?
+    a: >-
+        Only if it is also well-formed XML. `<br>` without a close, attributes without quotes, and uppercase/lowercase mismatch in tag names all fail. That is XML. HTML's parser is a different engine and is not used here.
+  - q: >-
+        Where does the check run?
+    a: >-
+        In your browser, via DOMParser with `application/xml`. Nothing is uploaded. The engine is the same one the rest of the page would use on this document.
+  - q: >-
+        Why is an empty document rejected?
+    a: >-
+        Because XML requires a root element. Whitespace alone is not a document.
+references:
+  - label: Extensible Markup Language (XML) 1.0 — well-formedness
+    url: https://www.w3.org/TR/xml/#sec-well-formed
+  - label: DOMParser — HTML Standard
+    url: https://html.spec.whatwg.org/multipage/dynamic-markup-insertion.html#dom-domparser-parsefromstring
+---
+
+## Well-formed, not valid
+
+A matching pair of tags, quoted attributes, a single root, and character data that does not look like markup unless it is escaped or in a CDATA section. That is the XML 1.0 well-formedness constraint, and it is what DOMParser enforces when the type is `application/xml`.
+
+A schema, a DTD, RelaxNG or an XSD is a second question, and answering it means shipping the schema. This page does not. A document that passes here is something an XML parser will accept; whether it is the document you meant is a different check.

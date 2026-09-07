@@ -1,0 +1,38 @@
+---
+description: >-
+    Check that a document is JSON — the same JSON.parse the rest of the platform will run, with the line and column of a failure.
+faq:
+  - q: >-
+        What does "valid" mean here?
+    a: >-
+        That JSON.parse accepts the text. That is the parser every other piece of JavaScript will use, so a pass here is a pass there. It is not a schema check: extra keys, missing keys and wrong types are still valid JSON.
+  - q: >-
+        Why is a trailing comma an error?
+    a: >-
+        Because RFC 8259 does not allow one. JavaScript object literals do, and that is the usual source of a paste that looks right and is not JSON. The caret points at the comma.
+  - q: >-
+        Is it safe to paste a document that has secrets in it?
+    a: >-
+        Yes. Parsing runs in your browser. Nothing is uploaded, which is the reason to use this page rather than a service.
+  - q: >-
+        Why does a number like 9007199254740993 change?
+    a: >-
+        JSON.parse uses IEEE 754 floats. Integers above 2^53 are not exact. The validator still accepts the document; it cannot preserve digits the parser itself drops. That is a property of JSON-in-JavaScript, not of this page.
+references:
+  - label: RFC 8259 — The JavaScript Object Notation (JSON) Data Interchange Format
+    url: https://www.rfc-editor.org/rfc/rfc8259
+  - label: ECMA-404 — The JSON Data Interchange Syntax
+    url: https://www.ecma-international.org/publications-and-standards/standards/ecma-404/
+---
+
+## What this page checks
+
+JSON.parse, and only JSON.parse. Comments, trailing commas, single quotes and unquoted keys are JavaScript, not JSON, and they fail here for the same reason they fail in `fetch().then(r => r.json())`.
+
+A failure is reported with a line, a column and a caret, because "Unexpected token" on its own is not a location. The engine's own message is kept beside that, so a disagreement with another tool can be traced to the parser rather than to this page.
+
+## What it does not check
+
+A schema. `"ok": "true"` is valid JSON and the wrong type for a boolean. This page will not say so. JSON Schema, TypeBox and a hand-written guard are the tools for that, and they run *after* a document has parsed.
+
+Duplicate keys are valid JSON and JSON.parse keeps the last one. The document is accepted; the earlier values are gone, which is what the platform will do with them too.

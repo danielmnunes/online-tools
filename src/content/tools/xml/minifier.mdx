@@ -1,0 +1,30 @@
+---
+description: >-
+    Strip ignorable whitespace from XML. Text content stays, because that is data; spaces between elements go.
+faq:
+  - q: >-
+        Will this change what the document means?
+    a: >-
+        Not for element-only trees. Whitespace between elements is ignorable in XML unless `xml:space="preserve"` says otherwise, and this page does not honour that attribute — mixed content (text and elements as siblings) is kept as written, which is the case that would actually change.
+  - q: >-
+        What about comments?
+    a: >-
+        Kept by default, because a comment is in the document. The control strips them when you want the smallest form for a wire format that does not need them.
+  - q: >-
+        Empty elements?
+    a: >-
+        Written as `<tag/>`. `<tag></tag>` and `<tag/>` are the same empty element; minifying picks the shorter spelling.
+  - q: >-
+        Is the output well-formed if the input was?
+    a: >-
+        Yes. The minifier parses first and refuses to write a document it could not read.
+references:
+  - label: XML 1.0 — White Space Handling
+    url: https://www.w3.org/TR/xml/#sec-white-space
+---
+
+## What is ignorable
+
+In an element whose children are only other elements, the newlines and indentation between them are not data. They go. In an element that contains text — `<p>Hello <em>there</em></p>` — the spaces are data, and they stay, because pretty-printing or collapsing that would change what a renderer shows.
+
+Comments are data of a kind too. They survive unless you ask for them not to.

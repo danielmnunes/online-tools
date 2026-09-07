@@ -1,0 +1,26 @@
+---
+description: >-
+    Convert an identifier to kebab-case — words in lowercase, joined with hyphens. The shape of a URL slug and of a CSS class.
+faq:
+  - q: >-
+        Is this the same as a URL slug?
+    a: >-
+        For ASCII identifiers, yes: `Hello World` becomes `hello-world`. This page does not strip accents or transliterate, so `café` stays `café`. A full slugifier is a different job.
+  - q: >-
+        Why not underscores?
+    a: >-
+        Because CSS class names, HTML custom elements and URL path segments conventionally use hyphens. snake_case is the neighbour that uses underscores.
+  - q: >-
+        Multiple hyphens in the input?
+    a: >-
+        They are separators. `hello--world` is two words and becomes `hello-world`.
+references:
+  - label: kebab-case — Wikipedia (lisp case)
+    url: https://en.wikipedia.org/wiki/Letter_case#Kebab_case
+---
+
+## Lowercase, with hyphens
+
+A CSS class, a `data-` attribute, a path segment. The splitter is shared with the other case pages; only the join character changes.
+
+`HelloWorld`, `hello_world` and `HELLO WORLD` all become `hello-world`.

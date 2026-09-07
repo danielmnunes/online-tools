@@ -1,0 +1,24 @@
+---
+description: >-
+    Convert an identifier to PascalCase — every word capitalised, no separator. What TypeScript calls a type name.
+faq:
+  - q: >-
+        camelCase versus PascalCase?
+    a: >-
+        The first word. camelCase leaves it lowercase (`helloWorld`); PascalCase capitalises it (`HelloWorld`). The rest of the words are capitalised on both pages.
+  - q: >-
+        Acronyms?
+    a: >-
+        Split the same way as camelCase: `XMLHttpRequest` becomes `XmlHttpRequest`. Letters after the first of each word are lowercased, so `XML` does not stay `XML`.
+  - q: >-
+        Is this UpperCamelCase?
+    a: >-
+        Yes. Same joining rule, two names. This page uses PascalCase because that is what the languages that care (C#, TypeScript, Go) call it.
+references:
+  - label: Pascal case — Wikipedia
+    url: https://en.wikipedia.org/wiki/Camel_case#Variations_and_synonyms
+---
+
+## Every word capitalised
+
+A type, a component, a constructor. The splitting rules are the same as camelCase; only the first word differs. `hello_world`, `hello-world` and `helloWorld` all become `HelloWorld`.

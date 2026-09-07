@@ -1,0 +1,30 @@
+---
+description: >-
+    Syntax-highlight code in the browser — JavaScript, TypeScript, JSON, XML, Python, SQL and a handful of others — with nothing sent anywhere.
+faq:
+  - q: >-
+        Which languages?
+    a: >-
+        A curated set: JavaScript, TypeScript, JSON, XML, CSS, Python, SQL, Bash, YAML, Markdown, Go and Rust. The full highlight.js catalogue is megabytes; this page loads the grammars it lists and no others.
+  - q: >-
+        Can it detect the language?
+    a: >-
+        Yes, among those twelve. Detection is a heuristic and can guess JavaScript for JSON, or XML for HTML. Pick the language when you know it.
+  - q: >-
+        Is the HTML it produces safe?
+    a: >-
+        highlight.js escapes the source before wrapping tokens in spans. A paste that contains `<script>` becomes `&lt;script&gt;` in the highlighted output. The original text is what Copy puts on the clipboard, not the HTML.
+  - q: >-
+        Why not ship every language?
+    a: >-
+        Because this site's budget is that a page does not grow with the catalogue. `/json/validator/` must not download a Rust grammar. The highlighter is its own page and its own chunk.
+references:
+  - label: highlight.js
+    url: https://highlightjs.org/
+---
+
+## Highlighting without a server
+
+The grammar runs in the tab. Tokens become spans with classes, coloured from this site's semantic palette so both themes stay readable. There is no network request at highlight time, and there is no third-party stylesheet.
+
+Auto-detect is a convenience. It scores the registered languages and picks the best; it cannot invent a language that is not in the list, and it can pick the wrong one among those that are. When the answer matters, set the language.

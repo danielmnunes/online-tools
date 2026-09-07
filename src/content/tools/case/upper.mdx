@@ -1,0 +1,26 @@
+---
+description: >-
+    Convert text to UPPER CASE. Letters change; spaces and punctuation stay put — unlike CONSTANT_CASE, which inserts underscores.
+faq:
+  - q: >-
+        How is this different from CONSTANT_CASE?
+    a: >-
+        UPPER CASE leaves separators alone: `hello world` becomes `HELLO WORLD`. CONSTANT_CASE splits into words and joins them with underscores: `HELLO_WORLD`.
+  - q: >-
+        German ß?
+    a: >-
+        In default Unicode mapping `ß` uppercases to `SS`. That is the standard, and it is what this page does.
+  - q: >-
+        Will it touch digits?
+    a: >-
+        No.
+references:
+  - label: Unicode Default Case Conversion
+    url: https://unicode.org/reports/tr21/tr21-5.html
+---
+
+## A mapping, not a join
+
+Uppercasing a sentence and turning an identifier into a C macro are different jobs. This page does the first. CONSTANT_CASE, next to it in the list, does the second.
+
+Use this when the letters should shout and the spaces should stay.
