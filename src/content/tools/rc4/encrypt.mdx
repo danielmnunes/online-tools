@@ -1,0 +1,38 @@
+---
+description: >-
+    Encrypt with RC4 (ARCFOUR). A stream cipher retired from TLS in 2015. Encryption and decryption are the same operation.
+faq:
+  - q: >-
+        Why is RC4 broken?
+    a: >-
+        The first bytes of the keystream are biased. Given enough ciphertexts under related keys — HTTPS with RC4 was exactly that — the plaintext leaks. TLS forbade RC4 in RFC 7465. This page will still XOR your bytes with that keystream, because reading old ciphertext is a real job.
+  - q: >-
+        Is there an IV?
+    a: >-
+        No. RC4 is keyed, not nonced. The same key always produces the same keystream, so encrypting two messages under one key is a many-time pad. That is a second reason not to use it.
+  - q: >-
+        What key lengths work?
+    a: >-
+        1 to 256 bytes. 16 bytes is the common case. A 5-byte key is the 40-bit export-grade RC4 that RFC 6229 uses as its first vector, and is here only because that vector is how the implementation is checked.
+references:
+  - label: >-
+        RFC 6229 — Test Vectors for RC4
+    url: https://www.rfc-editor.org/rfc/rfc6229
+  - label: >-
+        RFC 7465 — Prohibiting RC4 Cipher Suites
+    url: https://www.rfc-editor.org/rfc/rfc7465
+---
+
+## RC4 as a stream
+
+A 256-byte permutation, shuffled by the key, then walked to produce a
+keystream that is XORed with the message. Encryption and decryption are the
+same function, which is why this page and the decrypt page run identical code.
+
+The implementation is twenty lines and is checked against RFC 6229. There is
+no RC4 in the Web Crypto API, and @noble/ciphers does not ship one, so this is
+written here — short enough that a transcription error in the swap is the only
+real risk, and the RFC vector is what catches that.
+
+Do not use the output to protect anything. The page is an oracle for ciphertext
+that already exists, and a way to see what "RC4 of this string" actually is.

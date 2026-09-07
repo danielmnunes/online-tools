@@ -1,0 +1,37 @@
+---
+description: >-
+    Encrypt with SPECK-128, the 128-bit-block member of the NSA lightweight family. Keys of 128, 192 or 256 bits.
+faq:
+  - q: >-
+        Why SPECK and not AES?
+    a: >-
+        You probably want AES. SPECK is a lightweight ARX cipher designed for constrained devices. This page is here because the algorithm is in the catalogue people search for, and because the official test vectors are public. It is not a recommendation.
+  - q: >-
+        Which variant is this?
+    a: >-
+        SPECK-128 only: 128-bit blocks, keys of 16, 24 or 32 bytes (32, 33 or 34 rounds). The 64-bit-block variants use a different rotation pair and are not offered. Software that says "SPECK-128/128" is this, with a 16-byte key.
+  - q: >-
+        Is the byte order little-endian?
+    a: >-
+        The page treats the 16 bytes you paste as the 128-bit block written the way the specification writes its test vectors: most-significant byte first. That is also how the key is read.
+references:
+  - label: >-
+        Beaulieu et al. — The SIMON and SPECK Families of Lightweight Block Ciphers
+    url: https://eprint.iacr.org/2013/404
+---
+
+## SPECK-128
+
+An ARX block cipher: add, rotate, XOR, on two 64-bit words, with a 128-bit
+block. The NSA published it in 2013 alongside SIMON. The round function is
+short enough to write from the paper; the official test vectors are what make
+the round count and the key expansion checked rather than hoped.
+
+There is no SPECK in the Web Crypto API or in @noble/ciphers, so this is
+written here, in the same drawer as DES and RC4. Unlike those two, SPECK is
+not broken in the 56-bit-key sense. It is also not AES: it has had less
+analysis, it is not a NIST standard for general use, and a lightweight cipher
+is the wrong default on a desktop browser.
+
+CBC and ECB are offered because a block cipher in a catalogue is expected to
+have them. Prefer CBC. Prefer AES.

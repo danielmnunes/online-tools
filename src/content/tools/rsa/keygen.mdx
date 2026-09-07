@@ -1,0 +1,35 @@
+---
+description: >-
+    Generate an RSA key pair in this browser. PKCS#8 private key and SPKI public key, or JWK. Not for long-term identities.
+faq:
+  - q: >-
+        Is it safe to generate a key here?
+    a: >-
+        The bytes never leave the tab, and the entropy is `crypto.getRandomValues`. That is as good as the browser. It is not as private as a key generated on the machine that will hold it, in software you control, with a backup story. Use this page to see the format and to make a throwaway pair. Do not mint a production identity in a web page.
+  - q: >-
+        2048, 3072 or 4096?
+    a: >-
+        2048 is still the internet's default and is what this page starts on. 3072 matches the 128-bit security level; 4096 is slower and larger for a gain most protocols do not need. 1024 is not offered.
+  - q: >-
+        Why PKCS#8 and not BEGIN RSA PRIVATE KEY?
+    a: >-
+        Because the browser's Web Crypto API imports PKCS#8 (`BEGIN PRIVATE KEY`) and SubjectPublicKeyInfo (`BEGIN PUBLIC KEY`). PKCS#1 (`BEGIN RSA PRIVATE KEY`) is a different structure. The encrypt and sign pages refuse it with the openssl command that converts it.
+references:
+  - label: >-
+        RFC 8017 — PKCS #1
+    url: https://www.rfc-editor.org/rfc/rfc8017
+  - label: >-
+        RFC 5208 — PKCS #8
+    url: https://www.rfc-editor.org/rfc/rfc5208
+---
+
+## Generating an RSA key in a browser
+
+The pair is made by the Web Crypto API, which is the same generator every
+other respectable thing in this tab uses. The private key is PKCS#8 PEM or a
+JWK; the public key is SPKI PEM or a JWK. The public exponent is 65537.
+
+A private key generated here is as good as the browser's CSPRNG and as private
+as this tab. Close the tab and it is gone unless you copied it. That is the
+feature and the limitation. Generate long-term keys on the machine that will
+hold them.

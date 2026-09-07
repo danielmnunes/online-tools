@@ -1,0 +1,67 @@
+---
+description: >-
+    Encrypt bytes with AES in CBC, GCM, CTR, CFB or ECB. Keys of 128, 192 or 256 bits, in the browser.
+faq:
+  - q: >-
+        Which mode should I use?
+    a: >-
+        GCM if you need to know the ciphertext was not changed. CBC if you are talking to something that only has CBC. CTR if you need a stream. Never ECB, except for a single block you already understand. The page defaults to CBC because that is what most people pasting a key and an IV have.
+  - q: >-
+        Why is GCM ciphertext 16 bytes longer?
+    a: >-
+        Those 16 bytes are the authentication tag, appended the way the Web Crypto API returns it. Decrypting strips them. If you have a tag stored separately, concatenate it onto the end before pasting.
+  - q: >-
+        Can I encrypt a file?
+    a: >-
+        This page is for a message you can paste. AES of a multi-gigabyte file is a different job — streaming, resumable, with a header that carries the nonce — and pretending a textarea is that job would be a lie.
+  - q: >-
+        Is the key sent anywhere?
+    a: >-
+        No. AES runs in this tab as JavaScript. Open the network panel while you encrypt: the only requests you will see are the ones that loaded the page.
+references:
+  - label: >-
+        FIPS 197 — Advanced Encryption Standard
+    url: https://csrc.nist.gov/publications/detail/fips/197/final
+  - label: >-
+        NIST SP 800-38A — Block Cipher Modes of Operation
+    url: https://csrc.nist.gov/publications/detail/sp/800-38a/final
+  - label: >-
+        NIST SP 800-38D — GCM
+    url: https://csrc.nist.gov/publications/detail/sp/800-38d/final
+---
+
+## What AES is
+
+A 128-bit block cipher with keys of 128, 192 or 256 bits, standardised as FIPS 197
+in 2001. The block size does not change with the key: AES-256 is not "bigger
+blocks", it is more round-key material and two extra rounds.
+
+A block cipher on its own is not encryption of a message. It is encryption of
+sixteen bytes. A *mode* is how those sixteen-byte steps are chained so a message
+of any length comes out, and the modes are not interchangeable: CBC of a message
+and GCM of the same message are unrelated byte strings, and decrypting one as
+the other fails.
+
+## The modes on this page
+
+- **CBC** — each block is XORed with the previous ciphertext block before it is
+  encrypted. Needs an unpredictable IV of 16 bytes, and padding. Unauthenticated:
+  a flipped bit in the ciphertext becomes a flipped bit in the next plaintext
+  block, and a padding oracle is how that gets read.
+- **GCM** — CTR plus a polynomial MAC. The nonce is 12 bytes. The output is the
+  ciphertext plus a 16-byte tag. Associated data is bound to the tag without
+  being encrypted. Do not reuse a nonce with the same key.
+- **CTR** — the block cipher encrypts a counter; the result is XORed with the
+  message. No padding. Unauthenticated. The 16-byte IV is the whole counter
+  block.
+- **CFB** — ciphertext feedback, also a stream. Unauthenticated.
+- **ECB** — each block independent. Identical plaintext blocks stay identical.
+  The page says so when you pick it, because that is the whole problem.
+
+## Padding
+
+CBC and ECB need a multiple of 16 bytes. PKCS#7 is the default and the one
+OpenSSL uses. ANSI X.923 writes zeros then a length byte. ISO/IEC 7816-4 writes
+`0x80` then zeros. Zero padding cannot tell zeros that were in the message from
+zeros that were added, so decrypting it is lossy. "None" demands an already
+aligned input.

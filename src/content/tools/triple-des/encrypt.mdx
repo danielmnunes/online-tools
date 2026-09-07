@@ -1,0 +1,37 @@
+---
+description: >-
+    Encrypt with Triple DES (3DES, TDEA) in CBC or ECB. Two-key or three-key EDE. Retired by NIST in 2023.
+faq:
+  - q: >-
+        Two-key or three-key?
+    a: >-
+        16 bytes is two-key (K1, K2, K1). 24 bytes is three-key (K1, K2, K3). Two-key is 80-bit work with the sweet-spot attack; three-key is 112. Neither is a reason to start. Payment systems used two-key for years because the key-exchange ceremony was built around 16 bytes.
+  - q: >-
+        Is this EDE or EEE?
+    a: >-
+        EDE: encrypt with K1, decrypt with K2, encrypt with K3. That is the construction SP 800-67 specifies, and the one that becomes single DES when all three keys are equal, which is a property EEE does not have.
+  - q: >-
+        Why did NIST retire it?
+    a: >-
+        Because 112 bits is below the 128-bit floor everything else moved to, and because a 64-bit block leaks after a few gigabytes of ciphertext under one key (the sweet32 attack). AES has a 128-bit block and no such birthday.
+references:
+  - label: >-
+        NIST SP 800-67 Rev. 2 — Triple DES
+    url: https://csrc.nist.gov/publications/detail/sp/800-67/rev-2/final
+---
+
+## Triple DES
+
+DES, three times, in encrypt-decrypt-encrypt order. The middle decrypt is not a
+mistake: it is what makes a three-key encryption with K1 = K2 = K3 equal to
+single DES, so a Triple-DES implementation can talk to a DES implementation by
+repeating the key. That backwards-compatibility trick is also why two-key
+Triple DES (K3 = K1) exists.
+
+The block is still 8 bytes. The birthday bound on a 64-bit block is what
+sweet32 exploited in TLS: after 32 GB or so of ciphertext under one key,
+collisions appear and the plaintext leaks. AES does not have this problem. This
+page does not make it less true.
+
+Use it to produce a test vector, or to match a payment terminal that has not
+been updated. Do not use it to protect anything whose loss you would notice.

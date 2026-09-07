@@ -13,9 +13,10 @@ visitor's browser. No backend, no uploads, no accounts.
 - **Svelte islands.** A handful of generic widgets serve the whole catalogue: one
   `TextHash` component backs every text hashing tool, one `XofHash` backs all sixteen
   SP 800-185 functions, one `KdfTool` backs every key-derivation page in both directions,
-  and one `Codec` backs all twelve encoding pages — the controls each page shows come from
-  a table, so there is no per-algorithm branch in the component. Pages with no widget — the
-  home page, category pages — ship no JavaScript at all.
+  one `Codec` backs all twelve encoding pages, one `SymmetricCipher` backs all sixteen
+  cipher pages, and one `AsymmetricTool` backs RSA and ECDSA. The controls each page
+  shows come from a table, so there is no per-algorithm branch in the component. Pages
+  with no widget — the home page, category pages — ship no JavaScript at all.
 - **Files are read a chunk at a time.** Checksums, encodings and hex dumps go through
   `src/lib/file.ts`, which slices a file and hands over a few megabytes at a time: a
   multi-gigabyte file is processed with one chunk resident, and a hex dump is read one
@@ -33,18 +34,21 @@ visitor's browser. No backend, no uploads, no accounts.
 
 Cryptographic correctness is not something to eyeball, so it is checked several ways:
 
-- **Published vectors** — RFCs 1321, 3174, 2202, 4231, 5869, 6070, 7693, 7914, 8018 and
-  9106; FIPS 180-4 and FIPS 202; the NIST SP 800-185 samples; the BLAKE3 team's own
-  vectors; the bcrypt suite that ships with OpenBSD; §10 of RFC 4648 for the base codecs;
-  Appendix A of RFC 8949, in full, for CBOR; and §A.1 of RFC 7515 for JWS.
+- **Published vectors** — RFCs 1321, 3174, 2202, 4231, 5869, 6070, 6229, 7693, 7914,
+  8018, 8439 and 9106; FIPS 180-4, FIPS 202 and FIPS 46-3; NIST SP 800-38A, 800-38D
+  and 800-185; the BLAKE3 team's own vectors; the bcrypt suite that ships with
+  OpenBSD; §10 of RFC 4648 for the base codecs; Appendix A of RFC 8949, in full,
+  for CBOR; §A.1 of RFC 7515 for JWS; and the SPECK-128 vectors in Beaulieu et al.
 - **Parity with independent implementations** — every algorithm OpenSSL implements is
   compared against it through `node:crypto` or the command line, across lengths chosen to
   sit on the block boundaries where padding bugs live. Where OpenSSL falls short, Bouncy
   Castle and the Rust-backed Python `bcrypt` module take over; for encoding, the platform
   itself is the oracle — `Buffer`, `encodeURIComponent`, `encodeURI`, `URLSearchParams`,
   `hexdump -C` where it is installed, and `node:crypto` signing the tokens the JWT page has
-  to verify and reject. Algorithms with no cross-check are listed explicitly in
-  `test/parity.test.ts`, so adding one silently fails the suite.
+  to verify and reject. Ciphers OpenSSL implements (AES, DES, 3DES, ChaCha20) go
+  through `node:crypto` the same way; GCM is also checked against `crypto.subtle`.
+  Algorithms with no cross-check are listed explicitly in `test/parity.test.ts`
+  and `test/cipher-parity.test.ts`, so adding one silently fails the suite.
 - **Re-derivation from the specification** — TupleHash and ParallelHash are rebuilt inside
   the tests from the text of SP 800-185, on top of OpenSSL's SHAKE, across parameter
   combinations no vector table covers. This is the layer that settled a disagreement
@@ -53,10 +57,10 @@ Cryptographic correctness is not something to eyeball, so it is checked several 
   divergence is recorded in `test/vectors/sp800-185.ts`. The same idea, smaller, checks the
   Base32 alphabets — transcribed from RFC 4648 and Crockford's page, with each five-bit
   group computed in the test — and the Base58Check checksum, recomputed with SHA-256.
-- **Constants derived, not transcribed** — bcrypt is the one algorithm here written from
-  the specification, because no browser has Blowfish. Its 1042-word initial state is the
-  hexadecimal fraction of pi, and the test suite recomputes pi with Machin's formula and
-  checks every word rather than trusting a careful copy.
+- **Constants derived, not transcribed** — bcrypt's 1042-word initial state is the
+  hexadecimal fraction of pi; XXTEA's round constant is floor(2^32 / φ). The test
+  suite recomputes both rather than trusting a careful copy. DES S-boxes have no
+  formula, so they are transcribed from FIPS 46-3 and checked against OpenSSL.
 - **Widget behaviour** — the components are mounted in jsdom and driven the way a person
   drives them, which covers the wiring the algorithm tests cannot see: recomputation on
   option changes, decode errors surfacing instead of stale results, and the guard that

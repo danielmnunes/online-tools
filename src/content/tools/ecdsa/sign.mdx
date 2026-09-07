@@ -1,0 +1,29 @@
+---
+description: >-
+    Sign bytes with ECDSA. The signature is r and s concatenated (IEEE P1363), which is what JWT and Web Crypto use — not DER.
+faq:
+  - q: >-
+        Why is this not DER?
+    a: >-
+        Because the Web Crypto API and JWS both write ECDSA signatures as r and s concatenated at a fixed width (32 bytes each on P-256, 48 on P-384, 66 on P-521). OpenSSL and `node:crypto` default to a DER SEQUENCE. The usual interop bug is wrapping what was already raw, or unwrapping what was already DER. This page produces raw.
+  - q: >-
+        Which hash with which curve?
+    a: >-
+        Pair them: SHA-256 with P-256, SHA-384 with P-384, SHA-512 with P-521. Other combinations are defined and will run; they are not what JWT's ES256/384/512 mean.
+references:
+  - label: >-
+        FIPS 186-5 — Digital Signature Standard
+    url: https://csrc.nist.gov/publications/detail/fips/186/5/final
+  - label: >-
+        RFC 7515 §3.4 — ECDSA signature encoding
+    url: https://www.rfc-editor.org/rfc/rfc7515#section-3.4
+---
+
+## ECDSA signatures
+
+The private key, the message, the hash and the curve. The output is r || s,
+fixed width, no DER. That is the encoding the JWT page on this site verifies,
+and it is the encoding `crypto.subtle.sign` returns.
+
+A new signature over the same message is different every time: ECDSA needs a
+nonce, and the browser draws a fresh one. Both will verify. That is not a bug.

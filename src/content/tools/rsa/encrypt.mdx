@@ -1,0 +1,31 @@
+---
+description: >-
+    Encrypt with RSA-OAEP. PKCS#1 v1.5 encryption is not offered: it is deprecated, and the browser does not have it.
+faq:
+  - q: >-
+        Why won't it encrypt my file?
+    a: >-
+        RSA encrypts a small message, not a stream. OAEP with SHA-256 on a 2048-bit key allows 190 bytes. For anything larger, the usual construction is to encrypt a random AES key with RSA and the message with AES. This page will not pretend to do that in one box.
+  - q: >-
+        What about PKCS#1 v1.5 encryption?
+    a: >-
+        Not here. Web Crypto does not implement it, it is deprecated in RFC 8017, and Bleichenbacher's attack is why. Signatures still offer RSASSA-PKCS1-v1_5 because that is what existing tokens use. Encryption does not.
+  - q: >-
+        Which hash?
+    a: >-
+        SHA-256 unless the other side named another. The hash is part of OAEP; encrypting with SHA-256 and decrypting with SHA-1 fails. SHA-1 is offered only to talk to something that has not been updated.
+references:
+  - label: >-
+        RFC 8017 §7.1 — RSAES-OAEP
+    url: https://www.rfc-editor.org/rfc/rfc8017#section-7.1
+---
+
+## RSA-OAEP
+
+The public-key encryption the browser actually has. OAEP pads the message with
+a hash-based mask, then applies the RSA permutation. The output is one modulus
+wide: 256 bytes for a 2048-bit key, always.
+
+Paste a SubjectPublicKeyInfo PEM (`BEGIN PUBLIC KEY`) or a JWK. PKCS#1
+(`BEGIN RSA PUBLIC KEY`) is refused with the openssl command that converts it,
+because Web Crypto cannot import that form.

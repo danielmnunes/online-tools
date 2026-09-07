@@ -22,7 +22,7 @@ utilizador** — e onde essa afirmação é verificável abrindo o separador de 
 ### Objetivos
 
 1. Cobertura funcional próxima da do site de referência (~188 ferramentas). As categorias
-   Hash, XOF/MAC, KDF e Encoding fecham com exclusões deliberadas listadas em §5.
+   Hash, XOF/MAC, KDF, Encoding e Cryptography fecham com exclusões deliberadas listadas em §5.
 2. Processamento 100% client-side, sem exceções.
 3. Cada ferramenta num URL próprio, com HTML estático real — o tráfego desta categoria vem
    de pesquisa orgânica ("md5 online", "base64 decode").
@@ -59,7 +59,7 @@ protegidos por direitos de autor. Todo o código, design e conteúdo é escrito 
 | Ilhas interativas | **Svelte 5** (runes) | Runtime mínimo; ~2x menor que React para o mesmo widget |
 | Estilos | **Tailwind CSS 4** (`@tailwindcss/vite`) | Sem CSS runtime; dark mode por classe |
 | Conteúdo SEO | **MDX + Content Collections** (schema Zod) | Prosa e FAQ versionados e validados no build |
-| Criptografia | **@noble/hashes** e, onde faltar, implementação própria | Ver §5 |
+| Criptografia | **@noble/hashes**, **@noble/ciphers**, Web Crypto, e implementação própria em `legacy/` | Ver §5 |
 | Codificação | **@scure/base** (base16/32/58/64) e **cbor2** (RFC 8949) | Auditados, sem dependências, um módulo por função; ver §5.3 |
 | Trabalho pesado | **Web Workers** com um pool próprio (`src/lib/worker/`) | Argon2 e bcrypt bloqueiam a UI thread durante segundos |
 | Linguagem | TypeScript `strict` | O registry só funciona se for tipado |
@@ -251,6 +251,41 @@ descarregar nada, e a única direção que precisa mesmo de tabelas — codifica
 legado — não tem procura que justifique trinta tabelas transcritas, que é a maior fonte de erro
 de cópia que existe.
 
+### 5.4 Âmbito da categoria Cryptography
+
+A categoria fecha em **8 cifras e 24 páginas**: AES, DES, Triple DES, RC4, ChaCha20,
+ChaCha20-Poly1305, SPECK-128 e XXTEA (encrypt e decrypt), mais RSA
+(keygen / encrypt / decrypt / sign / verify) e ECDSA (keygen / sign / verify).
+
+AES vem do `@noble/ciphers` em todos os modos, incluindo os que a Web Crypto não tem
+(ECB, CFB) e os que tem (CBC, CTR, GCM) — uma biblioteca, padding nosso, e paridade
+com o OpenSSL e com `crypto.subtle` no GCM. ChaCha20 e ChaCha20-Poly1305 também: a
+Web Crypto não os expõe. RSA e ECDSA são só Web Crypto, porque gerar RSA à mão é
+como nascem o PKCS#1 v1.5 encryption e a mistura DER/raw no ECDSA.
+
+DES, Triple DES, RC4, SPECK-128 e XXTEA são implementação própria em
+`src/lib/algo/legacy/`. O precedente é o bcrypt: constantes derivadas quando há
+fórmula (o delta do XXTEA é floor(2^32 / φ)), transcritas e verificadas quando não
+há (as S-boxes do DES não se geram). SPECK e RC4 têm vetores oficiais; o DES e o
+Triple DES batem com o OpenSSL.
+
+**Fora de âmbito, por decisão:**
+
+- **PKCS#1 v1.5 encryption.** A Web Crypto não o tem, está deprecated no RFC 8017, e
+  o ataque de Bleichenbacher é o motivo. As assinaturas RSASSA-PKCS1-v1_5 ficam,
+  porque são o que os JWT e muita coisa existente usam.
+- **ECIES / ECDSA encrypt.** ECDSA não cifra. Uma página que fingisse o contrário
+  seria outra construção.
+- **Páginas de ficheiro.** Cifrar um ficheiro de gigabytes é um produto diferente
+  (cabeçalho, nonce, retomável). Uma textarea não é isso.
+- **XChaCha20, Blowfish, Camellia, SM4, Rabbit, RC5.** Fora da lista do §8.
+- **SPECK de bloco 64 bits.** Rotação e round count diferentes; "SPECK online" é
+  SPECK-128.
+
+Se a decisão for revertida, o caminho é o de sempre: entrada na tabela de
+`ciphers.ts` ou `asymmetric.ts`, módulo em `impl/`, MDX, e registo em
+`VERIFIED_ELSEWHERE`.
+
 ---
 
 ## 6. Verificação
@@ -260,7 +295,9 @@ Correção criptográfica não se verifica a olho. Três camadas independentes:
 1. **Vetores publicados** — RFC 1321, 3174, 2202, 4231, 5869, 6070, 7693, 7914, 8018, 9106;
    FIPS 180-4, FIPS 202; SP 800-185; os vetores oficiais da equipa BLAKE3; os vetores do
    bcrypt distribuídos com o OpenBSD; a §10 da RFC 4648 (Base16/32/64), o Apêndice A da
-   RFC 8949 (CBOR, na íntegra) e a §A.1 da RFC 7515 (JWS).
+   RFC 8949 (CBOR, na íntegra) e a §A.1 da RFC 7515 (JWS); NIST SP 800-38A (AES),
+   SP 800-38D (GCM); RFC 8439 (ChaCha20-Poly1305); RFC 6229 (RC4); o vetor FIPS 46-3
+   do DES; os vetores oficiais SPECK-128 de Beaulieu et al.
 2. **Paridade com implementações independentes.** O OpenSSL, através do `node:crypto` e da
    linha de comandos, é o oráculo principal — não partilha código com o noble. Onde não chega,
    entram o Bouncy Castle 1.83 (SP 800-185, Argon2, bcrypt) e o módulo `bcrypt` do Python. Para
@@ -322,7 +359,7 @@ Correção criptográfica não se verifica a olho. Três camadas independentes:
 | **Format** | JSON validator/minifier/formatter/viewer/compare, XML validator/minifier/formatter, text compare, syntax highlight |
 | **Convert** | 7 conversores de case, time converter |
 
-| **Cryptography** | AES, DES, Triple DES, RC4, ChaCha20, ChaCha20-Poly1305, SPECK, XXTEA (encrypt/decrypt); ECDSA e RSA (keygen/sign/verify/encrypt/decrypt) |
+| **Cryptography** | AES, DES, Triple DES, RC4, ChaCha20, ChaCha20-Poly1305, SPECK, XXTEA (encrypt/decrypt); RSA (keygen/encrypt/decrypt/sign/verify) e ECDSA (keygen/sign/verify). **Entregue.** Exclusões em §5.4 |
 | **Compression** | GZIP, DEFLATE, Brotli, Zstandard, XZ, LZIP, LZMA (compress/decompress e create/extract), ZIP, TAR |
 | **Generator** | UUID v1/v3/v4/v5/v6/v7, gerador de passwords, QR code generator e scanner |
 

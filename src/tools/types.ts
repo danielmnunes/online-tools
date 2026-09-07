@@ -1,7 +1,9 @@
+import type { AsymmetricId, AsymmetricOp } from '~/lib/algo/asymmetric';
+import type { CipherDirection, CipherId } from '~/lib/algo/ciphers';
+import type { CodecDirection, CodecId } from '~/lib/algo/codecs';
 import type { HashId } from '~/lib/algo/hashes';
 import type { KdfId } from '~/lib/algo/kdfs';
 import type { XofId } from '~/lib/algo/xofs';
-import type { CodecDirection, CodecId } from '~/lib/algo/codecs';
 
 export type ToolCategory =
   | 'hash'
@@ -105,6 +107,14 @@ export type Tool = ToolBase &
     | { readonly widget: 'cbor'; readonly config: Record<string, never> }
     | { readonly widget: 'jwt'; readonly config: Record<string, never> }
     | { readonly widget: 'url-parser'; readonly config: Record<string, never> }
+    | {
+        readonly widget: 'symmetric-cipher';
+        readonly config: { readonly algorithm: CipherId; readonly direction: CipherDirection };
+      }
+    | {
+        readonly widget: 'asymmetric';
+        readonly config: { readonly algorithm: AsymmetricId; readonly operation: AsymmetricOp };
+      }
   );
 
 export type WidgetKind = Tool['widget'];

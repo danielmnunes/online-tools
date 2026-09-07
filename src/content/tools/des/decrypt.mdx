@@ -1,0 +1,33 @@
+---
+description: >-
+    Decrypt DES ciphertext in CBC or ECB. 8-byte key, 8-byte block. Use this to read old data, not to protect new data.
+faq:
+  - q: >-
+        The output is garbage. Is my key wrong?
+    a: >-
+        Often, yes — or the mode, or the IV, or the ciphertext was already decoded once. DES has no authentication, so a wrong key still produces 8-byte blocks. Switch the output to hex and see whether you recognise anything. If you do not, the key is not the one that encrypted this.
+  - q: >-
+        Does this handle parity bits?
+    a: >-
+        They are ignored, as the algorithm specifies. Paste the 8-byte key as you have it.
+  - q: >-
+        Single DES or Triple DES?
+    a: >-
+        If the key is 8 bytes, this page. If it is 16 or 24, the Triple DES page. A 16-byte key used here is truncated in nobody's favour: it is rejected.
+references:
+  - label: >-
+        FIPS 46-3 — Data Encryption Standard
+    url: https://csrc.nist.gov/publications/detail/fips/46/3/archive/1999-10-25
+---
+
+## Reading DES
+
+The inverse of the encrypt page. CBC needs the IV that was used to encrypt;
+ECB needs nothing but the key. There is no tag to check, which is the other
+half of why DES is not used for anything that matters: you will always get
+bytes out, and only you can tell whether they are the message.
+
+If the plaintext was PKCS#7 padded, leave padding on PKCS#7 and a wrong key
+will often throw. That is a hint, not a proof, and it is the shape of a padding
+oracle. For a one-shot decryption of a blob you already have, it is merely
+convenient.

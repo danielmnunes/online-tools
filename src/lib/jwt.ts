@@ -19,6 +19,9 @@
  */
 import { base64urlnopad } from '@scure/base';
 import { DecodeError } from './encoding';
+import { pemToDer } from './pem';
+
+export { pemToDer } from './pem';
 
 export interface JwtHeader {
   readonly alg?: string;
@@ -365,41 +368,4 @@ async function importKey(
   }
 
   return crypto.subtle.importKey('spki', pemToDer(material), params, false, ['verify']);
-}
-
-/**
- * The DER bytes out of a PEM block.
- *
- * Only the SubjectPublicKeyInfo form is accepted, which is what
- * -----BEGIN PUBLIC KEY----- wraps. The PKCS#1 form
- * (-----BEGIN RSA PUBLIC KEY-----) is a different structure and is much rarer
- * in this setting, so it is refused with the command that converts it rather
- * than parsed into something Web Crypto cannot import.
- */
-export function pemToDer(pem: string): Uint8Array<ArrayBuffer> {
-  const match =
-    /-----BEGIN ([A-Z0-9 ]+)-----([\s\S]*?)-----END \1-----/.exec(pem.trim());
-  if (match === null) {
-    throw new Error(
-      'that is not a PEM block. It has to start with -----BEGIN PUBLIC KEY----- and end with -----END PUBLIC KEY-----.',
-    );
-  }
-  const [, label = '', body = ''] = match;
-  if (label.includes('RSA PUBLIC KEY')) {
-    throw new Error(
-      'that is a PKCS#1 RSA public key. The browser wants the SubjectPublicKeyInfo form: ' +
-        'openssl rsa -RSAPublicKey_in -pubin -out public.pem',
-    );
-  }
-
-  const base64 = body.replace(/\s+/g, '');
-  let binary: string;
-  try {
-    binary = atob(base64.replace(/-/g, '+').replace(/_/g, '/'));
-  } catch {
-    throw new Error('the base64 inside the PEM block does not decode.');
-  }
-  const out = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
-  return out;
 }

@@ -2,20 +2,20 @@
 
 Estado de execução do [PRD.md](PRD.md). `[x]` feito e verificado · `[ ]` por fazer.
 
-**Agora:** 100 ferramentas em produção, 1087 testes, CI a fazer deploy automático.
-**Alvo:** ~188 ferramentas. As categorias Hash, XOF/MAC, KDF e Encoding estão **fechadas**.
+**Agora:** 124 ferramentas, categorias Hash, XOF/MAC, KDF, Encoding e Cryptography **fechadas**.
+**Alvo:** ~188 ferramentas.
 
 ```
 Hash          ████████████████████  42 / 42  (âmbito fechado)
 XOF e MAC     ████████████████████  23 / 23  (âmbito fechado)
 KDF           ████████████████████  12 / 12  (âmbito fechado)
 Encoding      ████████████████████  23 / 23  (âmbito fechado)
+Cryptography  ████████████████████  24 / 24  (âmbito fechado)
 Format+Conv   ░░░░░░░░░░░░░░░░░░░░   0 / 20
-Cryptography  ░░░░░░░░░░░░░░░░░░░░   0 / 26
 Compression   ░░░░░░░░░░░░░░░░░░░░   0 / 30
 Generator     ░░░░░░░░░░░░░░░░░░░░   0 / 9
                                      ─────────
-                                    100 / 188
+                                    124 / 188
 ```
 
 ---
@@ -234,13 +234,48 @@ Ver [PRD §5.3](PRD.md).
 - [ ] Text compare, syntax highlight
 - [ ] `ConvertTool.svelte` — 7 conversores de case, time converter
 
-### Fase 5 — Criptografia (~26 páginas)
+### Fase 5 — Criptografia (24 páginas) — âmbito fechado
 
-- [ ] `SymmetricCipher.svelte` — modo, padding, IV, encoding de chave
-- [ ] AES, ChaCha20, ChaCha20-Poly1305 (Web Crypto + `@noble/ciphers`)
-- [ ] DES, Triple DES, RC4, SPECK, XXTEA — implementação própria, com vetores NIST
-- [ ] `AsymmetricTool.svelte` — RSA keygen/sign/verify/encrypt/decrypt, ECDSA keygen/sign/verify
-- [ ] Aviso claro de que gerar chaves privadas num browser tem implicações
+- [x] Tabela de cifras (`src/lib/algo/ciphers.ts`) — **8 cifras**, cada modo a declarar
+      IV, padding e AEAD; `SymmetricCipher.svelte` renderiza exactamente esses controlos
+- [x] `SymmetricCipher.svelte` — modo, padding, IV, encoding de chave, AAD onde cabe
+- [x] AES (CBC, GCM, CTR, CFB, ECB) via `@noble/ciphers`; GCM e CBC conferidos contra
+      OpenSSL e o GCM contra a Web Crypto
+- [x] ChaCha20 e ChaCha20-Poly1305 via `@noble/ciphers` (a Web Crypto não os tem)
+- [x] DES, Triple DES, RC4, SPECK-128, XXTEA — implementação própria, com vetores
+      NIST / RFC / Beaulieu e, no DES/3DES, paridade OpenSSL
+- [x] `AsymmetricTool.svelte` — RSA keygen/sign/verify/encrypt/decrypt, ECDSA
+      keygen/sign/verify, via Web Crypto
+- [x] Aviso claro de que gerar chaves privadas num browser tem implicações
+- [x] 24 ficheiros MDX escritos de raiz, cada um com ângulo próprio, FAQ e referências
+
+Cifras entregues: `aes` `des` `triple-des` `rc4` `chacha20` `chacha20-poly1305` `speck` `xxtea`
+(encrypt e decrypt). RSA: `keygen` `encrypt` `decrypt` `sign` `verify`. ECDSA: `keygen`
+`sign` `verify`.
+
+**Fora de âmbito, por decisão:** PKCS#1 v1.5 encryption, ECIES, páginas de ficheiro,
+XChaCha20, Blowfish, e SPECK de bloco 64 bits. Ver [PRD §5.4](PRD.md).
+
+### Verificação da Fase 5
+
+- [x] AES: NIST SP 800-38A (ECB, CBC, CTR) e SP 800-38D (GCM); paridade OpenSSL em CBC
+      e GCM; GCM ainda contra `crypto.subtle.decrypt`
+- [x] ChaCha20-Poly1305: o vetor da RFC 8439 §2.8.2, tag no fim; tag adulterada rejeitada
+- [x] DES: o vetor FIPS 46-3 e OpenSSL; Triple DES two-key e three-key contra OpenSSL
+- [x] RC4: RFC 6229 vectores 1 e 3
+- [x] SPECK-128/128, /192 e /256 contra os vetores de Beaulieu et al.
+- [x] XXTEA: delta derivado de φ, MX re-derivado no teste
+- [x] RSA-OAEP round-trip, RSASSA-PKCS1-v1_5 verificado pelo `node:crypto`, ECDSA P-256
+      em IEEE P1363 (64 bytes), bit virado a falhar
+- [x] Guardas do registry: páginas por cifra e direção, RSA/ECDSA só nas operações da
+      tabela, catálogo a 124
+- [x] Testes de componente para os dois widgets novos
+- [x] **1152 testes**, `astro check` com 0 erros / 0 avisos / 0 hints
+- [x] **Verificação em Chrome contra o build de produção**: o vetor NIST SP 800-38A
+      F.1.1 (ECB-AES128) sai `3ad77bb40d7a3660a89ecaf32466ef97` no browser; o vetor da
+      RFC 8439 §2.8.2 no ChaCha20-Poly1305 inclui a tag no fim; o aviso do DES está
+      visível; o RSA keygen mostra o aviso de chave privada no tab e, ao gerar, PEM
+      PKCS#8 (`BEGIN PRIVATE KEY`) e SPKI (`BEGIN PUBLIC KEY`)
 
 ### Fase 6 — Compressão e arquivos (~30 páginas)
 

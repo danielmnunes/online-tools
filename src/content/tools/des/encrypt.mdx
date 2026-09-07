@@ -1,0 +1,44 @@
+---
+description: >-
+    Encrypt with DES in CBC or ECB. A 56-bit key, broken since 1998, kept so existing ciphertext can still be produced for tests.
+faq:
+  - q: >-
+        Should I use DES for anything new?
+    a: >-
+        No. The key is 56 bits. The Electronic Frontier Foundation's DES Cracker exhausted that space in 56 hours in 1998, on hardware that now fits in a pocket. This page exists because DES ciphertext still turns up, and because test suites still need a DES oracle.
+  - q: >-
+        Why is the key 8 bytes if DES is 56 bits?
+    a: >-
+        Each byte stores 7 key bits and 1 parity bit. The parity bits are ignored by the algorithm and by this page. Two keys that differ only in parity encrypt identically.
+  - q: >-
+        What about triple DES?
+    a: >-
+        That is a different page. Triple DES applies this cipher three times with two or three keys, which is how DES survived in payment systems after 56 bits became a joke. NIST retired even that in 2023.
+references:
+  - label: >-
+        FIPS 46-3 — Data Encryption Standard
+    url: https://csrc.nist.gov/publications/detail/fips/46/3/archive/1999-10-25
+  - label: >-
+        FIPS 81 — DES Modes of Operation
+    url: https://csrc.nist.gov/publications/detail/fips/81/archive/1980-12-02
+---
+
+## DES, as a historical object
+
+An 8-byte block, a 56-bit key, 16 Feistel rounds. IBM designed it, the NSA
+adjusted the S-boxes, NBS published it in 1977, and for two decades it was the
+default way a computer encrypted anything.
+
+The S-boxes have no generating formula. They are tables. This implementation
+transcribes them from FIPS 46-3 and checks them against the textbook vector
+(key `13 34 57 79 9B BC DF F1`, block `01 23 45 67 89 AB CD EF` →
+`85 E8 13 54 0F 0A B4 05`) and against OpenSSL, which shares no code with this
+page. That is the same standard this site used for bcrypt: if a constant cannot
+be derived, it is verified instead.
+
+## Why it is here
+
+Not because 56 bits is enough. Because a page that claims to be a catalogue of
+ciphers and quietly omits the one that ran the world for twenty years is a
+catalogue of fashion, and because the ciphertext is still out there. Decrypt
+it, migrate it, do not produce more of it for any reason other than a test.

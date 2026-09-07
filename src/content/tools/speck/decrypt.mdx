@@ -1,0 +1,18 @@
+---
+description: >-
+    Decrypt SPECK-128 ciphertext in CBC or ECB. 16-byte blocks; keys of 16, 24 or 32 bytes.
+faq:
+  - q: >-
+        It decrypted to bytes I do not recognise.
+    a: >-
+        Wrong key, wrong mode, or the ciphertext was produced by a 64-bit-block SPECK. This page only does SPECK-128. There is no tag, so a wrong key still yields 16-byte blocks.
+references:
+  - label: >-
+        Beaulieu et al. — The SIMON and SPECK Families of Lightweight Block Ciphers
+    url: https://eprint.iacr.org/2013/404
+---
+
+## Decrypting SPECK-128
+
+The inverse of the encrypt page. CBC needs the 16-byte IV. The block is 16
+bytes; PKCS#7 is the default padding. Nothing is authenticated.

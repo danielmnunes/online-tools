@@ -1,0 +1,25 @@
+---
+description: >-
+    Sign bytes with RSA: RSASSA-PKCS1-v1_5 or RSA-PSS, using a PKCS#8 private key. Output is r-sized, one modulus wide.
+faq:
+  - q: >-
+        PKCS#1 or PSS?
+    a: >-
+        PSS is the better construction (random salt, proven in the random-oracle model). PKCS#1 v1.5 is what JWTs, many TLS certificates historically, and a great deal of existing data use. If you are signing something new that you control both ends of, prefer PSS. If you are matching a verifier, use what it asks for.
+  - q: >-
+        Is the message hashed first?
+    a: >-
+        Yes, inside the signature scheme, with the hash you pick. You do not pre-hash unless the protocol says the signature is over a digest you already have — in which case paste that digest as hex.
+references:
+  - label: >-
+        RFC 8017 §8 — Signature schemes
+    url: https://www.rfc-editor.org/rfc/rfc8017#section-8
+---
+
+## RSA signatures
+
+RSASSA-PKCS1-v1_5 or RSA-PSS, computed by the Web Crypto API. The private key
+is PKCS#8 or a JWK. The output is one modulus wide and is not DER-wrapped.
+
+PSS uses a salt the length of the hash, which is what RFC 8017 and JWA agree
+on. A verifier that expects a different salt length will reject a correct key.

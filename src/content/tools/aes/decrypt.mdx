@@ -1,0 +1,56 @@
+---
+description: >-
+    Decrypt AES ciphertext in CBC, GCM, CTR, CFB or ECB. The last 16 bytes of GCM are the tag.
+faq:
+  - q: >-
+        Decrypt failed. What actually went wrong?
+    a: >-
+        For GCM, almost always the tag: the key, nonce, associated data or ciphertext does not match, and the page refuses rather than returning garbage. For CBC, a padding error usually means the key or the IV is wrong, or the ciphertext was truncated. "Not valid UTF-8" means the bytes came out and they are not text — switch the output to hex.
+  - q: >-
+        My GCM tag is a separate field.
+    a: >-
+        Concatenate it onto the end of the ciphertext. That is the shape Web Crypto, noble and this page use. OpenSSL's `enc -aes-256-gcm` writes the tag separately because of a historical accident; the bytes are the same.
+  - q: >-
+        Why does the IV have to be the same one that encrypted?
+    a: >-
+        Because the IV is not a second key, it is part of the ciphertext. Losing it is losing the message. CBC needs the original IV to undo the first XOR; GCM and CTR need the original nonce to regenerate the keystream. An IV is not secret. It has to be unique.
+  - q: >-
+        Can I decrypt if I do not know the mode?
+    a: >-
+        Not reliably. The same key and IV under two modes produce two different plaintexts, and only one of them is the message. If you have a protocol spec it names the mode. If you do not, CBC-PKCS#7 is the historical default and GCM is the modern one.
+references:
+  - label: >-
+        FIPS 197 — Advanced Encryption Standard
+    url: https://csrc.nist.gov/publications/detail/fips/197/final
+  - label: >-
+        NIST SP 800-38D — GCM
+    url: https://csrc.nist.gov/publications/detail/sp/800-38d/final
+---
+
+## Decrypting AES
+
+The inverse of the encrypt page, with the same modes, the same key sizes and the
+same rule that nothing is sent anywhere. What changes is the failure mode:
+encryption of well-formed inputs always produces bytes, decryption of a wrong
+key produces either a padding error, an authentication failure, or bytes that
+are not the message.
+
+GCM is the honest one. A wrong key, a wrong nonce, a wrong associated-data
+string or a flipped bit all look the same: the tag does not verify, and nothing
+is returned. That is the point of authenticated encryption.
+
+CBC with PKCS#7 is the dishonest one. A wrong key often fails padding, which
+sounds useful and is how padding oracles work. Do not treat a padding error as
+proof of a wrong key in a protocol; treat it as "this did not decrypt" and
+authenticate the ciphertext with something else.
+
+## What to paste
+
+- **Ciphertext** in hex or Base64, which is how it usually arrives.
+- **Key** of 16, 24 or 32 bytes.
+- **IV / nonce** of 16 bytes for CBC, CTR and CFB, or 12 bytes for GCM.
+- **Associated data** for GCM, exactly the bytes that were authenticated, which
+  may be empty.
+
+The output is bytes. If they are UTF-8 text they will show as text; if they are
+not, the page says so instead of drawing a row of replacement characters.

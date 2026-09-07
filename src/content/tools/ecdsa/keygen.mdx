@@ -1,0 +1,24 @@
+---
+description: >-
+    Generate an ECDSA key pair on P-256, P-384 or P-521, in this browser. PKCS#8 and SPKI, or JWK. Not for long-term identities.
+faq:
+  - q: >-
+        Which curve?
+    a: >-
+        P-256 is the default and is what ES256 in JWT means. P-384 is ES384. P-521 is ES512 — there is no P-512, and the mismatch between "512" and 521 bits is the thing people trip over. The page names the curves the way the Web Crypto API names them.
+  - q: >-
+        Is a key generated here a production key?
+    a: >-
+        No. Same warning as RSA keygen: the entropy is the browser's, the privacy is this tab's. Generate long-term keys on the machine that will hold them.
+references:
+  - label: >-
+        FIPS 186-5 — Digital Signature Standard
+    url: https://csrc.nist.gov/publications/detail/fips/186/5/final
+---
+
+## Generating ECDSA keys
+
+A P-256, P-384 or P-521 key pair from the Web Crypto API. Private key as
+PKCS#8 PEM or JWK; public key as SPKI PEM or JWK. SEC1 (`BEGIN EC PRIVATE
+KEY`) is not emitted and is not accepted on the sign page — convert it to
+PKCS#8 if that is what you have.

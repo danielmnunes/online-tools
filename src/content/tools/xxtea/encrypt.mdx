@@ -1,0 +1,35 @@
+---
+description: >-
+    Encrypt with XXTEA (Corrected Block TEA). A 16-byte key and a message of at least eight bytes, padded.
+faq:
+  - q: >-
+        Is this TEA, XTEA or XXTEA?
+    a: >-
+        XXTEA, the 1998 "Corrected Block TEA" of Needham and Wheeler, with the 2010 correction of the original C. TEA is a 64-bit-block cipher with a different round. XTEA is the 1997 fix of TEA. They do not decrypt each other's output.
+  - q: >-
+        Why at least eight bytes?
+    a: >-
+        The algorithm runs on n 32-bit words, n ≥ 2. PKCS#7 padding to 8-byte blocks is how a shorter message gets there. An empty input becomes eight bytes of `0x08`.
+  - q: >-
+        Where does 0x9e3779b9 come from?
+    a: >-
+        It is floor(2^32 / φ), the golden-ratio constant TEA used so the round keys would not look like they hid a trapdoor. This implementation derives it from √5 rather than transcribing it, and the test suite recomputes the same floor.
+references:
+  - label: >-
+        Needham and Wheeler — Correction to XTEA
+    url: https://www.movable-type.co.uk/scripts/xxtea.pdf
+---
+
+## XXTEA
+
+A whole-message block cipher: the input is treated as an array of 32-bit
+little-endian words and mixed for 6 + 52/n rounds under a 128-bit key. There
+is no IV and no mode in the AES sense — the "block" is the message.
+
+The MX mixing step is a handful of shifts. It is re-derived in the tests from
+the 2010 correction of `btea()`, so a transcription error is a disagreement
+with that copy, not a silent agreement with itself.
+
+XXTEA is not a modern AEAD. It is here because it still turns up in firmware
+and in small network protocols, and because a page that can round-trip a
+vector is how you confirm you are looking at XXTEA and not XTEA.

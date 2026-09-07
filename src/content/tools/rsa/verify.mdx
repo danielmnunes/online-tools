@@ -1,0 +1,24 @@
+---
+description: >-
+    Verify an RSA signature against a public key. RSASSA-PKCS1-v1_5 or RSA-PSS; the result is yes or no, not a recovered message.
+faq:
+  - q: >-
+        It does not verify with the right key.
+    a: >-
+        The usual causes are the wrong padding (PSS versus PKCS#1), the wrong hash, or a signature that was DER-wrapped. This page wants the raw modulus-wide value, which is what Web Crypto and JWS produce. OpenSSL's default `dgst -sign` for RSA is that value; for ECDSA it is DER, which is a different page's problem.
+  - q: >-
+        Does a valid signature mean the message is true?
+    a: >-
+        It means this public key signed these bytes. Whether you trust the key is a different question, and this page does not answer it.
+references:
+  - label: >-
+        RFC 8017 §8 — Signature schemes
+    url: https://www.rfc-editor.org/rfc/rfc8017#section-8
+---
+
+## Verifying RSA
+
+Paste the public key, the message, the signature, the hash and the padding.
+The answer is whether that key signed those bytes under that scheme. A failed
+verification is the expected result for a changed message or a different key,
+not an error in the page.

@@ -12,6 +12,8 @@ import { describe, expect, it } from 'vitest';
 import { TOOLS, getTool, populatedCategories, relatedTools, toolsInCategory } from '~/tools/registry';
 import { CATEGORIES, type Tool } from '~/tools/types';
 import { CODECS, CODEC_IDS, codecFileSlug, codecSlug, isCodecId } from '~/lib/algo/codecs';
+import { CIPHER_IDS, cipherSlug, isCipherId } from '~/lib/algo/ciphers';
+import { ASYMMETRIC, ASYMMETRIC_IDS, asymmetricSlug, isAsymmetricId } from '~/lib/algo/asymmetric';
 import { HASHES, isHashId } from '~/lib/algo/hashes';
 import { XOFS, XOF_FILE_IDS, XOF_IDS, isXofId } from '~/lib/algo/xofs';
 import { KDFS, KDF_IDS, isKdfId } from '~/lib/algo/kdfs';
@@ -91,6 +93,12 @@ describe('widget configuration', () => {
         case 'codec':
         case 'file-codec':
           expect(isCodecId(tool.config.codec), tool.slug).toBe(true);
+          break;
+        case 'symmetric-cipher':
+          expect(isCipherId(tool.config.algorithm), tool.slug).toBe(true);
+          break;
+        case 'asymmetric':
+          expect(isAsymmetricId(tool.config.algorithm), tool.slug).toBe(true);
           break;
         case 'hmac':
         case 'cbor':
@@ -190,11 +198,41 @@ describe('coverage of the algorithm tables', () => {
     }
   });
 
-  it('has the catalogue size phase 3 set out to deliver', () => {
+  it('gives every cipher a page in each direction', () => {
+    const slugs = new Set(toolsInCategory('crypto').map((tool) => tool.slug));
+    for (const id of CIPHER_IDS) {
+      expect(slugs.has(cipherSlug(id, 'encrypt')), `${id}/encrypt`).toBe(true);
+      expect(slugs.has(cipherSlug(id, 'decrypt')), `${id}/decrypt`).toBe(true);
+    }
+  });
+
+  it('gives RSA and ECDSA only the operations their table lists', () => {
+    const slugs = new Set(toolsInCategory('crypto').map((tool) => tool.slug));
+    for (const id of ASYMMETRIC_IDS) {
+      for (const op of ASYMMETRIC[id].operations) {
+        expect(slugs.has(asymmetricSlug(id, op)), `${id}/${op}`).toBe(true);
+      }
+      expect(slugs.has(`${id}/encrypt`), `${id}/encrypt`).toBe(id === 'rsa');
+    }
+  });
+
+  it('gives a cipher page the other direction as its first related link', () => {
+    for (const tool of TOOLS) {
+      if (tool.widget !== 'symmetric-cipher') continue;
+      const other = cipherSlug(
+        tool.config.algorithm,
+        tool.config.direction === 'encrypt' ? 'decrypt' : 'encrypt',
+      );
+      expect(tool.related?.[0], tool.slug).toBe(other);
+    }
+  });
+
+  it('has the catalogue size phase 5 set out to deliver', () => {
     expect(toolsInCategory('hash')).toHaveLength(42);
     expect(toolsInCategory('xof')).toHaveLength(23);
     expect(toolsInCategory('kdf')).toHaveLength(12);
     expect(toolsInCategory('encoding')).toHaveLength(23);
-    expect(TOOLS).toHaveLength(100);
+    expect(toolsInCategory('crypto')).toHaveLength(24);
+    expect(TOOLS).toHaveLength(124);
   });
 });

@@ -1,0 +1,24 @@
+---
+description: >-
+    Decrypt RC4 ciphertext. XOR with the same keystream that encrypted it. No IV, no padding, no authentication.
+faq:
+  - q: >-
+        I get bytes back with the wrong key. Is that expected?
+    a: >-
+        Yes. RC4 has no padding and no tag. A wrong key is another keystream, and XOR still produces bytes. If the result is not the message, the key is not the key.
+  - q: >-
+        Drop-N / RC4-drop?
+    a: >-
+        Not on this page. Some implementations discard the first 768 or 3072 keystream bytes to skip the worst biases. If your ciphertext was produced that way, this page will not match. The RFC 6229 vectors, and OpenSSL's `rc4`, do not drop.
+references:
+  - label: >-
+        RFC 6229 — Test Vectors for RC4
+    url: https://www.rfc-editor.org/rfc/rfc6229
+---
+
+## Decrypting RC4
+
+XOR the ciphertext with the keystream of the key. That is the whole algorithm,
+and it is the same function the encrypt page runs. There is no IV to paste and
+no padding to get wrong. The only inputs are the key and the ciphertext, and
+the only way to know you have the right key is to recognise the plaintext.

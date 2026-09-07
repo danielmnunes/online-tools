@@ -1,0 +1,19 @@
+---
+description: >-
+    Decrypt XXTEA (Corrected Block TEA). 16-byte key; input at least 8 bytes and a multiple of 4 after decoding.
+faq:
+  - q: >-
+        Decrypt threw about length.
+    a: >-
+        XXTEA needs at least two 32-bit words. Ciphertext shorter than 8 bytes, or not a multiple of 4, cannot be this algorithm — or it was truncated. If padding was applied on encrypt, leave the same padding scheme on for decrypt.
+references:
+  - label: >-
+        Needham and Wheeler — Correction to XTEA
+    url: https://www.movable-type.co.uk/scripts/xxtea.pdf
+---
+
+## Decrypting XXTEA
+
+The inverse of the encrypt page. Words are little-endian, the key is 16 bytes,
+and there is no IV. A wrong key produces bytes of the same length; only the
+padding check, if you used PKCS#7, will sometimes refuse them.

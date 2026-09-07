@@ -1,0 +1,24 @@
+---
+description: >-
+    Verify an ECDSA signature against a public key. r and s concatenated, not DER. P-256, P-384 or P-521.
+faq:
+  - q: >-
+        OpenSSL says the signature is valid and this page does not.
+    a: >-
+        OpenSSL is almost certainly looking at DER. Convert: if you have a DER signature from `openssl dgst -sign`, it is a SEQUENCE of two INTEGERs, not the raw r || s this page wants. The JWT decoder on this site documents the same conversion, because JWS made the same choice.
+  - q: >-
+        The signature is the right length and still fails.
+    a: >-
+        Wrong curve, wrong hash, or the message bytes are not the bytes that were signed — a trailing newline is the usual culprit. Set the input encoding explicitly.
+references:
+  - label: >-
+        RFC 7515 §3.4 — ECDSA signature encoding
+    url: https://www.rfc-editor.org/rfc/rfc7515#section-3.4
+---
+
+## Verifying ECDSA
+
+Paste the public key, the message, the raw r || s signature, the hash and the
+curve. The answer is whether that key signed those bytes. There is no
+encryption on this algorithm: ECDSA does not encrypt, and a page that
+pretended otherwise would be ECIES, which is a different construction.

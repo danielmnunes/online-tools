@@ -1,0 +1,31 @@
+---
+description: >-
+    Decrypt Triple DES ciphertext. 16-byte keys are two-key EDE; 24-byte keys are three-key. Still an 8-byte block.
+faq:
+  - q: >-
+        I have a 24-byte key and it does not decrypt.
+    a: >-
+        Check the order. Triple DES keys are K1 then K2 then K3, each 8 bytes. Some libraries store them the other way around. If a 16-byte key works when you repeat the first 8 bytes at the end, you had two-key material in a three-key slot.
+  - q: >-
+        Does OpenSSL call this des-ede3?
+    a: >-
+        Yes. `des-ede3-cbc` is three-key CBC, `des-ede-cbc` is two-key. This page picks by the length of what you paste.
+  - q: >-
+        Can I tell two-key from three-key by looking at the ciphertext?
+    a: >-
+        No. The ciphertext does not encode the key length. The protocol does, or the key file does.
+references:
+  - label: >-
+        NIST SP 800-67 Rev. 2 — Triple DES
+    url: https://csrc.nist.gov/publications/detail/sp/800-67/rev-2/final
+---
+
+## Reading Triple DES
+
+The inverse of the encrypt page: EDE in reverse, DED. CBC needs the IV. There
+is no authentication, so a wrong key produces bytes that look like a message
+until you try to parse them.
+
+If you are here because a payment message or a Java `DESede` blob has to be
+read once, this will do it. If you are here to keep using Triple DES, the
+retirement date was 2023 and the block size was always the real problem.

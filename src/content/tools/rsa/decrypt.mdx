@@ -1,0 +1,23 @@
+---
+description: >-
+    Decrypt RSA-OAEP ciphertext with a PKCS#8 private key or a JWK. The hash has to match the one used to encrypt.
+faq:
+  - q: >-
+        Decryption failed.
+    a: >-
+        The hash, the key or the ciphertext does not match. OAEP does not have a friendly padding-oracle error; it just fails. Confirm the public key that encrypted this is the pair of the private key you pasted, and that the hash is the same one.
+  - q: >-
+        BEGIN RSA PRIVATE KEY is rejected.
+    a: >-
+        That is PKCS#1. Convert it: `openssl pkcs8 -topk8 -nocrypt -in key.pem`. The browser wants PKCS#8.
+references:
+  - label: >-
+        RFC 8017 §7.1 — RSAES-OAEP
+    url: https://www.rfc-editor.org/rfc/rfc8017#section-7.1
+---
+
+## Decrypting RSA-OAEP
+
+Paste the PKCS#8 private key, the ciphertext, and the OAEP hash that was used
+to encrypt. The result is the original message, at most a couple of hundred
+bytes. There is no streaming, and there is no PKCS#1 v1.5 mode.

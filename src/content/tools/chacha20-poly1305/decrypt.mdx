@@ -1,0 +1,24 @@
+---
+description: >-
+    Decrypt ChaCha20-Poly1305. The last 16 bytes must be the Poly1305 tag; a mismatch returns nothing, not garbage.
+faq:
+  - q: >-
+        Authentication failed. Which input is wrong?
+    a: >-
+        The page cannot tell. A tag is a yes or a no. Check the key, the nonce, the associated data and the ciphertext as a set. If the tag was stored separately, it has to be the last 16 bytes of what you paste.
+  - q: >-
+        The ciphertext is shorter than 16 bytes.
+    a: >-
+        Then it is not ChaCha20-Poly1305 as this page understands it. The tag is 16 bytes; a message of n bytes encrypts to n + 16.
+references:
+  - label: >-
+        RFC 8439 §2.8 — AEAD Construction
+    url: https://www.rfc-editor.org/rfc/rfc8439#section-2.8
+---
+
+## Decrypting ChaCha20-Poly1305
+
+Paste the ciphertext with the 16-byte tag on the end, the 32-byte key, the
+12-byte nonce, and any associated data that was authenticated. If the tag
+verifies, the plaintext is returned. If it does not, nothing is — not a
+partial message, not a padding error, not a guess.

@@ -1,0 +1,24 @@
+---
+description: >-
+    Decrypt IETF ChaCha20. 32-byte key, 12-byte nonce. The same XOR as encryption; a wrong nonce is another keystream.
+faq:
+  - q: >-
+        Decrypt produced bytes that are not the message.
+    a: >-
+        Wrong key or wrong nonce, and there is no tag to say so. ChaCha20 will always return bytes the length of the ciphertext. If you need to know they were not altered, that is ChaCha20-Poly1305.
+  - q: >-
+        My nonce is 16 bytes.
+    a: >-
+        OpenSSL's `chacha20` takes a 16-byte IV: a 4-byte little-endian counter followed by a 12-byte nonce. If the first four bytes are zeros, paste the last twelve here. If they are not, the counters do not match and the output will not.
+references:
+  - label: >-
+        RFC 8439 — ChaCha20 and Poly1305 for IETF Protocols
+    url: https://www.rfc-editor.org/rfc/rfc8439
+---
+
+## Decrypting ChaCha20
+
+XOR with the keystream of the key and nonce. Same function as encrypt, same
+12-byte nonce, same counter starting at 0. Nothing is authenticated. The
+output is as long as the input, always, which is either convenient or a way
+to not notice you have the wrong key.

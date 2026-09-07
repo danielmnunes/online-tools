@@ -12,6 +12,8 @@ import HexDump from '~/components/widgets/HexDump.svelte';
 import CborTool from '~/components/widgets/CborTool.svelte';
 import JwtTool from '~/components/widgets/JwtTool.svelte';
 import UrlParser from '~/components/widgets/UrlParser.svelte';
+import SymmetricCipher from '~/components/widgets/SymmetricCipher.svelte';
+import AsymmetricTool from '~/components/widgets/AsymmetricTool.svelte';
 
 interface Props {
   tool: Tool;
@@ -53,3 +55,21 @@ const { tool } = Astro.props;
 {tool.widget === 'cbor' && <CborTool client:load />}
 {tool.widget === 'jwt' && <JwtTool client:load />}
 {tool.widget === 'url-parser' && <UrlParser client:load />}
+{
+  tool.widget === 'symmetric-cipher' && (
+    <SymmetricCipher
+      algorithm={tool.config.algorithm}
+      direction={tool.config.direction}
+      client:load
+    />
+  )
+}
+{
+  tool.widget === 'asymmetric' && (
+    <AsymmetricTool
+      algorithm={tool.config.algorithm}
+      operation={tool.config.operation}
+      client:load
+    />
+  )
+}

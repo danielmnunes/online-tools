@@ -9,6 +9,14 @@
  * regularity -- only some have a verify page, and three Argon2 variants share
  * one.
  */
+import { ASYMMETRIC, ASYMMETRIC_IDS, asymmetricSlug } from '~/lib/algo/asymmetric';
+import {
+  CIPHERS,
+  CIPHER_IDS,
+  cipherSlug,
+  type CipherDirection,
+  type CipherId,
+} from '~/lib/algo/ciphers';
 import {
   CODECS,
   CODEC_IDS,
@@ -364,6 +372,73 @@ function encodingTools(): Tool[] {
   ];
 }
 
+/**
+ * The symmetric-cipher pages, generated from the cipher table the same way
+ * the codecs are: encrypt and decrypt are two searches and two pages.
+ */
+function cipherTools(): Tool[] {
+  const others = (id: CipherId, direction: CipherDirection): string[] =>
+    CIPHER_IDS.filter((other) => other !== id)
+      .slice(0, 2)
+      .map((other) => cipherSlug(other, direction));
+
+  return CIPHER_IDS.flatMap((id): Tool[] => {
+    const meta = CIPHERS[id];
+    const lower = meta.label.toLowerCase();
+    return (['encrypt', 'decrypt'] as const).map((direction): Tool => {
+      const page = direction === 'encrypt' ? meta.encrypt : meta.decrypt;
+      const other = direction === 'encrypt' ? 'decrypt' : 'encrypt';
+      return {
+        slug: cipherSlug(id, direction),
+        name: page.name,
+        title: page.title,
+        category: 'crypto',
+        widget: 'symmetric-cipher',
+        config: { algorithm: id, direction },
+        keywords: [lower, id, direction, ...page.keywords, ...meta.keywords],
+        related: [cipherSlug(id, other), ...others(id, direction)],
+      };
+    });
+  });
+}
+
+/**
+ * RSA and ECDSA, listed from their table. ECDSA has no encrypt or decrypt:
+ * those pages would be ECIES, which is a different construction.
+ */
+function asymmetricTools(): Tool[] {
+  return ASYMMETRIC_IDS.flatMap((id): Tool[] => {
+    const meta = ASYMMETRIC[id];
+    return meta.operations.map((operation): Tool => {
+      const page = meta.pages[operation];
+      if (page === undefined) {
+        throw new Error(`${meta.label} lists ${operation} but has no page for it.`);
+      }
+      const siblings = meta.operations
+        .filter((other) => other !== operation)
+        .map((other) => asymmetricSlug(id, other));
+      const counterpart =
+        id === 'rsa' && (operation === 'sign' || operation === 'verify' || operation === 'keygen')
+          ? [asymmetricSlug('ecdsa', operation)]
+          : id === 'ecdsa'
+            ? [asymmetricSlug('rsa', operation)]
+            : [];
+      return {
+        slug: asymmetricSlug(id, operation),
+        name: page.name,
+        title: page.title,
+        category: 'crypto',
+        widget: 'asymmetric',
+        config: { algorithm: id, operation },
+        keywords: [meta.label.toLowerCase(), id, operation, ...page.keywords, ...meta.keywords],
+        related: [...siblings.slice(0, 3), ...counterpart].filter(
+          (slug, index, all) => all.indexOf(slug) === index && slug !== asymmetricSlug(id, operation),
+        ),
+      };
+    });
+  });
+}
+
 export const TOOLS: ReadonlyArray<Tool> = [
   ...hashTools(),
   ...xofTools(),
@@ -371,6 +446,8 @@ export const TOOLS: ReadonlyArray<Tool> = [
   ...kdfTools(),
   ...codecTools(),
   ...encodingTools(),
+  ...cipherTools(),
+  ...asymmetricTools(),
 ];
 
 const BY_SLUG = new Map(TOOLS.map((tool) => [tool.slug, tool]));
