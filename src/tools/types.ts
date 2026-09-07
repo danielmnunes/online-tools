@@ -2,6 +2,8 @@ import type { HashId } from '~/lib/algo/hashes';
 import type { KdfId } from '~/lib/algo/kdfs';
 import type { XofId } from '~/lib/algo/xofs';
 import type { CodecDirection, CodecId } from '~/lib/algo/codecs';
+import type { FormatId } from '~/lib/algo/formats';
+import type { ConvertId } from '~/lib/algo/converts';
 
 export type ToolCategory =
   | 'hash'
@@ -36,8 +38,8 @@ export const CATEGORIES: ReadonlyArray<CategoryMeta> = [
   { id: 'encoding', label: 'Encoding', blurb: 'Base64, hex, URL and HTML encoding.' },
   { id: 'crypto', label: 'Cryptography', blurb: 'Symmetric ciphers, signatures and key pairs.' },
   { id: 'compression', label: 'Compression', blurb: 'Compress, decompress and inspect archives.' },
-  { id: 'format', label: 'Format', blurb: 'Validate, format and compare JSON and XML.' },
-  { id: 'convert', label: 'Convert', blurb: 'Change case, parse URLs, convert timestamps.' },
+  { id: 'format', label: 'Format', blurb: 'Validate, format and compare JSON, XML and text.' },
+  { id: 'convert', label: 'Convert', blurb: 'Change case and convert timestamps.' },
   { id: 'generator', label: 'Generator', blurb: 'UUIDs, passwords and QR codes.' },
   { id: 'other', label: 'Other', blurb: 'Everything else.' },
 ];
@@ -105,6 +107,8 @@ export type Tool = ToolBase &
     | { readonly widget: 'cbor'; readonly config: Record<string, never> }
     | { readonly widget: 'jwt'; readonly config: Record<string, never> }
     | { readonly widget: 'url-parser'; readonly config: Record<string, never> }
+    | { readonly widget: 'format'; readonly config: { readonly id: FormatId } }
+    | { readonly widget: 'convert'; readonly config: { readonly id: ConvertId } }
   );
 
 export type WidgetKind = Tool['widget'];

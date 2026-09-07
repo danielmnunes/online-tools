@@ -1,0 +1,26 @@
+---
+description: >-
+    Convert an identifier to snake_case — words in lowercase, joined with underscores. Python, Ruby, and a lot of databases.
+faq:
+  - q: >-
+        How are words found?
+    a: >-
+        The same splitter as the other case pages: whitespace, punctuation, digits, and camelCase boundaries. `HelloWorld` and `hello-world` both become `hello_world`.
+  - q: >-
+        CONSTANT_CASE versus snake_case?
+    a: >-
+        The letters. snake_case is lowercase (`hello_world`); CONSTANT_CASE is uppercase (`HELLO_WORLD`). The underscores are the same.
+  - q: >-
+        Leading and trailing underscores?
+    a: >-
+        They are separators, so they do not become empty words. `__hello__` is still `hello`.
+references:
+  - label: snake_case — Wikipedia
+    url: https://en.wikipedia.org/wiki/Snake_case
+---
+
+## Lowercase, with underscores
+
+The convention in Python, in many SQL schemas, and in a lot of JSON from backends that are not JavaScript. Words are split, lowercased, and joined with `_`.
+
+Round-trip with camelCase holds for ordinary identifiers: `hello_world` → `helloWorld` → `hello_world`.

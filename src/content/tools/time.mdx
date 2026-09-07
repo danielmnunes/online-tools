@@ -1,0 +1,38 @@
+---
+description: >-
+    Convert Unix time, ISO 8601 and RFC 2822 into each other. Seconds versus milliseconds are distinguished, not guessed silently.
+faq:
+  - q: >-
+        Seconds or milliseconds?
+    a: >-
+        A 13-digit number is milliseconds; anything smaller is seconds. Confusing the two is a thirty-thousand-year error (1.7e9 seconds is 2023; 1.7e12 milliseconds is 2023; 1.7e12 seconds is the year 55800). This page will not swap them quietly.
+  - q: >-
+        Which timezones?
+    a: >-
+        UTC, and the timezone of the machine that opened the page. Converting "to America/New_York" means shipping a timezone database, which this page does not. Those two zones need no table.
+  - q: >-
+        Is this moment.js / Temporal?
+    a: >-
+        No. Parsing is `Date` plus a conservative look at whether the input is a number, ISO 8601, or RFC 2822. Leap seconds are not modelled; JavaScript's Date does not have them.
+  - q: >-
+        Can I paste a JWT `exp`?
+    a: >-
+        Yes, if it is seconds since the epoch, which RFC 7519 says it is. A value around 1.7e9 is seconds; a value around 1.7e12 was probably copied from `Date.now()` by mistake.
+references:
+  - label: RFC 3339 — Date and Time on the Internet
+    url: https://www.rfc-editor.org/rfc/rfc3339
+  - label: Unix time
+    url: https://en.wikipedia.org/wiki/Unix_time
+  - label: RFC 7519 §2 — NumericDate
+    url: https://www.rfc-editor.org/rfc/rfc7519#section-2
+---
+
+## One instant, several writings
+
+Unix seconds, Unix milliseconds, ISO 8601 in UTC, the same instant in the browser's local zone, RFC 2822, and a relative phrase ("3 days ago"). All of them are the same `Date`. Editing any of the parseable inputs — a number, an ISO string, the local datetime picker — updates the rest.
+
+The relative phrase ticks while the tab is open, because "5 seconds ago" that never moves is a lie. The absolute values do not.
+
+## The unit
+
+Ten digits is seconds. Thirteen is milliseconds. A fractional number stays seconds, because that is how Unix time is written when people want sub-second precision without switching units. If the result looks like the year 55800, the input was milliseconds labelled as seconds, and the page did what the digits said.

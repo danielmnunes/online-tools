@@ -27,6 +27,8 @@ import {
   type XofId,
 } from '~/lib/algo/xofs';
 import { CATEGORIES, type CategoryMeta, type Tool, type ToolCategory } from './types';
+import { CONVERTS, CONVERT_IDS } from '~/lib/algo/converts';
+import { FORMATS, FORMAT_IDS } from '~/lib/algo/formats';
 
 /** Path of the file-checksum variant of an algorithm. */
 export function fileSlug(id: HashId): string {
@@ -364,6 +366,44 @@ function encodingTools(): Tool[] {
   ];
 }
 
+/**
+ * Format and convert pages, generated from their tables the same way the
+ * codecs are. Each entry is a different search ("json formatter", "camelCase
+ * converter") and a different shape of widget, so they are separate pages
+ * even when they share a component.
+ */
+function formatTools(): Tool[] {
+  return FORMAT_IDS.map((id): Tool => {
+    const meta = FORMATS[id];
+    return {
+      slug: meta.slug,
+      name: meta.name,
+      title: meta.title,
+      category: 'format',
+      widget: 'format',
+      config: { id },
+      keywords: meta.keywords,
+      related: meta.related,
+    };
+  });
+}
+
+function convertTools(): Tool[] {
+  return CONVERT_IDS.map((id): Tool => {
+    const meta = CONVERTS[id];
+    return {
+      slug: meta.slug,
+      name: meta.name,
+      title: meta.title,
+      category: 'convert',
+      widget: 'convert',
+      config: { id },
+      keywords: meta.keywords,
+      related: meta.related,
+    };
+  });
+}
+
 export const TOOLS: ReadonlyArray<Tool> = [
   ...hashTools(),
   ...xofTools(),
@@ -371,6 +411,8 @@ export const TOOLS: ReadonlyArray<Tool> = [
   ...kdfTools(),
   ...codecTools(),
   ...encodingTools(),
+  ...formatTools(),
+  ...convertTools(),
 ];
 
 const BY_SLUG = new Map(TOOLS.map((tool) => [tool.slug, tool]));

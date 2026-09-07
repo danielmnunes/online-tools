@@ -1,0 +1,30 @@
+---
+description: >-
+    Convert an identifier to camelCase — first word lowercase, the rest capitalised, no separator.
+faq:
+  - q: >-
+        How are words split?
+    a: >-
+        On whitespace, punctuation, digits, and camelCase boundaries already in the input. `XMLHttpRequest` is three words (XML, Http, Request); `hello_world` is two; `v2Draft` is three.
+  - q: >-
+        What happens to an acronym?
+    a: >-
+        A run of capitals followed by a capital-then-lowercase splits before the last capital, so `XMLHttp` becomes `xmlHttp`, not `xMLHttp`. That is the convention change-case and friends use.
+  - q: >-
+        First word?
+    a: >-
+        Lowercase, even if it was an acronym: `XML_HTTP` becomes `xmlHttp`. PascalCase is the page that capitalises every word.
+  - q: >-
+        Will `hello_world` round-trip?
+    a: >-
+        Through snake_case, yes: camelCase of `hello_world` is `helloWorld`, and snake_case of that is `hello_world`.
+references:
+  - label: camelCase — Wikipedia (naming convention)
+    url: https://en.wikipedia.org/wiki/Camel_case
+---
+
+## First word low, the rest capitalised
+
+The shape of a JavaScript variable and of a JSON field in most APIs. Words are split on the usual identifier boundaries, then joined with no separator.
+
+The other six conventions of the same input sit under the result, because the usual next question after "make this camelCase" is "and snake_case?".

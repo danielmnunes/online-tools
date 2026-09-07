@@ -1,0 +1,34 @@
+---
+description: >-
+    Inspect JSON as a collapsible tree — types visible, strings quoted, objects and arrays counted — without sending anything anywhere.
+faq:
+  - q: >-
+        How is this different from the formatter?
+    a: >-
+        The formatter writes text. The viewer walks the values JSON.parse produced: you can collapse a large array, see that a key is a number rather than a string, and copy a string without its quotes.
+  - q: >-
+        Why are some numbers slightly wrong?
+    a: >-
+        Because they were already slightly wrong after JSON.parse. Integers above 2^53 are IEEE 754 floats. The tree shows what JavaScript has, which is what any code that parsed this document would have.
+  - q: >-
+        Duplicate keys?
+    a: >-
+        JSON.parse keeps the last one. The tree has one entry per key, the last, because that is the object the rest of the program will see.
+  - q: >-
+        Can I edit the values?
+    a: >-
+        No. This page is for reading. Editing JSON as a tree is a different tool, and one that has to decide what to do with duplicate keys, key order and large integers — decisions this page refuses to hide.
+references:
+  - label: RFC 8259 — JSON
+    url: https://www.rfc-editor.org/rfc/rfc8259
+---
+
+## Reading a document as values
+
+Pretty-printed JSON is still a string. The viewer is the parsed value: objects and arrays you can fold, primitives labelled by type, a count on every collection. That is the shape a program walks, and walking it is often the fastest way to see why a key is missing or a list is longer than it looked.
+
+Strings are shown quoted, so a number and a numeric string cannot be confused. `null`, `true` and `false` are literals, not strings. Empty objects and empty arrays are labelled rather than left looking like a blank.
+
+## What is not in the tree
+
+Comments, trailing commas and unquoted keys never arrive: they fail to parse. Repair them first if that is what you pasted.

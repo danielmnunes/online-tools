@@ -1,0 +1,30 @@
+---
+description: >-
+    A line-by-line diff of two texts. The algorithm is Myers, the same family the Unix diff command uses.
+faq:
+  - q: >-
+        Is this `diff -u`?
+    a: >-
+        It is the same class of algorithm — Myers' shortest edit script — run line by line. It is not GNU diff, it does not emit a unified patch, and it does not ignore whitespace unless the two lines are actually equal.
+  - q: >-
+        Why lines, not words?
+    a: >-
+        Because that is the grain people paste files at. A word-level diff inside a changed line is a different display and a different algorithm. Identical lines stay identical; a changed line is a deletion plus an insertion.
+  - q: >-
+        Does a trailing newline count?
+    a: >-
+        Yes. `"a"` and `"a\n"` differ by one empty line, which is how `diff` reports it too.
+  - q: >-
+        For JSON, should I use this or JSON compare?
+    a: >-
+        JSON compare, if both sides parse. Key order and pretty-printing will otherwise look like a rewrite. Use this page for text that is not JSON, or for JSON you want to see as text.
+references:
+  - label: An O(ND) Difference Algorithm and Its Variations — Myers, 1986
+    url: https://www.xmailserver.org/diff2.pdf
+---
+
+## Shortest edit, by line
+
+Each line is kept, deleted or inserted. The script is the shortest one Myers' algorithm finds, which is the same idea `diff(1)` is built on. Two identical files produce no edits; a one-line change is one deletion and one insertion at that line.
+
+Nothing leaves the browser. Large pastes are still compared in this tab: there is no upload, and there is no server-side `diff`.

@@ -1,0 +1,26 @@
+---
+description: >-
+    Convert an identifier to CONSTANT_CASE — words in uppercase, joined with underscores. C macros, env vars, enum members.
+faq:
+  - q: >-
+        Why not just uppercase?
+    a: >-
+        Because `hello world` in UPPER CASE is `HELLO WORLD`, with a space. CONSTANT_CASE is `HELLO_WORLD`. Env vars and C macros cannot have spaces.
+  - q: >-
+        snake_case in uppercase?
+    a: >-
+        Yes. Same words, same underscores, different case of the letters.
+  - q: >-
+        Digits?
+    a: >-
+        Kept as their own words when they sit on a letter boundary: `v2Draft` becomes `V_2_DRAFT`.
+references:
+  - label: SCREAMING_SNAKE_CASE
+    url: https://en.wikipedia.org/wiki/Snake_case#screaming_snake_case
+---
+
+## Uppercase, with underscores
+
+`HTTP_STATUS`, `MAX_LENGTH`, `DATABASE_URL`. The splitter is the same one camelCase uses, so `httpStatus` and `http-status` both become `HTTP_STATUS`.
+
+Use UPPER CASE when you want the letters loud and the spaces kept. Use this page when the value has to be a single token.

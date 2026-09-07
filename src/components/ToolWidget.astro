@@ -12,6 +12,8 @@ import HexDump from '~/components/widgets/HexDump.svelte';
 import CborTool from '~/components/widgets/CborTool.svelte';
 import JwtTool from '~/components/widgets/JwtTool.svelte';
 import UrlParser from '~/components/widgets/UrlParser.svelte';
+import FormatTool from '~/components/widgets/FormatTool.svelte';
+import ConvertTool from '~/components/widgets/ConvertTool.svelte';
 
 interface Props {
   tool: Tool;
@@ -53,3 +55,5 @@ const { tool } = Astro.props;
 {tool.widget === 'cbor' && <CborTool client:load />}
 {tool.widget === 'jwt' && <JwtTool client:load />}
 {tool.widget === 'url-parser' && <UrlParser client:load />}
+{tool.widget === 'format' && <FormatTool id={tool.config.id} client:load />}
+{tool.widget === 'convert' && <ConvertTool id={tool.config.id} client:load />}

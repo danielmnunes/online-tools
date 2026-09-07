@@ -1,0 +1,32 @@
+---
+description: >-
+    Compare two JSON documents structurally — key order does not count, and a moved value is a change at its path.
+faq:
+  - q: >-
+        Why not a textual diff?
+    a: >-
+        Because `{"a":1,"b":2}` and `{"b":2,"a":1}` are the same JSON and a different string. A line diff reports a rewrite; a structural diff reports nothing, which is the answer RFC 8259 gives.
+  - q: >-
+        Are arrays unordered too?
+    a: >-
+        No. Array order is data. `[1,2]` and `[2,1]` differ at index 0 and index 1.
+  - q: >-
+        What if one side is not JSON?
+    a: >-
+        Then there is no structure to compare. The page falls back to a line diff of the text and says so, rather than inventing a parse.
+  - q: >-
+        Does whitespace count?
+    a: >-
+        Not once both sides parse. Two pretty-printed dumps of the same values compare equal, which is the usual reason to reach for this page instead of `diff`.
+references:
+  - label: RFC 8259 §4 — Objects
+    url: https://www.rfc-editor.org/rfc/rfc8259#section-4
+---
+
+## Structural, not textual
+
+Each difference is a path: `$.user.email`, `$.items[3]`. Added, removed, or changed. Nested values are compared recursively, so a one-key change inside a large object is one line, not a rewrite of the whole dump.
+
+Object keys are compared as a set. Arrays are compared by index. That is the JSON data model: members unordered, elements ordered.
+
+When a side cannot be parsed, inventing a structure would be a lie. The page says so and shows a line diff of the raw text, which is the honest fallback.

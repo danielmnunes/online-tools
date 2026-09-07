@@ -1,0 +1,26 @@
+---
+description: >-
+    Convert text to lower case. Letters change; spaces, punctuation and digits stay where they are.
+faq:
+  - q: >-
+        Is this the same as snake_case in lowercase?
+    a: >-
+        No. Lower case does not join words and does not insert underscores. `Hello World` becomes `hello world`. For `hello_world`, use the snake_case page.
+  - q: >-
+        What about Unicode?
+    a: >-
+        JavaScript's `toLowerCase`, which follows Unicode case mapping. `İ` in Turkish is the famous exception — this page uses the default locale, not `tr`.
+  - q: >-
+        Does it change non-letters?
+    a: >-
+        No. Digits, spaces, punctuation and emoji are left alone.
+references:
+  - label: Unicode Default Case Conversion
+    url: https://unicode.org/reports/tr21/tr21-5.html
+---
+
+## Letters only
+
+Lower case is a mapping on characters, not a joining of words. That is why this page exists next to camelCase and snake_case rather than as a mode of those: `HTTP_STATUS` becomes `http_status` here, and `httpStatus` on the camelCase page.
+
+The other six conventions are listed under the result, so a paste meant for a different one does not mean opening a different tab.

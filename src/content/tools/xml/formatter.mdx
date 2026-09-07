@@ -1,0 +1,30 @@
+---
+description: >-
+    Pretty-print XML with 2 spaces, 4 spaces or tabs, leaving mixed content alone so the document’s text does not change.
+faq:
+  - q: >-
+        Why is some of my document still on one line?
+    a: >-
+        Because that element has both text and child elements. Indenting it would insert whitespace into the text. The formatter leaves mixed content alone on purpose.
+  - q: >-
+        Does this validate against a schema?
+    a: >-
+        No. It checks well-formedness, then rewrites whitespace. A DTD or XSD is a different tool.
+  - q: >-
+        Will `<a></a>` become `<a/>`?
+    a: >-
+        Yes, when the element has no children. The two spellings are the same empty element; the pretty-printer uses the self-closing form.
+  - q: >-
+        Is the XML declaration kept?
+    a: >-
+        If it was in the input. DOMParser itself drops it, so the page copies the original declaration back on top when one was present.
+references:
+  - label: XML 1.0
+    url: https://www.w3.org/TR/xml/
+---
+
+## Pretty-print without changing the text
+
+Element-only trees get newlines and indent. Mixed content does not. That is the whole policy, and it is the one that stops a formatter from turning `<title>Chapter <n>1</n></title>` into something with a newline in the title.
+
+Attributes stay on the start tag, in the order the parser reported. CDATA, comments and processing instructions are kept. The input has to be well-formed; a document that does not parse cannot be indented.

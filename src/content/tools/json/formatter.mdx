@@ -1,0 +1,36 @@
+---
+description: >-
+    Pretty-print JSON with 2 spaces, 4 spaces or tabs. Indentation is the only thing that changes, and never inside a string.
+faq:
+  - q: >-
+        Does formatting change the values?
+    a: >-
+        No. JSON.parse of the input and of the output are the same document. Spaces inside a string stay; spaces between tokens are rewritten.
+  - q: >-
+        Why is my trailing comma gone — or rather, why did it fail?
+    a: >-
+        Because it was never JSON. The formatter parses first and pretty-prints what parsed. A trailing comma, a comment or a single-quoted string belongs on the repair page.
+  - q: >-
+        Should I sort the keys?
+    a: >-
+        Only when you want two dumps of the same data to match as text. The spec treats object members as unordered, so keeping the original order is the honest default.
+  - q: >-
+        Why did a large integer change?
+    a: >-
+        JSON.parse uses IEEE 754. Integers above 2^53 are not exact, and pretty-printing writes the float that was parsed, not the digits you typed. That is the platform, not a choice this page makes.
+references:
+  - label: RFC 8259 — JSON
+    url: https://www.rfc-editor.org/rfc/rfc8259
+  - label: JSON.stringify — ECMA-262
+    url: https://tc39.es/ecma262/#sec-json.stringify
+---
+
+## What this page does
+
+Parses with JSON.parse, writes with JSON.stringify and an indent. That is the entire pipeline, and it is the one every other tool in JavaScript uses, so the output is the pretty-printed form of *what the platform read* — not a re-lex of the original text.
+
+That distinction matters for `1.0` (becomes `1`), for `-0` (becomes `0` in some engines), and for integers wider than 2^53. The formatter will not pretend those survived.
+
+## Indent
+
+2 spaces is what most JavaScript projects use. 4 spaces is what a lot of other languages use. A tab is what a few editors still insert. None of them is more correct; pick the one the file next to this one already uses.
