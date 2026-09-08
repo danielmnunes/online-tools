@@ -98,17 +98,4 @@ entry, or if a tool slug collides with a category page.
 
 ## Deployment
 
-Static assets on Cloudflare Workers. `wrangler.jsonc` points at `dist/`; there is no Worker
-script. Deployed at `https://online-tools.dnhub.workers.dev`.
-
-CI deploys on every push to `main`, but only once two repository secrets exist —
-`CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. Until then the deploy job skips with a
-notice rather than failing the build. The `SITE_URL` repository variable overrides the
-default site address used for canonical tags, Open Graph and the sitemap; set it when a
-custom domain replaces the workers.dev one.
-
-## Licence and provenance
-
-This project is written from scratch. It was inspired by the tool catalogue at
-emn178/online-tools, whose code and content are explicitly not licensed for reuse — none
-of it is copied here.
+Deployed at `https://online-tools.dnhub.workers.dev`.
