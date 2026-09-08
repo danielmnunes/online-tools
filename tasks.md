@@ -305,7 +305,7 @@ Páginas entregues: `uuid/v1|v3|v4|v5|v6|v7`, `password`, `qr`, `qr/scan`.
 
 ## Decisões em aberto
 
-- [ ] **Licença.** Sem ficheiro `LICENSE`, um repositório público é "todos os direitos reservados" por omissão. Decidir se é open source e qual.
+- [x] **Licença MIT.** `LICENSE` adicionado para o repositório open source.
 - [ ] **Domínio próprio.** O endereço `workers.dev` funciona; um domínio próprio precisa de definir a variável `SITE_URL`.
 - [ ] **`hash-wasm` para o caminho de ficheiro.** Medir se o JavaScript puro é lento demais em ficheiros de vários GB antes de decidir.
 - [ ] **Topics do repositório** no GitHub, para descoberta.
