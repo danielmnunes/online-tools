@@ -1,0 +1,32 @@
+---
+description: >-
+  Generate RFC 9562 version 7 UUIDs: Unix milliseconds in the first 48 bits, then random. Sorts by time; successive values from this page are monotonic.
+faq:
+  - q: >-
+      Unix milliseconds or seconds?
+    a: >-
+      Milliseconds, in the first 48 bits, big-endian. 1645557742000 (2022-02-22T19:22:22.000Z) is the appendix A example and becomes `017F22E2-79B0-7…`. Seconds would not fill 48 bits usefully and are not what the RFC specifies.
+  - q: >-
+      Monotonic?
+    a: >-
+      Successive clicks on this page, in the same millisecond, increment a 12-bit counter in `rand_a` (RFC 9562 §6.2 method 1). Overflow of that counter steps the timestamp forward by one millisecond rather than repeating. Two tabs do not share the counter.
+  - q: >-
+      v4 or v7?
+    a: >-
+      v4 if you want the identifier to say nothing about when it was minted. v7 if you want a B-tree index that is also roughly insertion order. v7 leaks the minting time to the millisecond; that is the trade.
+  - q: >-
+      Can I set the timestamp?
+    a: >-
+      Not on this page. A UUID whose timestamp you picked is a different tool (and a different kind of lie). The inspect box will still decode the timestamp of a v7 UUID you paste.
+references:
+  - label: RFC 9562 §5.7 — UUID Version 7
+    url: https://www.rfc-editor.org/rfc/rfc9562.html#name-uuid-version-7
+  - label: RFC 9562 §6.2 — Monotonicity and Counters
+    url: https://www.rfc-editor.org/rfc/rfc9562.html#name-monotonicity-and-counters
+---
+
+## Time in front, random behind
+
+A version 7 UUID is a 48-bit Unix millisecond timestamp, a 12-bit field that this page uses as a counter, and 62 random bits. Values sort by time. That is the property people wanted from v1, without the Gregorian epoch or a node ID.
+
+The inspect box under the result shows the timestamp as ISO 8601. Paste any v7 UUID — not only ones from this page — and the same decoding runs.

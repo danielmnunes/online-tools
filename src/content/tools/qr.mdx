@@ -1,0 +1,32 @@
+---
+description: >-
+  Generate a QR code from text, as SVG, in this tab. Error correction is ISO/IEC 18004 level L, M, Q or H. Nothing is uploaded.
+faq:
+  - q: >-
+      What do L, M, Q and H mean?
+    a: >-
+      How much of the symbol can be destroyed and still read: about 7%, 15%, 25% and 30%. Higher correction makes a denser code for the same payload. M is the usual default; H is for a logo eating the middle, which this page does not add.
+  - q: >-
+      Why SVG, not a PNG?
+    a: >-
+      SVG is the modules as geometry, so it scales without becoming a blur of grey. A PNG download is offered too, rasterised at the SVG's pixel size, black on white, for tools that will not take a vector.
+  - q: >-
+      Quiet zone?
+    a: >-
+      Four modules, the ISO/IEC 18004 default. A QR code drawn edge-to-edge against other graphics is harder to scan; the white border is not decoration.
+  - q: >-
+      Binary payloads?
+    a: >-
+      The text is encoded as UTF-8. A PNG file is not a good QR payload; put a URL to it instead. Capacity depends on version and ECC — a version-40 symbol at L holds a few kilobytes, not a photograph.
+references:
+  - label: ISO/IEC 18004 — QR Code
+    url: https://www.iso.org/standard/62021.html
+  - label: Nayuki QR Code generator (the algorithm uqr uses)
+    url: https://www.nayuki.io/page/qr-code-generator-library
+---
+
+## Text in, modules out
+
+A QR code is a grid of modules, a version (1–40), and an error-correction level. This page draws that grid as SVG, in black on white, with a four-module quiet zone. The encoder is uqr, a JavaScript port of Nayuki's library; it runs in this tab and does not call a rendering service.
+
+The scanner is a separate page. Encoding does not need a camera or a WASM decoder, and `/qr/` does not download one.

@@ -17,6 +17,7 @@ import { XOFS, XOF_FILE_IDS, XOF_IDS, isXofId } from '~/lib/algo/xofs';
 import { KDFS, KDF_IDS, isKdfId } from '~/lib/algo/kdfs';
 import { FORMATS, FORMAT_IDS, isFormatId } from '~/lib/algo/formats';
 import { CONVERTS, CONVERT_IDS, isConvertId } from '~/lib/algo/converts';
+import { GENERATORS, GENERATOR_IDS, isGeneratorId } from '~/lib/algo/generators';
 
 describe('slugs', () => {
   it('are unique', () => {
@@ -101,6 +102,10 @@ describe('widget configuration', () => {
         case 'convert':
           expect(isConvertId(tool.config.id), tool.slug).toBe(true);
           expect(CONVERTS[tool.config.id].slug, tool.slug).toBe(tool.slug);
+          break;
+        case 'generator':
+          expect(isGeneratorId(tool.config.id), tool.slug).toBe(true);
+          expect(GENERATORS[tool.config.id].slug, tool.slug).toBe(tool.slug);
           break;
         case 'hmac':
         case 'cbor':
@@ -212,13 +217,22 @@ describe('coverage of the algorithm tables', () => {
     expect(toolsInCategory('convert')).toHaveLength(CONVERT_IDS.length);
   });
 
-  it('has the catalogue size phase 4 set out to deliver', () => {
+  it('gives every generator tool a page whose slug matches the table', () => {
+    const slugs = new Set(toolsInCategory('generator').map((tool) => tool.slug));
+    for (const id of GENERATOR_IDS) {
+      expect(slugs.has(GENERATORS[id].slug), GENERATORS[id].slug).toBe(true);
+    }
+    expect(toolsInCategory('generator')).toHaveLength(GENERATOR_IDS.length);
+  });
+
+  it('has the catalogue size phase 5 set out to deliver', () => {
     expect(toolsInCategory('hash')).toHaveLength(42);
     expect(toolsInCategory('xof')).toHaveLength(23);
     expect(toolsInCategory('kdf')).toHaveLength(12);
     expect(toolsInCategory('encoding')).toHaveLength(23);
     expect(toolsInCategory('format')).toHaveLength(11);
     expect(toolsInCategory('convert')).toHaveLength(8);
-    expect(TOOLS).toHaveLength(119);
+    expect(toolsInCategory('generator')).toHaveLength(9);
+    expect(TOOLS).toHaveLength(128);
   });
 });

@@ -4,6 +4,7 @@ import type { XofId } from '~/lib/algo/xofs';
 import type { CodecDirection, CodecId } from '~/lib/algo/codecs';
 import type { FormatId } from '~/lib/algo/formats';
 import type { ConvertId } from '~/lib/algo/converts';
+import type { GeneratorId } from '~/lib/algo/generators';
 
 export type ToolCategory =
   | 'hash'
@@ -109,6 +110,7 @@ export type Tool = ToolBase &
     | { readonly widget: 'url-parser'; readonly config: Record<string, never> }
     | { readonly widget: 'format'; readonly config: { readonly id: FormatId } }
     | { readonly widget: 'convert'; readonly config: { readonly id: ConvertId } }
+    | { readonly widget: 'generator'; readonly config: { readonly id: GeneratorId } }
   );
 
 export type WidgetKind = Tool['widget'];

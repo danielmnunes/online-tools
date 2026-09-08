@@ -2,8 +2,17 @@
   interface Props {
     onfile: (file: File) => void;
     disabled?: boolean;
+    accept?: string;
+    heading?: string;
+    hint?: string;
   }
-  let { onfile, disabled = false }: Props = $props();
+  let {
+    onfile,
+    disabled = false,
+    accept,
+    heading = 'Drop a file here, or click to choose',
+    hint = 'The file is read in your browser and never uploaded. Size is not limited by us.',
+  }: Props = $props();
 
   let dragging = $state(false);
   let inputEl: HTMLInputElement;
@@ -46,10 +55,8 @@
          {disabled ? 'cursor-not-allowed opacity-50' : ''}
          {dragging ? 'border-accent bg-accent/5' : 'border-border hover:border-accent/50'}"
 >
-  <span class="text-sm font-medium text-fg">Drop a file here, or click to choose</span>
-  <span class="text-xs text-muted">
-    The file is read in your browser and never uploaded. Size is not limited by us.
-  </span>
+  <span class="text-sm font-medium text-fg">{heading}</span>
+  <span class="text-xs text-muted">{hint}</span>
   <!-- Visually hidden but still in the accessibility tree, so it needs a name.
        tabindex -1 keeps it out of the tab order: the wrapper above is already
        a labelled, keyboard-operable button that opens the same picker. -->
@@ -59,6 +66,7 @@
     class="sr-only"
     tabindex="-1"
     aria-label="Choose a file"
+    {accept}
     {disabled}
     onchange={(e) => {
       take(e.currentTarget.files);

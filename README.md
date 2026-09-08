@@ -1,6 +1,6 @@
 # online/tools
 
-Developer tools — hashing, encoding, formatting, conversion — that run entirely in the
+Developer tools — hashing, encoding, formatting, conversion and generators — that run entirely in the
 visitor's browser. No backend, no uploads, no accounts.
 
 ## How it is put together
@@ -15,8 +15,9 @@ visitor's browser. No backend, no uploads, no accounts.
   SP 800-185 functions, one `KdfTool` backs every key-derivation page in both directions,
   and one `Codec` backs all twelve encoding pages — the controls each page shows come from
   a table, so there is no per-algorithm branch in the component. The same idea covers
-  format (`FormatTool`: JSON, XML, text compare, syntax highlight) and convert
-  (`ConvertTool`: seven cases and a time converter). Pages with no widget — the
+  format (`FormatTool`: JSON, XML, text compare, syntax highlight), convert
+  (`ConvertTool`: seven cases and a time converter), and generators
+  (`GeneratorTool`: UUID v1–v7, passwords, QR codes). Pages with no widget — the
   home page, category pages — ship no JavaScript at all.
 - **Files are read a chunk at a time.** Checksums, encodings and hex dumps go through
   `src/lib/file.ts`, which slices a file and hands over a few megabytes at a time: a
@@ -38,7 +39,8 @@ Cryptographic correctness is not something to eyeball, so it is checked several 
 - **Published vectors** — RFCs 1321, 3174, 2202, 4231, 5869, 6070, 7693, 7914, 8018 and
   9106; FIPS 180-4 and FIPS 202; the NIST SP 800-185 samples; the BLAKE3 team's own
   vectors; the bcrypt suite that ships with OpenBSD; §10 of RFC 4648 for the base codecs;
-  Appendix A of RFC 8949, in full, for CBOR; and §A.1 of RFC 7515 for JWS.
+  Appendix A of RFC 8949, in full, for CBOR; §A.1 of RFC 7515 for JWS;
+  and Appendix A of RFC 9562 for UUID versions 1, 3, 4, 5, 6 and 7.
 - **Parity with independent implementations** — every algorithm OpenSSL implements is
   compared against it through `node:crypto` or the command line, across lengths chosen to
   sit on the block boundaries where padding bugs live. Where OpenSSL falls short, Bouncy
@@ -88,7 +90,7 @@ Cryptographic correctness is not something to eyeball, so it is checked several 
    and a branch in `src/components/ToolWidget.astro`.
 
 For a family with a table behind it — hashes, the SP 800-185 functions, the codecs,
-the format pages or the case converters — add the entry to the matching table in
+the format pages, the case converters or the generators — add the entry to the matching table in
 `src/lib/algo/` instead and the registry generates the pages from it.
 
 The build fails if a registry entry has no content file, if a content file has no registry
