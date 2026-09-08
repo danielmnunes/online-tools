@@ -303,9 +303,9 @@ Páginas entregues: `uuid/v1|v3|v4|v5|v6|v7`, `password`, `qr`, `qr/scan`.
 
 ---
 
-## Decisões em aberto
+## Decisões
 
 - [x] **Licença MIT.** `LICENSE` adicionado para o repositório open source.
-- [ ] **Domínio próprio.** O endereço `workers.dev` funciona; um domínio próprio precisa de definir a variável `SITE_URL`.
-- [ ] **`hash-wasm` para o caminho de ficheiro.** Medir se o JavaScript puro é lento demais em ficheiros de vários GB antes de decidir.
-- [ ] **Topics do repositório** no GitHub, para descoberta.
+- [x] **Domínio próprio.** Manter a hospedagem Cloudflare no endereço `workers.dev`, sem domínio próprio.
+- [x] **`hash-wasm` para o caminho de ficheiro.** Não avaliar nem adotar para ficheiros grandes; manter o JavaScript atual.
+- [x] **Topics do repositório** para descoberta: `developer-tools`, `online-tools`, `hashing`, `cryptography`, `encoding`, `astro`, `svelte`, `typescript`, `cloudflare-workers`.
