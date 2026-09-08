@@ -303,20 +303,6 @@ Páginas entregues: `uuid/v1|v3|v4|v5|v6|v7`, `password`, `qr`, `qr/scan`.
 
 ---
 
-## Por fazer
-
-### Fase 6 — Polimento
-
-- [ ] Pesquisa com Pagefind
-- [ ] Suite E2E em Playwright (existe um driver validado; falta integrá-lo no CI)
-- [ ] PWA/offline — as ferramentas funcionam sem rede, o que é uma vantagem real
-- [ ] Orçamento de performance verificado no CI (falhar se uma página passar de 100 KB de JS)
-- [ ] Auditoria de acessibilidade (labels, ordem de foco, contraste)
-- [ ] Atalhos de teclado
-- [ ] "Remember input" opcional em `localStorage`
-
----
-
 ## Decisões em aberto
 
 - [ ] **Licença.** Sem ficheiro `LICENSE`, um repositório público é "todos os direitos reservados" por omissão. Decidir se é open source e qual.
