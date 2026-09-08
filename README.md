@@ -98,4 +98,4 @@ entry, or if a tool slug collides with a category page.
 
 ## Deployment
 
-Deployed at `https://online-tools.dnhub.workers.dev`.
+Deployed [here](https://online-tools.dnhub.workers.dev)
