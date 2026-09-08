@@ -103,7 +103,7 @@
 
   const namedUuid = $derived.by(() => {
     if (!nameBased || meta.version === undefined) return undefined;
-    if (uuidName === '' || namespaceValue === '') return undefined;
+    if (namespaceValue === '') return undefined;
     try {
       return {
         ok: true as const,

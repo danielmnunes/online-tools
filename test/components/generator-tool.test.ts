@@ -3,8 +3,9 @@
  * Generator widgets.
  *
  * The algorithms have their own suite. What is here is the wiring: a v4 UUID
- * appears on load, a v5 UUID matches the RFC vector once a name is typed, a
- * password has the requested length, and a QR code becomes an SVG.
+ * appears on load, a v5 UUID is the namespace-only hash until a name is typed
+ * (then the RFC vector), a password has the requested length, and a QR code
+ * becomes an SVG.
  */
 import { cleanup, render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
@@ -27,6 +28,13 @@ describe('UUID v4', () => {
 });
 
 describe('UUID v5', () => {
+  it('hashes the DNS namespace alone when the name is empty', async () => {
+    render(GeneratorTool, { id: 'uuid-v5' });
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent('4ebd0208-8328-5d69-8c44-ec50939c0967'),
+    );
+  });
+
   it('recomputes the RFC 9562 DNS vector from the name', async () => {
     render(GeneratorTool, { id: 'uuid-v5' });
     const user = userEvent.setup();
