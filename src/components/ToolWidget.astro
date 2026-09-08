@@ -14,6 +14,7 @@ import JwtTool from '~/components/widgets/JwtTool.svelte';
 import UrlParser from '~/components/widgets/UrlParser.svelte';
 import FormatTool from '~/components/widgets/FormatTool.svelte';
 import ConvertTool from '~/components/widgets/ConvertTool.svelte';
+import GeneratorTool from '~/components/widgets/GeneratorTool.svelte';
 
 interface Props {
   tool: Tool;
@@ -57,3 +58,4 @@ const { tool } = Astro.props;
 {tool.widget === 'url-parser' && <UrlParser client:load />}
 {tool.widget === 'format' && <FormatTool id={tool.config.id} client:load />}
 {tool.widget === 'convert' && <ConvertTool id={tool.config.id} client:load />}
+{tool.widget === 'generator' && <GeneratorTool id={tool.config.id} client:load />}

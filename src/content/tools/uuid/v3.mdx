@@ -1,0 +1,34 @@
+---
+description: >-
+  Generate RFC 9562 version 3 UUIDs: MD5 of a namespace UUID plus a name. The same pair is the same UUID every time.
+faq:
+  - q: >-
+      Why is this MD5?
+    a: >-
+      Because that is what RFC 4122 defined in 2005 and RFC 9562 still specifies for v3. MD5 is broken as a collision-resistant hash; it is not broken as "the same inputs make the same 128 bits". Use v5 (SHA-1) unless you are matching a system that already stored v3.
+  - q: >-
+      Which namespace?
+    a: >-
+      DNS, URL, OID and X.500 Distinguished Name are the four from RFC 4122 §4.3, still listed in RFC 9562 §6.6. A custom namespace is any UUID you already have. The name is hashed as UTF-8 of the text you type, which is how the appendix A vector (`www.example.com` in the DNS namespace) is computed.
+  - q: >-
+      DNS wire format?
+    a: >-
+      No. `www.example.com` is the eight-bit ASCII of that string, not the DNS label encoding `3www7example3com0`. The RFC's own test vector uses the former.
+  - q: >-
+      Empty name?
+    a: >-
+      Allowed. The hash is then just the namespace UUID, with the version and variant bits overwritten. It is still a v3 UUID; it is just not a useful one.
+references:
+  - label: RFC 9562 §5.3 — UUID Version 3
+    url: https://www.rfc-editor.org/rfc/rfc9562.html#name-uuid-version-3
+  - label: RFC 9562 Appendix A.2 — UUIDv3 test vector
+    url: https://www.rfc-editor.org/rfc/rfc9562.html#name-example-of-a-uuidv3-value
+---
+
+## A name, hashed with MD5
+
+Version 3 is namespace plus name, fed to MD5, then the version nibble set to 3 and the variant bits set to `10`. The same pair is the same UUID on every implementation that follows the RFC, which is the whole point: you can mint an identifier for `www.example.com` without talking to anyone.
+
+DNS + `www.example.com` is `5df41881-3aed-3515-88a7-2f4a814cf09e`. That value is in appendix A of RFC 9562; this page recomputes it from MD5 rather than looking it up.
+
+Prefer version 5 unless you are reproducing something that already used MD5. The construction is identical; only the hash changes.

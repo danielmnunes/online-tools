@@ -1,0 +1,32 @@
+---
+description: >-
+  Generate RFC 9562 version 4 UUIDs from crypto.getRandomValues. 122 random bits; version and variant bits filled in. Nothing is uploaded.
+faq:
+  - q: >-
+      Is this `crypto.randomUUID()`?
+    a: >-
+      Same construction: 16 random bytes, version nibble set to 4, variant bits set to `10`. This page uses `crypto.getRandomValues` directly so the same path can emit hex, uppercase, or a URN, and so the tests can feed known bytes (the appendix A vector) instead of hoping the platform RNG drew them.
+  - q: >-
+      Math.random?
+    a: >-
+      Never. `Math.random` is not a CSPRNG; its period and bias are the wrong shape for an identifier people will paste into a database. `crypto.getRandomValues` is the Web Crypto CSPRNG.
+  - q: >-
+      How many bits of randomness?
+    a: >-
+      122. Six bits are reserved: four for the version, two for the variant. 2^122 is enough that a collision from this generator is not the thing to worry about; a collision from copying the same UUID twice is.
+  - q: >-
+      Sortable?
+    a: >-
+      No. v4 values are random. If a database index that is also chronological is the goal, that is v7.
+references:
+  - label: RFC 9562 §5.4 — UUID Version 4
+    url: https://www.rfc-editor.org/rfc/rfc9562.html#name-uuid-version-4
+  - label: RFC 9562 Appendix A.3 — UUIDv4 test vector
+    url: https://www.rfc-editor.org/rfc/rfc9562.html#name-example-of-a-uuidv4-value
+---
+
+## 122 random bits
+
+A version 4 UUID is 16 bytes from a CSPRNG with six bits overwritten so a reader can see that it is version 4 and RFC 9562 variant. That is the entire construction.
+
+The appendix A vector starts from the 16 bytes `919108f752d133205bacf847db4148a8` and becomes `919108f7-52d1-4320-9bac-f847db4148a8` after those six bits are set. The inspect box under the result will say version 4 for anything this page emits, and for any v4 UUID you paste.

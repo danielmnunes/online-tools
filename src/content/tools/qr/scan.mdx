@@ -1,0 +1,32 @@
+---
+description: >-
+  Scan a QR code from an image or the camera. Decoding is ZXing WebAssembly served from this origin, not a CDN. Nothing is uploaded.
+faq:
+  - q: >-
+      Does the image leave this machine?
+    a: >-
+      No. A dropped file is decoded in this tab. The camera stream is `getUserMedia` into a `<video>` element, frames are drawn to a canvas, and those pixels go into the decoder. Open the network tab: the only extra request is the WASM binary from this origin.
+  - q: >-
+      Why WASM from this origin, not jsDelivr?
+    a: >-
+      zxing-wasm's default loader fetches the binary from a CDN. That is a request to a host this site does not control, which every other tool here refuses to make. The reader binary is bundled and served as a hashed `/_astro/` asset.
+  - q: >-
+      Camera permission?
+    a: >-
+      The browser will ask. Denying it still leaves the file picker. This page never asks for the microphone; the `getUserMedia` call requests video only.
+  - q: >-
+      What if nothing is found?
+    a: >-
+      The decoder is pointed at QR codes only, not at every barcode symbology ZXing knows. A blurry photo, a screen photographed at an angle, or a code that is not QR will come back empty rather than as a wrong guess.
+references:
+  - label: ZXing ("zebra crossing")
+    url: https://github.com/zxing-cpp/zxing-cpp
+  - label: MediaDevices.getUserMedia
+    url: https://w3c.github.io/mediacapture-main/#dom-mediadevices-getusermedia
+---
+
+## A camera, or a file, and no server
+
+Drop an image, or point the camera at a code. The pixels never leave the tab. The decoder is ZXing, compiled to WebAssembly, loaded from the same origin as the rest of this site.
+
+Generation is a different page, with a different library. A scanner that also encoded would download a writer this page does not use.

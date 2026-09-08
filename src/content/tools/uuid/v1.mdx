@@ -1,0 +1,34 @@
+---
+description: >-
+  Generate RFC 9562 version 1 UUIDs from a Gregorian timestamp, a clock sequence and a random multicast node — not a MAC address.
+faq:
+  - q: >-
+      Is the node ID my MAC address?
+    a: >-
+      No. Browsers do not expose hardware addresses, and putting one in a UUID is a privacy leak. RFC 9562 §6.10 says to use 48 random bits and set the multicast bit so the value can never collide with a real IEEE 802 address. That is what this page does, unless you paste a node of your own.
+  - q: >-
+      What epoch is the timestamp?
+    a: >-
+      15 October 1582, the start of the Gregorian calendar, in 100-nanosecond ticks. Unix time starts in 1970; the offset between them is 0x01B21DD213814000 ticks, which is derived in the tests rather than trusted as a copied constant.
+  - q: >-
+      Why not v6 or v7?
+    a: >-
+      v1 puts the low 32 bits of the timestamp first, so values do not sort by time. v6 is the same fields reordered. v7 uses Unix milliseconds and is what a new database column usually wants. v1 exists because a lot of existing data used it.
+  - q: >-
+      Can two tabs produce the same UUID?
+    a: >-
+      Only if they draw the same timestamp, clock sequence and node in the same 100 ns. The clock sequence is random per page load and increments if the clock steps backwards or the 100-ns counter overflows, which is the RFC's collision avoidance for a single generator.
+references:
+  - label: RFC 9562 §5.1 — UUID Version 1
+    url: https://www.rfc-editor.org/rfc/rfc9562.html#name-uuid-version-1
+  - label: RFC 9562 §6.10 — UUIDs That Do Not Identify Hosts
+    url: https://www.rfc-editor.org/rfc/rfc9562.html#name-uuids-that-do-not-identify-
+---
+
+## Time, then a node
+
+A version 1 UUID is a 60-bit timestamp, a 14-bit clock sequence, and a 48-bit node. The timestamp is Gregorian, not Unix: it counts 100-nanosecond intervals since 1582-10-15. The layout puts the *low* 32 bits first, which is why v1 values do not sort by time and why v6 exists.
+
+The node on this page is not a MAC address. A random 48-bit value with the multicast bit set cannot collide with a hardware address, which is the construction RFC 9562 requires of implementations that do not have one.
+
+The inspect box under the result reads a v1 UUID back into a timestamp and a node, including UUIDs this page did not mint.

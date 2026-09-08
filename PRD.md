@@ -258,7 +258,8 @@ Correção criptográfica não se verifica a olho. Três camadas independentes:
 1. **Vetores publicados** — RFC 1321, 3174, 2202, 4231, 5869, 6070, 7693, 7914, 8018, 9106;
    FIPS 180-4, FIPS 202; SP 800-185; os vetores oficiais da equipa BLAKE3; os vetores do
    bcrypt distribuídos com o OpenBSD; a §10 da RFC 4648 (Base16/32/64), o Apêndice A da
-   RFC 8949 (CBOR, na íntegra) e a §A.1 da RFC 7515 (JWS).
+   RFC 8949 (CBOR, na íntegra), a §A.1 da RFC 7515 (JWS) e o Apêndice A da RFC 9562
+   (UUID v1/v3/v4/v5/v6/v7).
 2. **Paridade com implementações independentes.** O OpenSSL, através do `node:crypto` e da
    linha de comandos, é o oráculo principal — não partilha código com o noble. Onde não chega,
    entram o Bouncy Castle 1.83 (SP 800-185, Argon2, bcrypt) e o módulo `bcrypt` do Python. Para
@@ -301,7 +302,7 @@ Correção criptográfica não se verifica a olho. Três camadas independentes:
 | Métrica | Alvo | Estado atual |
 |---|---|---|
 | JS na home e páginas de categoria | 0 KB | **0 KB, 0 ilhas** |
-| Transferido numa página de ferramenta | < 100 KB gz | **35 KB gz** no máximo (`/cbor/`); FormatTool 8 KB gz, highlight.js 23 KB gz só em `/syntax-highlight/` |
+| Transferido numa página de ferramenta | < 100 KB gz | **35 KB gz** no máximo (`/cbor/`); FormatTool 8 KB gz, highlight.js 23 KB gz só em `/syntax-highlight/`; o leitor ZXing (~1.1 MB WASM) só em `/qr/scan/` |
 | Trabalho pesado fora da main thread | sempre | Argon2id a 19 MiB: 571 ms, **0 ms** de bloqueio |
 | Crescimento por algoritmo adicionado | ~0 nas outras páginas | confirmado |
 | Pedidos a hosts externos | 0 | **0** |
@@ -319,7 +320,7 @@ Correção criptográfica não se verifica a olho. Três camadas independentes:
 | **Encoding** | Hex/Base16, Base32, Base58, Base64 (texto e ficheiro), Hex dump (texto e ficheiro), HTML entities, URL encode/decode, URL parser, CBOR, JWT decoder. **Entregue.** Exclusões em §5.3 |
 | **Format** | JSON validator/minifier/formatter/viewer/compare/repair, XML validator/minifier/formatter, text compare, syntax highlight. **Entregue.** |
 | **Convert** | 7 conversores de case (lower, UPPER, camelCase, PascalCase, snake_case, kebab-case, CONSTANT_CASE), time converter. **Entregue.** |
-| **Generator** | UUID v1/v3/v4/v5/v6/v7, gerador de passwords, QR code generator e scanner |
+| **Generator** | UUID v1/v3/v4/v5/v6/v7, gerador de passwords, QR code generator e scanner. **Entregue.** |
 
 **Fora de âmbito:** Cryptography (AES, DES, Triple DES, RC4, ChaCha20, ChaCha20-Poly1305,
 SPECK, XXTEA, ECDSA, RSA) e Compression (GZIP, DEFLATE, Brotli, Zstandard, XZ, LZIP, LZMA,

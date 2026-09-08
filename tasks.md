@@ -2,8 +2,8 @@
 
 Estado de execução do [PRD.md](PRD.md). `[x]` feito e verificado · `[ ]` por fazer.
 
-**Agora:** 119 ferramentas em produção, 1157 testes, CI a fazer deploy automático.
-**Alvo:** 128 ferramentas. As categorias Hash, XOF/MAC, KDF, Encoding, Format e Convert estão **fechadas**. Criptografia e compressão saem do âmbito.
+**Agora:** 128 ferramentas em produção, 1193 testes, CI a fazer deploy automático.
+**Alvo:** 128 ferramentas. As categorias Hash, XOF/MAC, KDF, Encoding, Format, Convert e Generator estão **fechadas**. Criptografia e compressão saem do âmbito.
 
 ```
 Hash          ████████████████████  42 / 42  (âmbito fechado)
@@ -12,14 +12,14 @@ KDF           ████████████████████  12 /
 Encoding      ████████████████████  23 / 23  (âmbito fechado)
 Format        ████████████████████  11 / 11  (âmbito fechado)
 Convert       ████████████████████   8 / 8   (âmbito fechado)
-Generator     ░░░░░░░░░░░░░░░░░░░░   0 / 9
+Generator     ████████████████████   9 / 9   (âmbito fechado)
                                      ─────────
-                                    119 / 128
+                                    128 / 128
 ```
 
 **Fora de âmbito, por decisão:** as antigas fases de Criptografia (~26 páginas) e Compressão
 (~30 páginas) — AES/DES/RSA, GZIP/Brotli/Zstd/XZ, ZIP e TAR. Sem cifras, arquivos nem
-codecs WASM de compressão. O catálogo fecha em 128 (119 entregues + 9 geradores).
+codecs WASM de compressão. O catálogo fecha em 128.
 
 ---
 
@@ -267,6 +267,32 @@ uma base de timezones; a página mostra UTC e o fuso da máquina. Schema XML (DT
       em JSON.parse-able; o XML indenta; Unix 1000000000 sai `2001-09-09T01:46:40.000Z`
       no browser, não só no Node; camelCase de `hello_world` é `helloWorld`
 
+### Fase 5 — Geradores (9 páginas) — âmbito fechado
+
+- [x] Tabela de geradores (`src/lib/algo/generators.ts`) — **9 páginas**, cada entrada a declarar o *kind* (uuid / password / qr-encode / qr-scan) e o chunk extra, se houver; `GeneratorTool.svelte` ramifica no *kind*, não no id
+- [x] UUID v1/v3/v4/v5/v6/v7 a partir da RFC 9562 (`src/lib/uuid.ts`)
+- [x] v3/v5 com MD5/SHA-1 do `@noble/hashes`; v1/v4/v6/v7 com `crypto.getRandomValues`; o node de v1/v6 é um endereço multicast aleatório, não um MAC
+- [x] Gerador de passwords com rejection sampling sobre `crypto.getRandomValues`, nunca `Math.random`
+- [x] QR encoder via `uqr` (JavaScript, chunk próprio); scanner via `zxing-wasm/reader` com o WASM servido desta origem, não do jsDelivr
+- [x] 9 ficheiros MDX escritos de raiz, cada um com ângulo próprio, FAQ e referências
+
+Páginas entregues: `uuid/v1|v3|v4|v5|v6|v7`, `password`, `qr`, `qr/scan`.
+
+**Fora de âmbito, por decisão:** UUID v2 (DCE security) — precisa de um UID POSIX que o browser não tem. O writer do zxing-wasm também não: gerar um QR é umas kilobytes de JavaScript; o WASM de 1.1 MB fica só na página que descodifica.
+
+### Verificação da Fase 5
+
+- [x] Apêndice A da RFC 9562: v1, v3, v4, v5, v6 e v7 com os bytes publicados
+- [x] v3 e v5 re-derivados no teste: MD5/SHA-1 de namespace||nome, version e variant aplicados no próprio teste
+- [x] Offset gregoriano–Unix re-derivado das duas épocas (`Date.UTC(1582, 9, 15)`)
+- [x] Paridade com o pacote `uuid` (devDependency): v1/v6 com as opções documentadas; v3/v5 contra `v3.DNS` / `v5.DNS`
+- [x] Passwords: comprimento, alfabeto, uma de cada classe, `Math.random` nunca chamado
+- [x] QR: SVG com quiet zone; payload vazio recusado
+- [x] Guardas do registry: 9 geradores, slugs a bater com a tabela, catálogo a 128 ferramentas
+- [x] **1193 testes**, `astro check` com 0 erros / 0 avisos / 0 hints
+- [x] Peso medido no build: GeneratorTool 9 KB gz; uqr 4 KB gz só em `/qr/`; leitor ZXing 13 KB gz de JS + 445 KB gz de WASM só em `/qr/scan/`
+- [x] **Verificação em Chrome real contra o build de preview**: v4 emite um UUID versão 4 variante RFC 9562; o inspect do vector v1 da RFC 9562 mostra timestamp e node; DNS + `www.example.com` em v5 activa o resultado (o vector da RFC); a página de passwords mostra os controlos; `/qr/` e `/qr/scan/` compilam como páginas próprias
+
 ### Deploy
 
 - [x] Cloudflare Workers static assets — **https://online-tools.dnhub.workers.dev**
@@ -278,12 +304,6 @@ uma base de timezones; a página mostra UTC e o fuso da máquina. Schema XML (DT
 ---
 
 ## Por fazer
-
-### Fase 5 — Geradores (~9 páginas)
-
-- [ ] UUID v1/v3/v4/v5/v6/v7
-- [ ] Gerador de passwords (`crypto.getRandomValues`, nunca `Math.random`)
-- [ ] QR code generator e scanner (`getUserMedia` + `zxing-wasm`)
 
 ### Fase 6 — Polimento
 

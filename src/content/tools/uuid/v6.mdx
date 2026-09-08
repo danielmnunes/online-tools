@@ -1,0 +1,32 @@
+---
+description: >-
+  Generate RFC 9562 version 6 UUIDs: the v1 fields reordered so the timestamp comes first and the values sort by time.
+faq:
+  - q: >-
+      Is this just v1 backwards?
+    a: >-
+      The same 60-bit Gregorian timestamp, clock sequence and node, laid out so the high bits of the timestamp occupy the first 32 bits of the UUID. Binary order then matches time order, which is what people wanted from v1 and did not get.
+  - q: >-
+      Why not v7?
+    a: >-
+      v7 uses Unix milliseconds and a random tail, which is the better default for a new system. v6 exists to keep the Gregorian timestamp and node of v1 while fixing the sort. If you do not already have v1 data, use v7.
+  - q: >-
+      Node ID?
+    a: >-
+      Random, with the multicast bit set, unless you paste one. Same rule as v1: browsers have no MAC address to put there, and RFC 9562 says not to pretend they do.
+  - q: >-
+      Can I convert v1 to v6?
+    a: >-
+      Yes, it is a rearrangement of the same 60 bits of timestamp plus the same clock sequence and node. This page generates v6; it does not rewrite a pasted v1, because silently changing a stored identifier is how records lose each other.
+references:
+  - label: RFC 9562 §5.6 — UUID Version 6
+    url: https://www.rfc-editor.org/rfc/rfc9562.html#name-uuid-version-6
+  - label: RFC 9562 Appendix A.5 — UUIDv6 test vector
+    url: https://www.rfc-editor.org/rfc/rfc9562.html#name-example-of-a-uuidv6-value
+---
+
+## v1, in an order that sorts
+
+Version 6 keeps every field of version 1 and moves the timestamp to the front. The appendix A vector that is `C232AB00-9414-11EC-B3C8-9F6BDECED846` as v1 is `1EC9414C-232A-6B00-B3C8-9F6BDECED846` as v6: same instant, same node, same clock sequence.
+
+New identifiers that only need to be unique and roughly ordered in a database are version 7. Version 6 is the migration hatch for a column that is already Gregorian.
